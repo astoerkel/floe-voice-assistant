@@ -7,8 +7,7 @@
     "schema": "src/models/prisma/schema.prisma"
   },
   "scripts": {
-    "start": "node minimal-app.js",
-    "start-full": "node start.js",
+    "start": "node start.js",
     "dev": "nodemon src/app.js",
     "build": "npx prisma generate",
     "worker": "node src/services/queue/worker.js",
