@@ -1,0 +1,13 @@
+[phases.setup]
+dependsOn = ['install']
+
+[phases.install]
+dependsOn = ['setup']
+cmds = ['cp -r voice-assistant-backend/* .']
+
+[phases.build]
+dependsOn = ['install']
+cmds = ['npm run build']
+
+[start]
+cmd = 'npm start'
