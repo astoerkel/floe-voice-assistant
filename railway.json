@@ -2,11 +2,11 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "cd voice-assistant-backend && npm run build",
+    "buildCommand": "cp -r voice-assistant-backend/* . && npm run build",
     "watchPatterns": ["voice-assistant-backend/**"]
   },
   "deploy": {
-    "startCommand": "cd voice-assistant-backend && npm start",
+    "startCommand": "npm start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
