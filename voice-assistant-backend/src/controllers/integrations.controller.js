@@ -1,6 +1,6 @@
 const GoogleCalendarService = require('../services/integrations/google/calendar');
 const GmailService = require('../services/integrations/google/gmail');
-const AirtableService = require('../services/integrations/airtable/tasks');
+// const AirtableService = require('../services/integrations/airtable/tasks'); // Temporarily disabled
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
 
@@ -8,7 +8,8 @@ class IntegrationsController {
     constructor() {
         this.calendarService = new GoogleCalendarService();
         this.gmailService = new GmailService();
-        this.airtableService = new AirtableService();
+        // this.airtableService = new AirtableService(); // Temporarily disabled
+        this.airtableService = null; // Placeholder
     }
     
     // Calendar endpoints
