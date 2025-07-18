@@ -1,0 +1,37 @@
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "b84e83af919eec42bced1ff1bb8d1b258e9027df735af239aa0ef9de7b58f126"
+build_start_time: [1752829552, 724703000]
+build_end_time: [1752829560, 586128000]
+inputs:
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/SharedModels.swift": !dirty [1752825443, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/APIClient.swift": !dirty [1752769900, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/AuthenticationView.swift": !dirty [1752769744, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Constants.swift": !dirty [1752768294, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/ContentView.swift": !dirty [1752770733, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/GoogleTTSService.swift": !dirty [1752771205, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/ParticleBackgroundView.swift": !dirty [1752700200, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Services/CalendarService.swift": !dirty [1752825113, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Services/OAuthService.swift": !dirty [1752825744, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/SpeechRecognizer.swift": !dirty [1752754457, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Utils/HapticManager.swift": !dirty [1752827154, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Utils/SoundManager.swift": !dirty [1752827413, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Components/ResultBottomSheet.swift": !dirty [1752827517, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Components/WaveformVisualizationView.swift"
+  : !dirty [1752827532, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/AtAGlanceCardsSection.swift": !dirty [1752824051, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/HomeDashboardView.swift": !dirty [1752825350, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/QuickActionsRow.swift": !dirty [1752825538, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Enhanced/EnhancedSettingsPlaceholderViews.swift"
+  : !dirty [1752829493, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Enhanced/EnhancedSettingsView.swift": !dirty [1752829501, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Enhanced/EnhancedVoiceInterface.swift": !dirty [1752825558, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/IntegrationsSetupView.swift": !dirty [1752824211, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/OnboardingCompleteView.swift": !dirty [1752823977, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/OnboardingCoordinator.swift": !dirty [1752823862, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/PermissionsFlowView.swift": !dirty [1752823910, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/WelcomeCarouselView.swift": !dirty [1752823883, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/VoiceAssistantApp.swift": !dirty [1752824142, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/WatchConnector.swift": !dirty [1752689873, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/WebSocketManager.swift": !dirty [1752769083, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/DerivedSources/GeneratedAssetSymbols.swift"
+  : !dirty [1752829552, 0]

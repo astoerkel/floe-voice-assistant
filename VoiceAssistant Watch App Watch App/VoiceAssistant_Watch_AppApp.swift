@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct VoiceAssistant_Watch_App_Watch_AppApp: App {
+struct VoiceAssistant_Watch_AppApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

@@ -1,0 +1,18 @@
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/APIClient.swift":
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/APIClient.dia"
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/APIClient.o"
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/APIClient.swiftconstvalues"
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/APIClient.swiftdeps"
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/APIClient.d"
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/WebSocketManager.swift":
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WebSocketManager.o"
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WebSocketManager.swiftconstvalues"
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WebSocketManager.swiftdeps"
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WebSocketManager.d"
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WebSocketManager.dia"
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Utils/HapticManager.swift":
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HapticManager.o"
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HapticManager.swiftconstvalues"
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HapticManager.swiftdeps"
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HapticManager.d"
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HapticManager.dia"

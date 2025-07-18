@@ -1,0 +1,18 @@
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/HomeDashboardView.swift":
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HomeDashboardView.d"
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HomeDashboardView.dia"
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HomeDashboardView.o"
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HomeDashboardView.swiftdeps"
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HomeDashboardView.swiftconstvalues"
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/ContentView.swift":
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ContentView.swiftdeps"
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ContentView.dia"
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ContentView.swiftconstvalues"
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ContentView.d"
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ContentView.o"
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/PermissionsFlowView.swift":
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/PermissionsFlowView.swiftconstvalues"
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/PermissionsFlowView.swiftdeps"
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/PermissionsFlowView.dia"
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/PermissionsFlowView.o"
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/PermissionsFlowView.d"

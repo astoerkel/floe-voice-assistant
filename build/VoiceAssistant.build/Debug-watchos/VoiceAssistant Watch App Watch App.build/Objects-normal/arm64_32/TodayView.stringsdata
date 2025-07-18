@@ -1,0 +1,96 @@
+{
+  "source": "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Enhanced/TodayView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Today",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connected to iPhone",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Offline Mode",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Today's Agenda",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cached Agenda",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "No cached data available",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 145
+        }
+      },
+      {
+        "comment": "",
+        "key": "Last sync: %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "Queued Commands",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 155
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld commands waiting",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sync Now",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 172
+        }
+      },
+      {
+        "comment": "",
+        "key": "Next",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 260
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,7 +1,7 @@
 # UI/UX Design Guidelines - VoiceAssistant iOS & watchOS
 
 ## Overview
-This document outlines the UI/UX design system for the VoiceAssistant application, covering both iOS and watchOS platforms. The design emphasizes simplicity, accessibility, and seamless cross-device interaction.
+This document outlines the UI/UX design system for the VoiceAssistant application, covering both iOS and watchOS platforms. The design emphasizes simplicity, accessibility, and seamless cross-device interaction. The application now includes comprehensive enhancements with onboarding, dashboard, OAuth integrations, and advanced voice features.
 
 ## Design Philosophy
 
@@ -384,10 +384,68 @@ VStack(alignment: .leading, spacing: 4) {
 - **overlay**: 0.8
 - **modal**: 0.9
 
+## Enhanced Features Implementation
+
+### Onboarding Flow (COMPLETED ✅)
+- **4-Step Process**: Welcome carousel, permissions, integrations, completion
+- **Welcome Carousel**: Auto-advancing 3-slide introduction to key features
+- **Permissions Flow**: Streamlined microphone and speech recognition setup
+- **Integrations Setup**: OAuth connections for Google Calendar, Gmail, and Airtable
+- **Completion**: Smooth transition to main application
+
+### Dashboard Interface (COMPLETED ✅)
+- **At-a-Glance Cards**: Calendar events, task count, email count, weather information
+- **Quick Actions Row**: 6 common voice commands with recent commands history
+- **Responsive Grid**: 2-column layout optimized for different screen sizes
+- **Context Awareness**: Real-time data updates and status indicators
+
+### Enhanced Voice Interface (COMPLETED ✅)
+- **Follow-up Suggestions**: Context-aware suggestions based on conversation
+- **Quick Action Integration**: Voice commands with visual quick action buttons
+- **Conversation Context**: Enhanced state management for natural conversations
+- **Audio Visualization**: Real-time waveform display during recording
+- **Multiple Waveform Styles**: Bars, circular, line, and particle visualizations
+- **Processing Animations**: Smooth transitions between recording and processing states
+
+### OAuth Integration UI (COMPLETED ✅)
+- **Service Connection**: Secure OAuth flows with visual feedback
+- **Connection Status**: Visual indicators for service connectivity
+- **Token Management**: Secure storage and refresh handling
+- **Service Selection**: Clean interface for managing multiple integrations
+
+### Bottom Sheet Modals (COMPLETED ✅)
+- **Voice Command Results**: Rich result display with action buttons
+- **Context-Aware Actions**: Different actions based on command type
+- **Follow-up Suggestions**: Smart suggestions for continuing the conversation
+- **Detail Views**: Comprehensive information display for complex results
+- **Presentation Detents**: Medium and large height options for different content
+
+### Enhanced Settings (COMPLETED ✅)
+- **Usage Tracking**: Monthly command usage with progress indicators
+- **Connected Services**: Visual management of third-party integrations
+- **Voice Settings**: Customizable voice speed, pitch, and gender
+- **Privacy Controls**: Data access logs and privacy management
+- **Haptic Settings**: Customizable haptic feedback preferences
+- **Sound Settings**: Volume control and sound effect management
+
+### Haptic Feedback System (COMPLETED ✅)
+- **Voice Interaction Haptics**: Recording start/stop, processing feedback
+- **Context-Aware Patterns**: Different patterns for different command types
+- **Connection Status**: Haptic feedback for watch connectivity
+- **UI Interactions**: Button presses, menu actions, and navigation feedback
+- **Custom Patterns**: Complex haptic patterns using Core Haptics
+
+### Sound Management (COMPLETED ✅)
+- **Voice Interaction Sounds**: Recording and processing audio cues
+- **Context-Aware Audio**: Different sounds for different actions
+- **Volume Control**: User-adjustable sound levels
+- **System Integration**: Proper audio session management
+- **Accessibility Support**: Sound cues for accessibility features
+
 ## Future Design Considerations
 
 ### Planned Enhancements
-- **Dark Mode**: Comprehensive dark mode support
+- **Dark Mode**: Comprehensive dark mode support (foundation already implemented)
 - **Themes**: Multiple theme options
 - **Customization**: User customizable interface elements
 - **Widgets**: Home screen and watch face widgets

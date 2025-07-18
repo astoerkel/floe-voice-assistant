@@ -1,202 +1,308 @@
-//
-//  PhoneConnector.swift
-//  VoiceAssistant
-//
-//  Created by Amit Störkel on 16.07.25.
-//
 import Foundation
 import WatchConnectivity
-import WatchKit
+import AVFoundation
 
 class PhoneConnector: NSObject, ObservableObject {
-    
     static let shared = PhoneConnector()
     
-    private var session: WCSession?
+    var session: WCSession?
+    private var audioPlayer: AVAudioPlayer?
     
     @Published var isConnected: Bool = false
-    @Published var status: VoiceAssistantStatus = .idle
+    @Published var currentStatus: VoiceAssistantStatus = .idle
     @Published var lastResponse: VoiceResponse?
     @Published var errorMessage: String?
     
     override init() {
+        print("📱 Watch PhoneConnector: Initializing...")
         super.init()
-        setupWatchConnectivity()
-    }
-    
-    private func setupWatchConnectivity() {
-        guard WCSession.isSupported() else {
-            print("WatchConnectivity not supported on this device")
-            return
-        }
         
-        session = WCSession.default
-        session?.delegate = self
+        if WCSession.isSupported() {
+            print("📱 Watch PhoneConnector: WCSession is supported")
+            session = WCSession.default
+            session?.delegate = self
+            session?.activate()
+            print("📱 Watch PhoneConnector: Session activation requested")
+        } else {
+            print("❌ Watch PhoneConnector: WCSession NOT supported")
+        }
     }
     
-    func activate() {
-        session?.activate()
-    }
-    
-    func sendAudioForTranscription(_ audioData: Data, completion: @escaping (Result<Void, Error>) -> Void) {
+    func sendAudioData(_ audioData: Data) {
         guard let session = session, session.isReachable else {
-            completion(.failure(VoiceAssistantError.watchConnectivityFailed))
+            print("❌ Watch: iPhone not reachable, trying direct processing...")
+            // Try to process directly if iPhone is not available
+            processAudioDirectly(audioData)
             return
         }
         
+        print("📤 Watch: Sending audio data (\(audioData.count) bytes)")
+        updateStatus(.transcribing)
+        
         let message: [String: Any] = [
-            "type": "transcriptionRequest",
-            "sessionId": Constants.getCurrentSessionId(),
+            "type": "audioData",
+            "audio": audioData,
             "timestamp": Date().timeIntervalSince1970
         ]
         
-        session.sendMessageData(audioData, replyHandler: { responseData in
-            DispatchQueue.main.async {
-                completion(.success(()))
-            }
+        print("📤 Watch: Message prepared, calling sendMessage...")
+        print("📤 Watch: Session reachable: \(session.isReachable)")
+        
+        // Use sendMessage WITHOUT expecting immediate reply (just acknowledgment)
+        session.sendMessage(message, replyHandler: { response in
+            print("📥 Watch: Acknowledgment received from iPhone")
+            // iPhone will send the actual response as a separate message later
         }, errorHandler: { error in
+            print("❌ Watch: Error handler called with error: \(error.localizedDescription)")
             DispatchQueue.main.async {
-                completion(.failure(error))
+                print("❌ Watch: Failed to send audio: \(error.localizedDescription)")
+                self.updateStatus(.error)
+                self.errorMessage = "Failed to send audio"
             }
         })
     }
     
-    func sendStatusUpdate(_ status: VoiceAssistantStatus) {
-        guard let session = session, session.isReachable else { return }
+    private func handleResponse(_ response: [String: Any]) {
+        print("📥 Watch: Received response from iPhone: \(response)")
         
-        let message: [String: Any] = [
-            "type": "status",
-            "status": status.rawValue,
-            "sessionId": Constants.getCurrentSessionId(),
-            "timestamp": Date().timeIntervalSince1970
-        ]
-        
-        session.sendMessage(message, replyHandler: nil, errorHandler: { error in
-            print("Failed to send status update: \(error)")
-        })
-        
-        DispatchQueue.main.async {
-            self.status = status
+        if let success = response["success"] as? Bool, success {
+            print("✅ Watch: Response marked as successful")
+            // Clear any previous error when we get a successful response
+            errorMessage = nil
+            
+            if let responseText = response["text"] as? String {
+                print("📝 Watch: Response text: \(responseText)")
+                let voiceResponse = VoiceResponse(
+                    text: responseText,
+                    success: true,
+                    audioBase64: response["audioBase64"] as? String
+                )
+                lastResponse = voiceResponse
+                updateStatus(.playing)
+                
+                // Play audio if available
+                if let audioBase64 = response["audioBase64"] as? String, !audioBase64.isEmpty {
+                    playAudioResponse(audioBase64)
+                } else {
+                    print("🔇 Watch: No audio data in response")
+                }
+                
+                // Return to idle after a delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.updateStatus(.idle)
+                }
+            } else {
+                print("❌ Watch: No text in response")
+                errorMessage = "No response text"
+                updateStatus(.error)
+            }
+        } else {
+            let errorMsg = response["error"] as? String ?? "Unknown error from iPhone"
+            print("❌ Watch: Error from iPhone: \(errorMsg)")
+            errorMessage = errorMsg
+            updateStatus(.error)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                self.updateStatus(.idle)
+            }
         }
     }
     
-    private func handleIncomingMessage(_ message: [String: Any]) {
-        guard let messageType = message["type"] as? String else {
-            print("Invalid message type received")
+    private func playAudioResponse(_ audioBase64: String) {
+        guard let audioData = Data(base64Encoded: audioBase64) else {
+            print("❌ Watch: Failed to decode base64 audio")
             return
         }
         
-        switch messageType {
-        case "voiceResponse":
-            handleVoiceResponse(message)
-        case "error":
-            handleError(message)
-        case "status":
-            handleStatusUpdate(message)
-        default:
-            print("Unhandled message type: \(messageType)")
-        }
-    }
-    
-    private func handleVoiceResponse(_ message: [String: Any]) {
-        guard let responseData = message["response"] as? Data else {
-            print("Invalid voice response data")
-            return
-        }
+        print("🔊 Watch: Playing audio response (\(audioData.count) bytes)")
         
         do {
-            let response = try JSONDecoder().decode(VoiceResponse.self, from: responseData)
+            // Set up audio session for playback
+            print("🔊 Watch: Setting up audio session for playback...")
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
             
-            DispatchQueue.main.async {
-                self.lastResponse = response
-                self.status = .playing
+            // Create and play audio
+            print("🔊 Watch: Creating AVAudioPlayer...")
+            let audioPlayer = try AVAudioPlayer(data: audioData)
+            audioPlayer.volume = 1.0
+            
+            // Add delegate to monitor playback
+            print("🔊 Watch: Audio format: \(audioPlayer.format)")
+            print("🔊 Watch: Number of channels: \(audioPlayer.numberOfChannels)")
+            print("🔊 Watch: Current device volume: \(AVAudioSession.sharedInstance().outputVolume)")
+            
+            // Check audio route
+            let currentRoute = AVAudioSession.sharedInstance().currentRoute
+            for output in currentRoute.outputs {
+                print("🔊 Watch: Audio output: \(output.portName) - \(output.portType.rawValue)")
+            }
+            
+            // Check if audio player is ready
+            if audioPlayer.prepareToPlay() {
+                print("🔊 Watch: Audio player prepared successfully")
+                let success = audioPlayer.play()
+                print("🔊 Watch: Audio playback started: \(success ? "SUCCESS" : "FAILED")")
+                print("🔊 Watch: Is playing: \(audioPlayer.isPlaying)")
+                print("🔊 Watch: Audio duration: \(audioPlayer.duration) seconds")
                 
-                // Provide haptic feedback
-                WKInterfaceDevice.current().play(.success)
+                // Keep strong reference to audio player
+                self.audioPlayer = audioPlayer
+            } else {
+                print("❌ Watch: Audio player failed to prepare")
             }
-        } catch {
-            print("Failed to decode voice response: \(error)")
-            DispatchQueue.main.async {
-                self.errorMessage = "Failed to decode response"
-                self.status = .error
-            }
-        }
-    }
-    
-    private func handleError(_ message: [String: Any]) {
-        let errorMsg = message["message"] as? String ?? "Unknown error"
-        
-        DispatchQueue.main.async {
-            self.errorMessage = errorMsg
-            self.status = .error
             
-            // Provide haptic feedback
-            WKInterfaceDevice.current().play(.failure)
+        } catch {
+            print("❌ Watch: Failed to play audio: \(error)")
+            print("❌ Watch: Audio error details: \(error.localizedDescription)")
         }
     }
     
-    private func handleStatusUpdate(_ message: [String: Any]) {
-        guard let statusString = message["status"] as? String,
-              let newStatus = VoiceAssistantStatus(rawValue: statusString) else {
-            print("Invalid status update")
-            return
+    private func updateStatus(_ status: VoiceAssistantStatus) {
+        currentStatus = status
+        print("📊 Watch: Status updated to \(status.rawValue)")
+    }
+    
+    private func processAudioDirectly(_ audioData: Data) {
+        print("🔄 Watch: Processing audio directly...")
+        updateStatus(.transcribing)
+        
+        // Use the WatchAPIClient for direct processing
+        let watchAPIClient = WatchAPIClient.shared
+        
+        watchAPIClient.processVoiceCommand(audioData: audioData) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("✅ Watch: Direct processing successful")
+                    self?.handleDirectResponse(response)
+                case .failure(let error):
+                    print("❌ Watch: Direct processing failed: \(error.localizedDescription)")
+                    self?.updateStatus(.error)
+                    self?.errorMessage = "Direct processing failed: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    private func handleDirectResponse(_ response: VoiceResponse) {
+        print("📥 Watch: Direct response received: \(response.text)")
+        
+        // If we have audio from the response, use it
+        if let audioBase64 = response.audioBase64, !audioBase64.isEmpty {
+            let voiceResponse = VoiceResponse(
+                text: response.text,
+                success: response.success,
+                audioBase64: audioBase64
+            )
+            
+            lastResponse = voiceResponse
+            updateStatus(.playing)
+            playAudioResponse(audioBase64)
+        } else {
+            // Generate audio using Google TTS
+            generateAudioResponse(for: response.text) { [weak self] audioBase64 in
+                DispatchQueue.main.async {
+                    let voiceResponse = VoiceResponse(
+                        text: response.text,
+                        success: response.success,
+                        audioBase64: audioBase64
+                    )
+                    
+                    self?.lastResponse = voiceResponse
+                    self?.updateStatus(.playing)
+                    
+                    if let audioBase64 = audioBase64 {
+                        self?.playAudioResponse(audioBase64)
+                    }
+                }
+            }
         }
         
-        DispatchQueue.main.async {
-            self.status = newStatus
+        // Return to idle after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.updateStatus(.idle)
+        }
+    }
+    
+    private func generateAudioResponse(for text: String, completion: @escaping (String?) -> Void) {
+        print("🔊 Watch: Generating audio for text: \(text)")
+        
+        GoogleTTSService.shared.synthesizeText(text) { result in
+            switch result {
+            case .success(let audioData):
+                print("✅ Watch: Audio generated successfully (\(audioData.count) bytes)")
+                let audioBase64 = audioData.base64EncodedString()
+                completion(audioBase64)
+            case .failure(let error):
+                print("❌ Watch: Failed to generate audio: \(error)")
+                completion(nil)
+            }
         }
     }
 }
 
+// MARK: - WCSessionDelegate
 extension PhoneConnector: WCSessionDelegate {
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async {
-            self.isConnected = (activationState == .activated) && session.isReachable
-        }
-        
-        if let error = error {
-            print("WCSession activation failed: \(error)")
-            DispatchQueue.main.async {
-                self.errorMessage = "Failed to connect to iPhone"
+            print("📱 Watch: WCSession activation completed")
+            print("📱 Watch: State: \(activationState.rawValue)")
+            print("📱 Watch: isReachable: \(session.isReachable)")
+            
+            switch activationState {
+            case .activated:
+                print("✅ Watch: WCSession activated")
+                self.isConnected = session.isReachable
+            case .inactive:
+                print("⚠️ Watch: WCSession inactive")
+                self.isConnected = false
+            case .notActivated:
+                print("❌ Watch: WCSession not activated")
+                self.isConnected = false
+            @unknown default:
+                self.isConnected = false
             }
-        } else {
-            print("WCSession activated successfully")
+            
+            print("📱 Watch: Final isConnected: \(self.isConnected)")
         }
     }
     
     func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async {
+            print("🔄 Watch: Reachability changed - iPhone reachable: \(session.isReachable)")
             self.isConnected = session.isReachable
+            print("🔄 Watch: Final isConnected: \(self.isConnected)")
+            
+            // Post notification about connectivity change
+            NotificationCenter.default.post(name: NSNotification.Name("watchConnectivityDidChange"), object: nil)
         }
-        
-        if !session.isReachable {
-            DispatchQueue.main.async {
-                self.errorMessage = "iPhone not reachable"
+    }
+    
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        print("📥 Watch: didReceiveMessage called with: \(message.keys)")
+        DispatchQueue.main.async {
+            if let type = message["type"] as? String {
+                print("📥 Watch: Message type: \(type)")
+                switch type {
+                case "voiceResponse":
+                    // Handle the voice response from iPhone
+                    print("📥 Watch: Received voice response from iPhone")
+                    self.handleResponse(message)
+                case "statusUpdate":
+                    if let statusRaw = message["status"] as? String,
+                       let status = VoiceAssistantStatus(rawValue: statusRaw) {
+                        self.updateStatus(status)
+                    }
+                case "error":
+                    let errorMsg = message["message"] as? String ?? "Unknown error"
+                    self.errorMessage = errorMsg
+                    self.updateStatus(.error)
+                default:
+                    print("📥 Watch: Unknown message type: \(type)")
+                    break
+                }
             }
         }
-    }
-    
-    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        handleIncomingMessage(message)
-    }
-    
-    func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
-        handleIncomingMessage(message)
-        
-        replyHandler([
-            "status": "received",
-            "timestamp": Date().timeIntervalSince1970
-        ])
-    }
-    
-    func session(_ session: WCSession, didReceiveMessageData messageData: Data) {
-        print("Received data message: \(messageData.count) bytes")
-    }
-    
-    func session(_ session: WCSession, didReceiveMessageData messageData: Data, replyHandler: @escaping (Data) -> Void) {
-        print("Received data message with reply handler: \(messageData.count) bytes")
-        
-        let response = "received".data(using: .utf8) ?? Data()
-        replyHandler(response)
     }
 }

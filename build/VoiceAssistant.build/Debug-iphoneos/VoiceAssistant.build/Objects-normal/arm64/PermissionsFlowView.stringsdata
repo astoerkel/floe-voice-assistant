@@ -1,0 +1,64 @@
+{
+  "source": "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/PermissionsFlowView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Back",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "Voice Permissions",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "We need access to your microphone and speech recognition to provide the best voice assistant experience.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Continue",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "Grant Permissions",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "Allow",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 272
+        }
+      },
+      {
+        "comment": "",
+        "key": "Denied",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 289
+        }
+      }
+    ]
+  },
+  "version": 1
+}

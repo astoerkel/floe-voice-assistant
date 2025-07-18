@@ -1,16 +1,30 @@
-const Airtable = require('airtable');
 const { prisma } = require('../../../config/database');
 const logger = require('../../../utils/logger');
+
+// Check if Airtable API key is available before requiring the module
+const AIRTABLE_ENABLED = !!process.env.AIRTABLE_API_KEY;
+const Airtable = AIRTABLE_ENABLED ? require('airtable') : null;
 
 class AirtableTasksIntegration {
   constructor() {
     this.serviceName = 'airtable_tasks';
-    this.airtable = new Airtable({
-      apiKey: process.env.AIRTABLE_API_KEY
-    });
+    this.isEnabled = AIRTABLE_ENABLED;
+    
+    if (this.isEnabled) {
+      this.airtable = new Airtable({
+        apiKey: process.env.AIRTABLE_API_KEY
+      });
+    } else {
+      logger.warn('Airtable API key not provided - Airtable integration will be disabled');
+      this.airtable = null;
+    }
   }
 
   async setupIntegration(userId, config) {
+    if (!this.isEnabled) {
+      throw new Error('Airtable integration is disabled - API key not configured');
+    }
+    
     try {
       const { baseId, tableId, apiKey } = config;
       
@@ -403,4 +417,29 @@ class AirtableTasksIntegration {
   }
 }
 
-module.exports = new AirtableTasksIntegration();
+// Only export instance if API key is available
+if (AIRTABLE_ENABLED) {
+  module.exports = new AirtableTasksIntegration();
+} else {
+  // Export a stub that logs warnings for all methods
+  module.exports = {
+    serviceName: 'airtable_tasks',
+    isEnabled: false,
+    setupIntegration: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    testConnection: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    createTask: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    updateTask: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    deleteTask: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    listTasks: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    getTask: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    markTaskComplete: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    searchTasks: () => Promise.reject(new Error('Airtable integration is disabled - API key not configured')),
+    getSupportedActions: () => ({
+      create: false,
+      read: false,
+      update: false,
+      delete: false,
+      actions: []
+    })
+  };
+}

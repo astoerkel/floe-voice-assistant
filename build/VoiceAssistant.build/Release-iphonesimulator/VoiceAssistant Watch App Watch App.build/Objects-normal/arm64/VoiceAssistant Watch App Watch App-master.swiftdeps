@@ -1,0 +1,42 @@
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "0419728269c0f6c53308672597383d6852e2f7a7b9985d56905014ceeb618497"
+build_start_time: [1752825071, 719285000]
+build_end_time: [1752825072, 579154000]
+inputs:
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/SharedModels.swift": !dirty [1752769044, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/AudioRecorder.swift": !dirty [1752667086, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Complications/AdaptiveComplication.swift"
+  : !dirty [1752743711, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Complications/AdaptiveComplicationProvider.swift"
+  : !dirty [1752743728, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/ContentView.swift": !dirty [1752746054, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/GoogleTTSService.swift": !dirty [1752776165, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/HapticFeedbackManager.swift": !dirty [1752743640, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Models/VoiceState.swift": !dirty [1752742358, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/PhoneConnector.swift": !dirty [1752775841, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Services/OfflineManager.swift"
+  : !dirty [1752824687, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Services/VoiceResponseHandler.swift"
+  : !dirty [1752743677, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Services/WatchVoiceManager.swift"
+  : !dirty [1752824904, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Components/ContextHintsView.swift"
+  : !dirty [1752746120, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Components/StatusIndicator.swift"
+  : !dirty [1752746110, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Components/VoiceButton.swift"
+  : !dirty [1752745266, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Components/WaveformView.swift"
+  : !dirty [1752745285, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Enhanced/EnhancedVoiceView.swift"
+  : !dirty [1752753028, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Enhanced/QuickActionsView.swift"
+  : !dirty [1752824727, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Enhanced/TodayView.swift"
+  : !dirty [1752753041, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/VoiceAssistant_Watch_AppApp.swift"
+  : !dirty [1752679127, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/WatchAPIClient.swift": !dirty [1752818703, 0]
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Constants.swift": !dirty [1752768294, 0]
+  ? "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/DerivedSources/GeneratedAssetSymbols.swift"
+  : !dirty [1752824609, 0]

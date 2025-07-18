@@ -4,10 +4,68 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
+		<key>VoiceAssistant Watch App Watch App.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
 		<key>VoiceAssistant.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>82B3C5C52E27BB81009FA651</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82B3C5D22E27BB82009FA651</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82B3C5DC2E27BB82009FA651</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82B3C5F12E27BBDB009FA651</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82B3C5F62E27BBDB009FA651</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82B3C6052E27BBDC009FA651</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82B3C60F2E27BBDC009FA651</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82D5ADF32E27F8D000C273E8</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82D5ADFF2E27F8D100C273E8</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>82D5AE092E27F8D100C273E8</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

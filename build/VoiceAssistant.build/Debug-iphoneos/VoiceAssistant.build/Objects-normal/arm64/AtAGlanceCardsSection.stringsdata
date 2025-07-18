@@ -1,0 +1,112 @@
+{
+  "source": "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/AtAGlanceCardsSection.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "At a Glance",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 17
+        }
+      },
+      {
+        "comment": "",
+        "key": "Next Event",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "No upcoming events",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Today",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 121
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tasks",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 132
+        }
+      },
+      {
+        "comment": "",
+        "key": "remaining",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 137
+        }
+      },
+      {
+        "comment": "",
+        "key": "Unread",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 177
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "emails",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "Weather",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 227
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading...",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld°",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 233
+        }
+      }
+    ]
+  },
+  "version": 1
+}

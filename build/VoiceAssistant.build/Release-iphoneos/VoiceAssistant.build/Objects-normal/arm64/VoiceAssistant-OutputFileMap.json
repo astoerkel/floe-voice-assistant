@@ -1,0 +1,155 @@
+{
+  "" : {
+    "const-values" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistant-master.swiftconstvalues",
+    "dependencies" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistant-master.d",
+    "diagnostics" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistant-master.dia",
+    "emit-module-dependencies" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistant-master-emit-module.d",
+    "emit-module-diagnostics" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistant-master-emit-module.dia",
+    "swift-dependencies" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistant-master.swiftdeps"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/SharedModels.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SharedModels.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SharedModels.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SharedModels.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/APIClient.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/APIClient.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/APIClient.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/APIClient.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/AuthenticationView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AuthenticationView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AuthenticationView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AuthenticationView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Constants.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/Constants.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/Constants.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/Constants.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/ContentView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ContentView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/GoogleTTSService.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/GoogleTTSService.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/GoogleTTSService.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/GoogleTTSService.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/ParticleBackgroundView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ParticleBackgroundView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ParticleBackgroundView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ParticleBackgroundView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Services/CalendarService.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/CalendarService.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/CalendarService.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/CalendarService.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Services/OAuthService.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OAuthService.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OAuthService.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OAuthService.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/SpeechRecognizer.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SpeechRecognizer.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SpeechRecognizer.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SpeechRecognizer.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Utils/HapticManager.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HapticManager.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HapticManager.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HapticManager.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Utils/SoundManager.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SoundManager.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SoundManager.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/SoundManager.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Components/ResultBottomSheet.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ResultBottomSheet.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ResultBottomSheet.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/ResultBottomSheet.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Components/WaveformVisualizationView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WaveformVisualizationView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WaveformVisualizationView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WaveformVisualizationView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/AtAGlanceCardsSection.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AtAGlanceCardsSection.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AtAGlanceCardsSection.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AtAGlanceCardsSection.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/HomeDashboardView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HomeDashboardView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HomeDashboardView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/HomeDashboardView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/QuickActionsRow.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/QuickActionsRow.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/QuickActionsRow.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/QuickActionsRow.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Enhanced/EnhancedSettingsPlaceholderViews.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedSettingsPlaceholderViews.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedSettingsPlaceholderViews.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedSettingsPlaceholderViews.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Enhanced/EnhancedSettingsView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedSettingsView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedSettingsView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedSettingsView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Enhanced/EnhancedVoiceInterface.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedVoiceInterface.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedVoiceInterface.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/EnhancedVoiceInterface.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/IntegrationsSetupView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/IntegrationsSetupView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/IntegrationsSetupView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/IntegrationsSetupView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/OnboardingCompleteView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OnboardingCompleteView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OnboardingCompleteView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OnboardingCompleteView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/OnboardingCoordinator.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OnboardingCoordinator.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OnboardingCoordinator.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/OnboardingCoordinator.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/PermissionsFlowView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/PermissionsFlowView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/PermissionsFlowView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/PermissionsFlowView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/WelcomeCarouselView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WelcomeCarouselView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WelcomeCarouselView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WelcomeCarouselView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/VoiceAssistantApp.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistantApp.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistantApp.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/VoiceAssistantApp.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/WatchConnector.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WatchConnector.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WatchConnector.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WatchConnector.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/WebSocketManager.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WebSocketManager.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WebSocketManager.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/WebSocketManager.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphoneos/VoiceAssistant.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  }
+}

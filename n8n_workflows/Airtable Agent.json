@@ -1,0 +1,596 @@
+{
+  "name": "Airtable Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"message\": \"create a task called test\",\n  \"memory\": \"\"\n}"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "92cece50-fe62-46ad-be5f-71e12fe07159",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message }}",
+        "options": {
+          "systemMessage": "=You are a helpful assistant\n\n##\n1. Get task: please get the task based on the record ID\n2. Create task: Please create a task \n3. Update task: Please update the task. If you don't already have the task ID, please search for it using the search option.\n4. Delete task: Please delete the task. If you don't already have the task ID, please search for it using the search option.\n5. Search for task: Please search for the task based on the task name"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        220,
+        0
+      ],
+      "id": "1a42c675-48b2-4015-ae0a-0dff9b009bba",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.memory }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        40,
+        220
+      ],
+      "id": "962a8e26-30ff-4a3a-a505-d61fd9936e2e",
+      "name": "Window Buffer Memory"
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "appbdqo9CdOnFsZnb",
+          "mode": "list",
+          "cachedResultName": "Personal",
+          "cachedResultUrl": "https://airtable.com/appbdqo9CdOnFsZnb"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblddRBqxzZKVq8N9",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appbdqo9CdOnFsZnb/tblddRBqxzZKVq8N9"
+        },
+        "id": "={{ $fromAI(\"recordID\", \"this is the ID of the record\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        200,
+        220
+      ],
+      "id": "fca25d75-b5a0-4298-8fc9-3866ac06ad74",
+      "name": "Get a record in Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QTkdejmQPBgkSQkK",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appbdqo9CdOnFsZnb",
+          "mode": "list",
+          "cachedResultName": "Personal",
+          "cachedResultUrl": "https://airtable.com/appbdqo9CdOnFsZnb"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbldDAoA50ij7yWJj",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/app0Al5GKMul8VlVb/tbldDAoA50ij7yWJj"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "={{ $fromAI(\"taskStatus\", \"this is the task status, which is either Todo, In progress, Done\") }}",
+            "Notes": "={{ $fromAI(\"taskNotes\", \"this is the task notes\") }}",
+            "Task": "={{ $fromAI(\"taskName\", \"this is the task name\") }}",
+            "Priority": "={{ $fromAI(\"taskPriority\", \"this is the task priority, which is either Low, Medium, High\") }}",
+            "Assignee": "=Jono Catliff",
+            "ID": "={{ $fromAI(\"taskID\", \"this is the task id\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Task",
+              "displayName": "Task",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Todo",
+                  "value": "Todo"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Assignee",
+              "displayName": "Assignee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Jono Catliff",
+                  "value": "Jono Catliff"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Low",
+                  "value": "Low"
+                },
+                {
+                  "name": "Medium",
+                  "value": "Medium"
+                },
+                {
+                  "name": "High",
+                  "value": "High"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        360,
+        220
+      ],
+      "id": "eaa04ed9-0c6b-4beb-963e-18a9f9a87937",
+      "name": "Create a record in Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QTkdejmQPBgkSQkK",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appbdqo9CdOnFsZnb",
+          "mode": "list",
+          "cachedResultName": "Personal",
+          "cachedResultUrl": "https://airtable.com/appbdqo9CdOnFsZnb"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbldDAoA50ij7yWJj",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/app0Al5GKMul8VlVb/tbldDAoA50ij7yWJj"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "={{ $fromAI(\"taskStatus\", \"this is the task status, which is either Todo, In progress, Done\") }}",
+            "Notes": "={{ $fromAI(\"taskNotes\", \"this is the task notes\") }}",
+            "Task": "={{ $fromAI(\"taskName\", \"this is the task name\") }}",
+            "Priority": "={{ $fromAI(\"taskPriority\", \"this is the task priority, which is either Low, Medium, High\") }}",
+            "Assignee": "=Jono Catliff",
+            "ID": "={{ $fromAI(\"taskID\", \"this is the task id\") }}",
+            "id": "={{ $fromAI(\"recordID\") }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Task",
+              "displayName": "Task",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Todo",
+                  "value": "Todo"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Assignee",
+              "displayName": "Assignee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Jono Catliff",
+                  "value": "Jono Catliff"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Low",
+                  "value": "Low"
+                },
+                {
+                  "name": "Medium",
+                  "value": "Medium"
+                },
+                {
+                  "name": "High",
+                  "value": "High"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        500,
+        220
+      ],
+      "id": "75cd3f6a-12a8-4e49-9814-ae5d6d2a554e",
+      "name": "Update record in Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QTkdejmQPBgkSQkK",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteRecord",
+        "base": {
+          "__rl": true,
+          "value": "appbdqo9CdOnFsZnb",
+          "mode": "list",
+          "cachedResultName": "Personal",
+          "cachedResultUrl": "https://airtable.com/appbdqo9CdOnFsZnb"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbldDAoA50ij7yWJj",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/app0Al5GKMul8VlVb/tbldDAoA50ij7yWJj"
+        },
+        "id": "={{ $fromAI(\"recordID\", \"this is the ID of the record\") }}"
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        220
+      ],
+      "id": "bf1809fa-43f3-4b62-96cf-6fb0d39efcf5",
+      "name": "Delete a record in Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QTkdejmQPBgkSQkK",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appbdqo9CdOnFsZnb",
+          "mode": "list",
+          "cachedResultName": "Personal",
+          "cachedResultUrl": "https://airtable.com/appbdqo9CdOnFsZnb"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbldDAoA50ij7yWJj",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/app0Al5GKMul8VlVb/tbldDAoA50ij7yWJj"
+        },
+        "filterByFormula": "=FIND(\"{{ $fromAI(\"taskName\", \"name of the task\") }}\", {Task})\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        780,
+        220
+      ],
+      "id": "90831f80-d205-4644-8fdc-9120856d1eca",
+      "name": "Search records in Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QTkdejmQPBgkSQkK",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        220
+      ],
+      "id": "ef81f5b2-cdb4-4c6a-a676-973ced57aa95",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "yqX60qGUPCo4if9n",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "message": "Just search for the task about the gym and update the priority to high",
+          "memory": "1234"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a record in Airtable": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record in Airtable": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update record in Airtable": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a record in Airtable": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records in Airtable": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f1770dce-ab6f-4be4-a34d-9644db9e1850",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "adcca09070fe54bee814223b70d273559600ccda916d5aea95e8ca21a7a9e368"
+  },
+  "id": "gFvOam4DYWWr8Bbc",
+  "tags": []
+}

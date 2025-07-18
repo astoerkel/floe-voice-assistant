@@ -1,52 +1,35 @@
-//
-//  ContentView.swift
-//  VoiceAssistantWatch Watch App
-//
-//  Created by Amit Störkel on 16.07.25.
-//
 import SwiftUI
 
 struct ContentView: View {
-    @State private var isConnected = false
-    @State private var statusText = "Open iPhone app first"
+    @State private var selectedTab = 0
     
     var body: some View {
-        VStack(spacing: 20) {
-            // Connection status
-            HStack {
-                Circle()
-                    .fill(isConnected ? .green : .red)
-                    .frame(width: 8, height: 8)
-                Text(isConnected ? "Connected" : "No iPhone")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+        TabView(selection: $selectedTab) {
+            // Main voice interface
+            EnhancedVoiceView()
+                .tag(0)
             
-            // Main microphone button
-            Button(action: {
-                // TODO: Implement voice recording
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(.blue)
-                        .frame(width: 80, height: 80)
-                    
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 30))
-                        .foregroundColor(.white)
-                }
+            // Quick actions for common tasks
+            NavigationView {
+                QuickActionsView()
+                    .navigationTitle("Actions")
+                    .navigationBarTitleDisplayMode(.inline)
             }
-            .buttonStyle(PlainButtonStyle())
+            .tag(1)
             
-            // Status text
-            Text(statusText)
-                .font(.caption)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
+            // Today's agenda (offline-capable)
+            NavigationView {
+                TodayView()
+                    .navigationTitle("Today")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+            .tag(2)
         }
-        .padding()
+        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 }
+
 
 #Preview {
     ContentView()

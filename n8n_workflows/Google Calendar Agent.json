@@ -1,0 +1,479 @@
+{
+  "name": "Google Calendar Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7ab380a2-a8d3-421c-ab4e-748ea8fb7904",
+              "name": "response",
+              "value": "Unable to perform task. Please try again.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0aa3b45f-77f8-47c4-bd01-8e92d93b586b",
+      "name": "Try Again",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1280,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "39c2f302-03be-4464-a17a-d7cc481d6d44",
+              "name": "=response",
+              "value": "={{$json.output}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e7b2286c-3649-4cfc-9093-3eb34e45e285",
+      "name": "Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1280,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When Executed by Another Workflow').item.json.message }}",
+        "options": {
+          "systemMessage": "=You are a calendar management assistant responsible for scheduling, retrieving, updating, and deleting events in the user's calendar.\n\nCalendar Management Tools\n\nCreate Event with Attendee – Use this when an event includes a participant.\nCreate Event – Use this for solo events. If there's a participant/attendee, do not create a solo event, only create the event with an attendee\nGet Events – Retrieve calendar schedules when requested.\nDelete Event – Remove an event. First, use \"Get Events\" to obtain the event ID.\nUpdate Event – Modify an event. First, use \"Get Events\" to obtain the event ID.\nFinal Notes\nCurrent Date/Time: {{ $now }}\n\nIf no duration is specified, assume the event lasts one hour.\nIf a only day and date is not specified, assume it is the next occurance of the day. \n\nIf inviting someone to an event, here’s the attendee’s information:\nName: {{ $json.names.displayName }}\nEmail: {{ $json.emailAddresses.undefined[0] }}"
+        }
+      },
+      "id": "938f1207-3aae-4d13-9166-2e600e72c199",
+      "name": "Calendar Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        940,
+        200
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "amit.stoerkel@gmail.com",
+          "mode": "list",
+          "cachedResultName": "amit.stoerkel@googlemail.com"
+        },
+        "start": "={{ $fromAI(\"eventStart\") }}",
+        "end": "={{ $fromAI(\"eventEnd\") }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $fromAI(\"eventAttendeeEmail\", \"this is the attendee's email address\") }}"
+          ],
+          "summary": "={{ $fromAI(\"eventTitle\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1300,
+        440
+      ],
+      "id": "4369b246-a52d-42fc-88dd-532a3656fbc2",
+      "name": "Create Event with Attendee1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YMqvGSWjMNk2I6WQ",
+          "name": "Google Calendar Amit.Stoerkel@Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "amit.stoerkel@gmail.com",
+          "mode": "list",
+          "cachedResultName": "amit.stoerkel@googlemail.com"
+        },
+        "start": "={{ $fromAI(\"eventStart\") }}",
+        "end": "={{ $fromAI(\"eventEnd\") }}",
+        "additionalFields": {
+          "attendees": [],
+          "summary": "={{ $fromAI(\"eventTitle\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1180,
+        440
+      ],
+      "id": "83ef6953-022c-4d79-bd27-1a85e51adce1",
+      "name": "Create Event1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YMqvGSWjMNk2I6WQ",
+          "name": "Google Calendar Amit.Stoerkel@Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "amit.stoerkel@gmail.com",
+          "mode": "list",
+          "cachedResultName": "amit.stoerkel@googlemail.com"
+        },
+        "timeMin": "={{ $fromAI(\"dayBefore\",\"the day before the date the user requested\") }}",
+        "timeMax": "={{ $fromAI(\"dayAfter\",\"the day after the date the user requested\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1060,
+        440
+      ],
+      "id": "b17e2912-bd96-49a2-90c6-7ef66189201a",
+      "name": "Get Events1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YMqvGSWjMNk2I6WQ",
+          "name": "Google Calendar Amit.Stoerkel@Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "amit.stoerkel@gmail.com",
+          "mode": "list",
+          "cachedResultName": "amit.stoerkel@googlemail.com"
+        },
+        "eventId": "={{ $fromAI(\"eventID\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        940,
+        440
+      ],
+      "id": "1aec1c1e-6604-43c8-b10a-17ed72b346ec",
+      "name": "Delete Event1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YMqvGSWjMNk2I6WQ",
+          "name": "Google Calendar Amit.Stoerkel@Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "amit.stoerkel@gmail.com",
+          "mode": "list",
+          "cachedResultName": "amit.stoerkel@googlemail.com"
+        },
+        "eventId": "={{ $fromAI(\"eventID\") }}",
+        "updateFields": {
+          "end": "={{ $fromAI(\"endTime\") }}",
+          "start": "={{ $fromAI(\"startTime\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        820,
+        440
+      ],
+      "id": "fa44950f-3a1f-493c-8ce4-45dee80a722b",
+      "name": "Update Event1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YMqvGSWjMNk2I6WQ",
+          "name": "Google Calendar Amit.Stoerkel@Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"message\": \"\",\n  \"name\": \"\"\n}"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        60,
+        200
+      ],
+      "id": "7694ba59-7c75-41b0-9136-a2255a46b2bc",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7b7d4e25-6623-40f1-8a73-3120cc9591d7",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        360,
+        200
+      ],
+      "id": "d67838ca-5fad-428a-903a-0166daecb66a",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        680,
+        200
+      ],
+      "id": "fcff9356-83ca-4bdf-9340-93cf2bb0d295",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "fields": [
+          "names",
+          "emailAddresses"
+        ],
+        "useQuery": true,
+        "query": "={{ $json.name }}"
+      },
+      "type": "n8n-nodes-base.googleContacts",
+      "typeVersion": 1,
+      "position": [
+        520,
+        40
+      ],
+      "id": "afe012f7-3828-4efc-ab44-382cc2d8fd6f",
+      "name": "Google Contacts1",
+      "credentials": {
+        "googleContactsOAuth2Api": {
+          "id": "OeW3ujLfdhxXGZu2",
+          "name": "Google Contacts account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        620,
+        440
+      ],
+      "id": "725fbb31-4a6d-4080-89ba-539b528973f3",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "yqX60qGUPCo4if9n",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "message": "invite jono to coffee at 5pm tomorrow",
+          "name": "Jono"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Calendar Agent": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Try Again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event with Attendee1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Events1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Event1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Event1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Google Contacts1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Google Contacts1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "cb643ea4-cb93-46fd-b267-8d3ce3627ca4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "adcca09070fe54bee814223b70d273559600ccda916d5aea95e8ca21a7a9e368"
+  },
+  "id": "1FFb2yQOJdxeCbXU",
+  "tags": []
+}

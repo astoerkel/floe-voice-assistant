@@ -1,0 +1,18 @@
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Constants.swift":
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/Constants.swiftconstvalues"
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/Constants.swiftdeps"
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/Constants.dia"
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/Constants.o"
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/Constants.d"
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/QuickActionsRow.swift":
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/QuickActionsRow.o"
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/QuickActionsRow.d"
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/QuickActionsRow.swiftconstvalues"
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/QuickActionsRow.swiftdeps"
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/QuickActionsRow.dia"
+"/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Dashboard/AtAGlanceCardsSection.swift":
+  const-values: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AtAGlanceCardsSection.swiftconstvalues"
+  object: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AtAGlanceCardsSection.o"
+  diagnostics: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AtAGlanceCardsSection.dia"
+  dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AtAGlanceCardsSection.d"
+  swift-dependencies: "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Debug-iphoneos/VoiceAssistant.build/Objects-normal/arm64/AtAGlanceCardsSection.swiftdeps"

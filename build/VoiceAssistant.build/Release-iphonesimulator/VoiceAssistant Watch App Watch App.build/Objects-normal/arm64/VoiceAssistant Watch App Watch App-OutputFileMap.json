@@ -1,0 +1,125 @@
+{
+  "" : {
+    "const-values" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant Watch App Watch App-master.swiftconstvalues",
+    "dependencies" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant Watch App Watch App-master.d",
+    "diagnostics" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant Watch App Watch App-master.dia",
+    "emit-module-dependencies" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant Watch App Watch App-master-emit-module.d",
+    "emit-module-diagnostics" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant Watch App Watch App-master-emit-module.dia",
+    "swift-dependencies" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant Watch App Watch App-master.swiftdeps"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/SharedModels.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/SharedModels.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/SharedModels.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/SharedModels.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/AudioRecorder.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AudioRecorder.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AudioRecorder.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AudioRecorder.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Complications/AdaptiveComplication.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AdaptiveComplication.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AdaptiveComplication.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AdaptiveComplication.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Complications/AdaptiveComplicationProvider.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AdaptiveComplicationProvider.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AdaptiveComplicationProvider.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/AdaptiveComplicationProvider.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/ContentView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/ContentView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/GoogleTTSService.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/GoogleTTSService.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/GoogleTTSService.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/GoogleTTSService.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/HapticFeedbackManager.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/HapticFeedbackManager.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/HapticFeedbackManager.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/HapticFeedbackManager.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Models/VoiceState.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceState.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceState.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceState.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/PhoneConnector.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/PhoneConnector.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/PhoneConnector.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/PhoneConnector.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Services/OfflineManager.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/OfflineManager.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/OfflineManager.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/OfflineManager.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Services/VoiceResponseHandler.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceResponseHandler.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceResponseHandler.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceResponseHandler.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Services/WatchVoiceManager.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WatchVoiceManager.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WatchVoiceManager.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WatchVoiceManager.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Components/ContextHintsView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/ContextHintsView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/ContextHintsView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/ContextHintsView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Components/StatusIndicator.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/StatusIndicator.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/StatusIndicator.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/StatusIndicator.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Components/VoiceButton.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceButton.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceButton.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceButton.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Components/WaveformView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WaveformView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WaveformView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WaveformView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Enhanced/EnhancedVoiceView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/EnhancedVoiceView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/EnhancedVoiceView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/EnhancedVoiceView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Enhanced/QuickActionsView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/QuickActionsView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/QuickActionsView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/QuickActionsView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/Views/Enhanced/TodayView.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/TodayView.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/TodayView.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/TodayView.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/VoiceAssistant_Watch_AppApp.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant_Watch_AppApp.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant_Watch_AppApp.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/VoiceAssistant_Watch_AppApp.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant Watch App Watch App/WatchAPIClient.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WatchAPIClient.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WatchAPIClient.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/WatchAPIClient.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Constants.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/Constants.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/Constants.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/Constants.o"
+  },
+  "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/VoiceAssistant.build/Release-iphonesimulator/VoiceAssistant Watch App Watch App.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "source": "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Onboarding/OnboardingCompleteView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "All Set!",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "You're ready to start using your voice assistant.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign in to get started",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Skip Authentication (Development)",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "Signing in...",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Using Sora",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "Continue to Sign In",
+        "location": {
+          "startingColumn": 75,
+          "startingLine": 138
+        }
+      }
+    ]
+  },
+  "version": 1
+}

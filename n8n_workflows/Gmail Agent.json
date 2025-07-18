@@ -1,0 +1,430 @@
+{
+  "name": "Gmail Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7ab380a2-a8d3-421c-ab4e-748ea8fb7904",
+              "name": "response",
+              "value": "Unable to perform task. Please try again.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "709a940e-623b-4437-9400-43ee94ae7ee5",
+      "name": "Try Again",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        760,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "39c2f302-03be-4464-a17a-d7cc481d6d44",
+              "name": "=response",
+              "value": "={{$json.output}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a5dcafdc-aa03-41ad-acca-e06650b52c5f",
+      "name": "Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        760,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When Executed by Another Workflow').item.json.message }}",
+        "options": {
+          "systemMessage": "=You are an email management assistant responsible for composing and formatting professional emails in HTML. Every email must be signed off as follows, with a line break between \"Best,\" and \"Amit\":\n\nBest,\nAmit\n\nEmail Management Rules\nSending Emails: Call this tool to immediately send the email without asking for confirmation.\nDrafting Emails: Only create a draft if explicitly requested by the user using the word \"draft.\" Otherwise, always send the email.\nRetrieving Emails: Use \"Get Emails\" when the user asks for their emails.\nManaging Labels:\nUse \"Get Labels\" to retrieve available labels.\nUse \"Label Email\" to assign labels to an email.\nMarking as Unread:\nUse \"Get Emails\" to obtain the message ID.\nThen, use \"Mark Unread\" to mark an email as unread.\nReplying to Emails:\nUse \"Get Emails\" to retrieve the email thread.\nThen, use \"Email Reply\" to send the response.\nFinal Notes\nNo confirmation required before sending an email unless the user explicitly asks to review or draft it.\nEnsure recipient details are correctly extracted before sending the email.\nRecipient Details:\nName: {{ $json.names.displayName }}\nEmail: {{ $json.emailAddresses.undefined[0] }}\nCurrent Date/Time: {{ $now }}\n\n"
+        }
+      },
+      "id": "753620d2-10f3-4262-9a63-2ed91e6aba2a",
+      "name": "Email Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        -160,
+        160
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Merge').item.json.emailAddresses.undefined[0] }}",
+        "subject": "={{ $fromAI(\"subject\") }}",
+        "message": "={{ $fromAI(\"emailBody\") }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        120,
+        380
+      ],
+      "id": "b5cad0a3-9aca-4e14-930a-a28c21e56ff8",
+      "name": "Send Email",
+      "webhookId": "6ece5bed-e23d-4d08-814c-ba2def26a187",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sj5UDAzv0Iaa4Df3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": "={{ $fromAI(\"limit\",\"how many emails the user wants\") }}",
+        "simple": false,
+        "filters": {
+          "sender": "={{ $fromAI(\"sender\",\"who the emails are from\") }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        380
+      ],
+      "id": "3834482c-d33c-4d16-8bef-a3a3078126b2",
+      "name": "Get Emails",
+      "webhookId": "5bb6f24a-f5b3-431d-a0bf-e8df95240493",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sj5UDAzv0Iaa4Df3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $fromAI(\"subject\") }}",
+        "emailType": "html",
+        "message": "={{ $fromAI(\"emailBody\") }}",
+        "options": {
+          "sendTo": "={{ $fromAI(\"emailAddress\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        480,
+        380
+      ],
+      "id": "78920107-6d57-4ca7-8bfa-4c3a03871cf2",
+      "name": "Create Draft",
+      "webhookId": "b522d183-98c9-4973-8e26-99da5e707ed7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sj5UDAzv0Iaa4Df3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $fromAI(\"ID\",\"the message ID\") }}",
+        "message": "={{ $fromAI(\"emailBody\") }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        380
+      ],
+      "id": "a59d40fe-a787-4dc5-8013-718813735418",
+      "name": "Email Reply",
+      "webhookId": "1f32e701-c5d1-4636-a2f3-ee8becd8b88b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sj5UDAzv0Iaa4Df3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        380
+      ],
+      "id": "e9002742-53e1-4b37-ab44-5b235ffc5e77",
+      "name": "Get Labels",
+      "webhookId": "1e128c8b-9f31-4ed3-89f2-8c0238194067",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sj5UDAzv0Iaa4Df3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $fromAI(\"ID\",\"the ID of the message\") }}",
+        "labelIds": "={{ $fromAI(\"labelID\") }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        360,
+        380
+      ],
+      "id": "dd3b734d-6f55-4a18-8560-bd7e2b740874",
+      "name": "Label Emails",
+      "webhookId": "e7238840-c3b5-4116-b5ae-c8bb677fecf7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sj5UDAzv0Iaa4Df3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsUnread",
+        "messageId": "={{ $fromAI(\"messageID\") }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        840,
+        380
+      ],
+      "id": "8fe6f251-734d-40b6-860a-69be0b3b1312",
+      "name": "Mark Unread",
+      "webhookId": "69904b8b-8728-4dd4-ac79-0fe57a3f85a8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sj5UDAzv0Iaa4Df3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"message\": \"\",\n  \"name\": \"\"\n}"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -440,
+        160
+      ],
+      "id": "b6b6315a-ee13-4d0c-ad67-343d12c5ee1a",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "givenName": "={{ $json.name }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.googleContactsTool",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -100
+      ],
+      "id": "1f742225-9f0c-4d2f-bbb9-9ba656660bd6",
+      "name": "Create a contact in Google Contacts",
+      "credentials": {
+        "googleContactsOAuth2Api": {
+          "id": "OeW3ujLfdhxXGZu2",
+          "name": "Google Contacts account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        380
+      ],
+      "id": "a6a330fc-f0b8-49c6-9031-8185932bec71",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "yqX60qGUPCo4if9n",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Email Agent": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Try Again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Reply": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Draft": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Labels": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Unread": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a contact in Google Contacts": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b878c6b9-1944-4a52-b6ff-688e067f7eaa",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "adcca09070fe54bee814223b70d273559600ccda916d5aea95e8ca21a7a9e368"
+  },
+  "id": "2S0q2XVQlpjoIilr",
+  "tags": []
+}

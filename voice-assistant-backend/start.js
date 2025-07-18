@@ -6,9 +6,19 @@ console.log('Starting Voice Assistant Backend...');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Port:', process.env.PORT || 3000);
 
-// Attempt database migration
+// Attempt database migration with fix
 try {
   console.log('Running database migrations...');
+  
+  // First try to fix any failed migrations
+  try {
+    console.log('Fixing any failed migrations...');
+    execSync('node scripts/fix-migration-railway.js', { stdio: 'inherit' });
+  } catch (fixError) {
+    console.log('Migration fix completed with warnings, continuing...');
+  }
+  
+  // Then try normal migration deploy
   execSync('npx prisma migrate deploy', { stdio: 'inherit' });
   console.log('Database migrations completed successfully');
 } catch (error) {

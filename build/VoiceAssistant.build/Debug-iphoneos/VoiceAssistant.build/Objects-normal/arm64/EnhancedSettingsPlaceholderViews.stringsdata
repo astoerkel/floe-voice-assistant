@@ -1,0 +1,296 @@
+{
+  "source": "/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/VoiceAssistant/Views/Enhanced/EnhancedSettingsPlaceholderViews.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Command History",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Command History",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 16
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your recent voice commands will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 20
+        }
+      },
+      {
+        "comment": "",
+        "key": "Usage Analytics",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Usage Analytics",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your usage statistics and analytics will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "Privacy Controls",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "Privacy Controls",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Privacy settings and controls will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 54
+        }
+      },
+      {
+        "comment": "",
+        "key": "Data Access Log",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "Data Access Log",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your data access logs will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "Security Settings",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Security Settings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 84
+        }
+      },
+      {
+        "comment": "",
+        "key": "Security settings and configurations will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accessibility Settings",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 110
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accessibility Settings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accessibility options and settings will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Watch Sync",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "Watch Sync Settings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Apple Watch sync settings will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Complications",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "Complication Settings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 135
+        }
+      },
+      {
+        "comment": "",
+        "key": "Apple Watch complication settings will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 139
+        }
+      },
+      {
+        "comment": "",
+        "key": "Haptic Patterns",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "Watch Haptic Settings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 152
+        }
+      },
+      {
+        "comment": "",
+        "key": "Apple Watch haptic pattern settings will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 156
+        }
+      },
+      {
+        "comment": "",
+        "key": "Backend Settings",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 178
+        }
+      },
+      {
+        "comment": "",
+        "key": "Backend Settings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 169
+        }
+      },
+      {
+        "comment": "",
+        "key": "Backend configuration settings will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "Developer Options",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 195
+        }
+      },
+      {
+        "comment": "",
+        "key": "Developer Options",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 186
+        }
+      },
+      {
+        "comment": "",
+        "key": "Developer tools and debugging options will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 190
+        }
+      },
+      {
+        "comment": "",
+        "key": "About",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 212
+        }
+      },
+      {
+        "comment": "",
+        "key": "About",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 203
+        }
+      },
+      {
+        "comment": "",
+        "key": "App information and version details will appear here",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 207
+        }
+      }
+    ]
+  },
+  "version": 1
+}

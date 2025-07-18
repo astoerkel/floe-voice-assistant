@@ -41,6 +41,9 @@ npm run migrate
 
 # Start background worker
 npm run worker
+
+# Deploy to Railway (✅ WORKING - Apple Speech Framework Integration Deployed)
+railway up --service "VoiceAssistant Floe"
 ```
 
 ### Testing
@@ -86,11 +89,14 @@ The app uses WatchConnectivity framework for iPhone-Watch communication:
 ## Audio Processing Pipeline
 
 1. **Recording**: AVAudioRecorder captures audio on device
-2. **Transcription**: Apple Speech Recognition converts to text
-3. **API Call**: Transcribed text sent to backend webhook
+2. **Transcription**: Apple Speech Recognition converts to text (Primary) OR OpenAI Whisper (Fallback)
+3. **API Call**: Transcribed text sent to backend via new `/api/voice/process-text` endpoint
 4. **AI Processing**: Backend processes request through LangChain agents
-5. **Response**: Base64-encoded audio response returned
+5. **Response**: Base64-encoded audio response returned via Google Text-to-Speech
 6. **Playback**: Audio decoded and played on originating device
+7. **Analytics**: Transcription method and performance metrics tracked
+
+**✅ DEPLOYMENT STATUS**: Apple Speech Framework integration with Whisper fallback successfully deployed to Railway production environment. Watch app HTTP 500 errors resolved through comprehensive database schema migrations.
 
 ## Important File Locations
 
