@@ -14,7 +14,11 @@
     "migrate": "npx prisma migrate deploy",
     "postinstall": "npx prisma generate",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "validate-deployment": "node scripts/validate-deployment.js",
+    "deploy-migrations": "node scripts/deploy-migrations.js",
+    "deploy-oauth": "node scripts/deploy-oauth.js",
+    "oauth-setup": "npm run validate-deployment && npm run deploy-migrations"
   },
   "keywords": [
     "voice-assistant",

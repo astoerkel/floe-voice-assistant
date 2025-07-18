@@ -21,6 +21,7 @@ const tasksRoutes = require('./routes/tasks');
 const integrationsRoutes = require('./routes/integrations');
 const syncRoutes = require('./routes/sync');
 const queueRoutes = require('./routes/queue');
+const oauthRoutes = require('./routes/oauth');
 
 // Import WebSocket handlers
 const initializeWebSocket = require('./websocket');
@@ -91,6 +92,7 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/integrations', integrationsRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/queue', queueRoutes);
+app.use('/api/oauth', oauthRoutes);
 
 // Static file serving for audio files
 app.use('/audio', express.static(process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data/audio'));

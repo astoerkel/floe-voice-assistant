@@ -1,25 +1,28 @@
 const express = require('express');
 const router = express.Router();
+const integrationsController = require('../controllers/integrations.controller');
+const { authenticateToken } = require('../services/auth/middleware');
 
-// Integrations routes placeholder
-router.get('/', (req, res) => {
-  res.status(501).json({ message: 'Get integrations not implemented yet' });
-});
+// Calendar endpoints
+router.get('/calendar/events', authenticateToken, integrationsController.getCalendarEvents);
+router.post('/calendar/events', authenticateToken, integrationsController.createCalendarEvent);
+router.put('/calendar/events/:eventId', authenticateToken, integrationsController.updateCalendarEvent);
+router.delete('/calendar/events/:eventId', authenticateToken, integrationsController.deleteCalendarEvent);
 
-router.post('/google/connect', (req, res) => {
-  res.status(501).json({ message: 'Google integration not implemented yet' });
-});
+// Email endpoints
+router.get('/email/messages', authenticateToken, integrationsController.getEmails);
+router.get('/email/messages/:emailId', authenticateToken, integrationsController.getEmail);
+router.post('/email/send', authenticateToken, integrationsController.sendEmail);
+router.post('/email/messages/:emailId/reply', authenticateToken, integrationsController.replyToEmail);
 
-router.post('/airtable/connect', (req, res) => {
-  res.status(501).json({ message: 'Airtable integration not implemented yet' });
-});
+// Task endpoints
+router.get('/tasks', authenticateToken, integrationsController.getTasks);
+router.get('/tasks/:taskId', authenticateToken, integrationsController.getTask);
+router.post('/tasks', authenticateToken, integrationsController.createTask);
+router.put('/tasks/:taskId', authenticateToken, integrationsController.updateTask);
+router.delete('/tasks/:taskId', authenticateToken, integrationsController.deleteTask);
 
-router.delete('/:id', (req, res) => {
-  res.status(501).json({ message: 'Delete integration not implemented yet' });
-});
-
-router.get('/:id/status', (req, res) => {
-  res.status(501).json({ message: 'Integration status not implemented yet' });
-});
+// Integration status
+router.get('/:type/status', authenticateToken, integrationsController.getIntegrationStatus);
 
 module.exports = router;

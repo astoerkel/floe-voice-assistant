@@ -14,9 +14,26 @@ model User {
   id                String   @id @default(cuid())
   email             String   @unique
   name              String?
+  provider          String   @default("apple") // 'apple', 'google', 'email'
+  providerId        String?
   appleId           String?  @unique
   googleId          String?  @unique
+  passwordHash      String?
   profilePicture    String?
+  
+  // Subscription fields
+  subscriptionStatus String   @default("trial")
+  subscriptionPlan   String   @default("trial")
+  trialStartsAt      DateTime @default(now())
+  trialEndsAt        DateTime?
+  subscriptionEndsAt DateTime?
+  
+  // Usage tracking
+  commandsThisMonth  Int      @default(0)
+  commandsTotal      Int      @default(0)
+  lastCommandAt      DateTime?
+  lastResetAt        DateTime @default(now())
+  
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   lastActive        DateTime @default(now())
@@ -33,6 +50,8 @@ model User {
   notificationPreferences NotificationPreference?
   transcriptionEvents TranscriptionEvent[]
 
+  @@index([email])
+  @@index([subscriptionStatus])
   @@map("users")
 }
 
@@ -53,20 +72,32 @@ model RefreshToken {
 model Integration {
   id           String   @id @default(cuid())
   userId       String
-  provider     String   // 'google', 'airtable', 'microsoft', 'apple'
-  type         String?  // Optional: 'calendar', 'email', 'tasks'
-  accessToken  String
-  refreshToken String?
+  type         String   // 'google', 'airtable', 'google_calendar', 'gmail', 'google_drive'
+  
+  // OAuth tokens
+  accessToken  String   @db.Text
+  refreshToken String?  @db.Text
+  tokenType    String   @default("Bearer")
   expiresAt    DateTime?
-  scope        String?
-  active       Boolean  @default(true)
+  scope        String?  @db.Text
+  
+  // Integration metadata
+  isActive     Boolean  @default(true)
+  lastSyncAt   DateTime?
+  syncErrors   Json?
+  
+  // Service-specific data
+  serviceData  Json?    // Store service-specific info (calendar IDs, base IDs, etc.)
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
-  // Relationships
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, provider])
+  
+  @@unique([userId, type])
+  @@index([userId])
+  @@index([type])
+  @@index([expiresAt])
   @@map("integrations")
 }
 
@@ -388,4 +419,19 @@ model TaskActivity {
   createdAt   DateTime @default(now())
   
   @@map("task_activities")
+}
+
+model OAuthState {
+  id          String   @id @default(cuid())
+  state       String   @unique
+  userId      String?
+  provider    String   // 'google', 'airtable'
+  returnUrl   String?
+  codeVerifier String? // For PKCE
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  
+  @@index([state])
+  @@index([expiresAt])
+  @@map("oauth_states")
 }
