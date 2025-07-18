@@ -5,6 +5,7 @@ const {
   controller, 
   processVoiceValidation, 
   processVoiceAudioValidation, 
+  processTextValidation,
   synthesizeSpeechValidation 
 } = require('../controllers/voice.controller');
 const { authenticateToken } = require('../services/auth/middleware');
@@ -22,13 +23,14 @@ const upload = multer({
   }
 });
 
-// Development-only endpoint that bypasses authentication
-router.post('/dev/process-audio', upload.single('audio'), processVoiceAudioValidation, controller.processVoiceAudio);
+// Development-only endpoint with authentication (still uses development tokens)
+router.post('/dev/process-audio', upload.single('audio'), authenticateToken, processVoiceAudioValidation, controller.processVoiceAudio);
 
 // All other voice routes require authentication
 router.use(authenticateToken);
 
 // Voice processing routes
+router.post('/process-text', processTextValidation, controller.processText);
 router.post('/process', processVoiceValidation, controller.processVoiceCommand);
 router.post('/process-audio', upload.single('audio'), processVoiceAudioValidation, controller.processVoiceAudio);
 
@@ -48,10 +50,11 @@ router.get('/conversations', controller.getConversationHistory);
 router.delete('/conversations', controller.clearConversationHistory);
 router.get('/context', controller.getUserContext);
 router.get('/stats', controller.getVoiceStats);
+router.get('/analytics', controller.getTranscriptionAnalytics);
 
-// Streaming routes (placeholder)
+// Streaming routes for real-time processing
 router.post('/stream-start', controller.streamStart);
-router.post('/stream-chunk', controller.streamChunk);
+router.post('/stream-process', controller.streamProcess);
 router.post('/stream-end', controller.streamEnd);
 
 module.exports = router;
