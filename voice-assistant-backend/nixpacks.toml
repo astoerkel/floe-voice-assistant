@@ -5,7 +5,7 @@ nixPkgs = ["nodejs-18_x"]
 cmds = ["npm install", "npx prisma generate"]
 
 [phases.start]
-cmd = "npm start"
+cmd = "npm run start:simple"
 
 [variables]
 NODE_ENV = "production"

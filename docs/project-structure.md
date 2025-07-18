@@ -277,6 +277,40 @@ model TranscriptionEvent {
 - **Fallback Rate**: Measures how often Whisper fallback is used
 - **Performance Metrics**: Compares processing times between methods
 
+## Recent Backend Modifications (2025-07-18)
+
+### Airtable Integration Fixes
+The following changes were made to resolve Railway deployment failures:
+
+#### Modified Files
+- **`src/controllers/integrations.controller.js`**: Commented out Airtable service imports
+- **`src/services/queue/processors/taskProcessor.js`**: Added mock Airtable service with stub methods
+
+#### Mock Service Implementation
+```javascript
+// Mock Airtable service until API key is available
+const airtableService = {
+  createTask: async (task) => {
+    logger.warn('Airtable service disabled - returning mock response');
+    return { id: `mock-${Date.now()}`, ...task };
+  },
+  updateTask: async (taskId, updates) => {
+    logger.warn('Airtable service disabled - returning mock response');  
+    return { id: taskId, ...updates };
+  },
+  listTasks: async () => {
+    logger.warn('Airtable service disabled - returning empty list');
+    return [];
+  }
+};
+```
+
+#### Impact
+- **Deployment**: Railway deployment now succeeds without Airtable API key
+- **Functionality**: Task-related features return mock responses until Airtable is re-enabled
+- **Logging**: Clear warnings in logs when mock service is used
+- **Future Work**: Re-enable Airtable service when API key is available
+
 ## File Naming Conventions
 
 ### Frontend (Swift) Files

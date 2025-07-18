@@ -496,7 +496,7 @@ class EnhancedVoiceViewModel: ObservableObject {
 struct ConversationContext {
     let lastCommand: ProcessedCommand?
     let activeCalendarEvent: CalendarEvent?
-    let currentTask: TaskItem?
+    let currentTask: QuickTaskItem?
     let sessionId: String
 }
 
@@ -514,7 +514,7 @@ enum CommandIntent {
     case general
 }
 
-struct TaskItem {
+struct QuickTaskItem {
     let id: String
     let title: String
     let isCompleted: Bool

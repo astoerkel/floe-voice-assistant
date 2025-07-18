@@ -26,7 +26,7 @@ struct OAuthIntegrationsView: View {
                     integrationCard(
                         title: "Google Services",
                         subtitle: "Calendar, Gmail, Drive, Sheets",
-                        icon: "logo.google",
+                        icon: "globe",
                         isConnected: oauthManager.isGoogleConnected,
                         integration: oauthManager.getIntegrationsByType("google").first
                     ) {

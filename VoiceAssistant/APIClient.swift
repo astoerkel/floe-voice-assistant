@@ -526,4 +526,108 @@ class APIClient: ObservableObject {
         
         webSocketManager.clearConversationHistory()
     }
+    
+    // MARK: - Generic HTTP Methods
+    
+    func get(_ endpoint: String, queryParams: [String: String]? = nil) async throws -> [String: Any] {
+        var urlComponents = URLComponents(string: "\(baseURL)\(endpoint)")
+        
+        if let queryParams = queryParams {
+            urlComponents?.queryItems = queryParams.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+        
+        guard let url = urlComponents?.url else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              200...299 ~= httpResponse.statusCode else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+    
+    func post(_ endpoint: String, body: [String: Any]) async throws -> [String: Any] {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              200...299 ~= httpResponse.statusCode else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+    
+    func put(_ endpoint: String, body: [String: Any]) async throws -> [String: Any] {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              200...299 ~= httpResponse.statusCode else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+    
+    func delete(_ endpoint: String) async throws -> [String: Any] {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              200...299 ~= httpResponse.statusCode else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
 }

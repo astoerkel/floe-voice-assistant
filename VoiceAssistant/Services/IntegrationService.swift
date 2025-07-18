@@ -127,7 +127,7 @@ class IntegrationService: ObservableObject {
     
     // MARK: - Task Integration
     
-    func getTasks(status: String? = nil, priority: String? = nil) async throws -> [Task] {
+    func getTasks(status: String? = nil, priority: String? = nil) async throws -> [TaskItem] {
         isLoading = true
         defer { isLoading = false }
         
@@ -147,7 +147,7 @@ class IntegrationService: ObservableObject {
             if let tasksData = response["tasks"] as? [[String: Any]] {
                 return try tasksData.compactMap { taskData in
                     let jsonData = try JSONSerialization.data(withJSONObject: taskData)
-                    return try JSONDecoder().decode(Task.self, from: jsonData)
+                    return try JSONDecoder().decode(TaskItem.self, from: jsonData)
                 }
             }
             
@@ -158,7 +158,7 @@ class IntegrationService: ObservableObject {
         }
     }
     
-    func createTask(title: String, description: String? = nil, priority: String = "Normal", dueDate: Date? = nil) async throws -> Task {
+    func createTask(title: String, description: String? = nil, priority: String = "Normal", dueDate: Date? = nil) async throws -> TaskItem {
         isLoading = true
         defer { isLoading = false }
         
@@ -180,7 +180,7 @@ class IntegrationService: ObservableObject {
             
             if let taskData = response["task"] as? [String: Any] {
                 let jsonData = try JSONSerialization.data(withJSONObject: taskData)
-                return try JSONDecoder().decode(Task.self, from: jsonData)
+                return try JSONDecoder().decode(TaskItem.self, from: jsonData)
             }
             
             throw IntegrationError.invalidResponse
@@ -190,7 +190,7 @@ class IntegrationService: ObservableObject {
         }
     }
     
-    func updateTask(_ taskId: String, title: String? = nil, description: String? = nil, status: String? = nil, priority: String? = nil) async throws -> Task {
+    func updateTask(_ taskId: String, title: String? = nil, description: String? = nil, status: String? = nil, priority: String? = nil) async throws -> TaskItem {
         isLoading = true
         defer { isLoading = false }
         
@@ -217,7 +217,7 @@ class IntegrationService: ObservableObject {
             
             if let taskData = response["task"] as? [String: Any] {
                 let jsonData = try JSONSerialization.data(withJSONObject: taskData)
-                return try JSONDecoder().decode(Task.self, from: jsonData)
+                return try JSONDecoder().decode(TaskItem.self, from: jsonData)
             }
             
             throw IntegrationError.invalidResponse
@@ -265,7 +265,7 @@ struct Email: Identifiable, Codable {
     }
 }
 
-struct Task: Identifiable, Codable {
+struct TaskItem: Identifiable, Codable {
     let id: String
     let title: String
     let description: String?
@@ -287,7 +287,7 @@ struct IntegrationStatus: Codable {
     let lastSyncAt: Date?
     let createdAt: Date
     let expiresAt: Date?
-    let syncErrors: [String: Any]?
+    let syncErrors: [String: String]?
     
     enum CodingKeys: String, CodingKey {
         case id, type, isActive, lastSyncAt, createdAt, expiresAt, syncErrors

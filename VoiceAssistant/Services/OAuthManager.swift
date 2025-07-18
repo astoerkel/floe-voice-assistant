@@ -80,10 +80,12 @@ class OAuthManager: ObservableObject {
             return
         }
         
-        if await UIApplication.shared.canOpenURL(url) {
-            await UIApplication.shared.open(url)
-        } else {
-            errorMessage = "Cannot open authorization URL"
+        await MainActor.run {
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+            } else {
+                errorMessage = "Cannot open authorization URL"
+            }
         }
     }
     

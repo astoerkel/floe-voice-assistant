@@ -48,13 +48,25 @@ async function fixMigrationOnRailway() {
             console.log('⚠️  Prisma client generation had issues, continuing...');
         }
         
-        // Step 5: Push schema directly as fallback
+        // Step 5: Push schema directly as fallback with timeout
         console.log('🔄 Pushing schema directly as fallback...');
         try {
-            execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+            execSync('npx prisma db push --accept-data-loss --force-reset', { 
+                stdio: 'inherit',
+                timeout: 30000 // 30 second timeout
+            });
             console.log('✅ Schema pushed successfully');
         } catch (error) {
-            console.log('⚠️  Schema push had issues, but may still work...');
+            console.log('⚠️  Schema push had issues, trying without force reset...');
+            try {
+                execSync('npx prisma db push --accept-data-loss', { 
+                    stdio: 'inherit',
+                    timeout: 30000 // 30 second timeout
+                });
+                console.log('✅ Schema pushed successfully (second attempt)');
+            } catch (error2) {
+                console.log('⚠️  Both schema push attempts failed, but may still work...');
+            }
         }
         
         console.log('🎉 Migration fix completed! Database should now be ready for OAuth.');

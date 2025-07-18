@@ -165,7 +165,7 @@ struct IntegrationsSetupView: View {
 
 // MARK: - Service Integration Models
 
-enum IntegrationService: String, CaseIterable {
+enum IntegrationServiceType: String, CaseIterable {
     case googleCalendar = "google_calendar"
     case gmail = "gmail"
     case airtable = "airtable"
@@ -205,119 +205,33 @@ enum IntegrationService: String, CaseIterable {
 
 struct ConnectedService: Identifiable {
     let id = UUID()
-    let service: IntegrationService
+    let service: IntegrationServiceType
     let isConnected: Bool
     let connectedAt: Date?
 }
 
-// MARK: - OAuth Manager
+// MARK: - Local OAuth Manager Extension
 
-@MainActor
-class OAuthManager: ObservableObject {
-    @Published var connectedServices: [ConnectedService] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    
-    private let oauthService = OAuthService.shared
-    
-    init() {
-        loadConnectedServices()
-    }
-    
-    func isConnected(_ service: IntegrationService) -> Bool {
-        return oauthService.isConnected(service.rawValue)
+extension OAuthManager {
+    func isConnected(_ service: IntegrationServiceType) -> Bool {
+        return integrations.contains { $0.type == service.rawValue && $0.isActive }
     }
     
     func connectGoogleCalendar() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            _ = try await oauthService.connectGoogleCalendar()
-            
-            // Update UI state
-            updateConnectedService(.googleCalendar, isConnected: true)
-            
-            print("✅ Google Calendar connected successfully")
-            
-        } catch {
-            errorMessage = "Failed to connect Google Calendar: \(error.localizedDescription)"
-            print("❌ Google Calendar connection failed: \(error)")
-        }
-        
-        isLoading = false
+        await connectGoogleServices()
     }
     
     func connectGmail() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            _ = try await oauthService.connectGmail()
-            
-            // Update UI state
-            updateConnectedService(.gmail, isConnected: true)
-            
-            print("✅ Gmail connected successfully")
-            
-        } catch {
-            errorMessage = "Failed to connect Gmail: \(error.localizedDescription)"
-            print("❌ Gmail connection failed: \(error)")
-        }
-        
-        isLoading = false
+        await connectGoogleServices()
     }
     
     func connectAirtable() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            _ = try await oauthService.connectAirtable()
-            
-            // Update UI state
-            updateConnectedService(.airtable, isConnected: true)
-            
-            print("✅ Airtable connected successfully")
-            
-        } catch {
-            errorMessage = "Failed to connect Airtable: \(error.localizedDescription)"
-            print("❌ Airtable connection failed: \(error)")
-        }
-        
-        isLoading = false
-    }
-    
-    func refreshTokens() async {
-        await oauthService.refreshTokens()
-        loadConnectedServices()
-    }
-    
-    private func updateConnectedService(_ service: IntegrationService, isConnected: Bool) {
-        if let index = connectedServices.firstIndex(where: { $0.service == service }) {
-            connectedServices[index] = ConnectedService(
-                service: service,
-                isConnected: isConnected,
-                connectedAt: isConnected ? Date() : nil
-            )
-        } else {
-            connectedServices.append(ConnectedService(
-                service: service,
-                isConnected: isConnected,
-                connectedAt: isConnected ? Date() : nil
-            ))
-        }
-    }
-    
-    private func loadConnectedServices() {
-        for service in IntegrationService.allCases {
-            updateConnectedService(service, isConnected: oauthService.isConnected(service.rawValue))
-        }
+        await connectAirtableServices()
     }
 }
 
 struct IntegrationCard: View {
-    let service: IntegrationService
+    let service: IntegrationServiceType
     let isConnected: Bool
     let isEnabled: Bool
     let onConnect: () async -> Void
