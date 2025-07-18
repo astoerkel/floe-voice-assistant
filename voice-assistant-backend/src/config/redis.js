@@ -1,10 +1,12 @@
 const Redis = require('ioredis');
 const logger = require('../utils/logger');
 
+// DO NOT initialize Redis at module load time
 let redis = null;
 let isRedisAvailable = false;
+let redisConfig = null;
 
-// Mock Redis client for when Redis is not available
+// Mock Redis client for fallback
 const mockRedisClient = {
   get: async () => null,
   set: async () => 'OK',
@@ -15,73 +17,134 @@ const mockRedisClient = {
   ttl: async () => -1,
   keys: async () => [],
   flushall: async () => 'OK',
-  connect: async () => { logger.warn('Mock Redis client - no actual connection'); },
-  disconnect: async () => { logger.warn('Mock Redis client - no actual disconnection'); }
+  ping: async () => 'PONG',
+  quit: async () => 'OK',
+  disconnect: async () => {},
+  on: () => {}
 };
 
-// Check if Redis should be used - disable if URL contains localhost or railway internal
-const shouldUseRedis = process.env.REDIS_URL && 
-  !process.env.REDIS_URL.includes('localhost') && 
-  !process.env.REDIS_URL.includes('railway.internal') &&
-  !process.env.DISABLE_REDIS;
-
-if (shouldUseRedis) {
-  redis = new Redis(process.env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    retryDelayOnFailover: 100,
-    enableReadyCheck: false,
-    lazyConnect: true,
-    reconnectOnError: (err) => {
-      logger.error('Redis connection error:', err);
-      isRedisAvailable = false;
-      return false; // Don't retry indefinitely
-    }
+/**
+ * Get Redis configuration - called at connection time, not module load time
+ */
+function getRedisConfiguration() {
+  // Log all Redis-related environment variables for debugging
+  logger.info('Redis environment variables:', {
+    REDIS_URL: process.env.REDIS_URL ? 'set' : 'not set',
+    REDIS_HOST: process.env.REDIS_HOST || 'not set',
+    REDIS_PORT: process.env.REDIS_PORT || 'not set',
+    NODE_ENV: process.env.NODE_ENV
   });
-} else {
-  logger.warn('Redis disabled or not available - using fallback mode');
-  redis = mockRedisClient;
+
+  // Priority 1: Use REDIS_URL if available
+  if (process.env.REDIS_URL) {
+    logger.info('Using REDIS_URL from environment variable');
+    return { 
+      url: process.env.REDIS_URL,
+      type: 'url'
+    };
+  }
+
+  // Priority 2: In production, construct URL from host/port
+  if (process.env.NODE_ENV === 'production') {
+    const host = process.env.REDIS_HOST || '10.244.122.235';
+    const port = process.env.REDIS_PORT || '6379';
+    const url = `redis://${host}:${port}`;
+    logger.info(`Using production Redis URL: ${url}`);
+    return { 
+      url,
+      type: 'constructed'
+    };
+  }
+
+  // Priority 3: Development/fallback
+  logger.info('Using development Redis configuration');
+  return { 
+    url: 'redis://localhost:6379',
+    type: 'development'
+  };
 }
 
 const connectRedis = async () => {
-  if (!shouldUseRedis) {
-    logger.warn('Redis disabled or not available, using fallback mode');
-    redis = mockRedisClient;
-    isRedisAvailable = false;
-    return;
-  }
-  
   try {
-    await redis.connect();
-    isRedisAvailable = true;
-    logger.info('Connected to Redis successfully');
+    // Get configuration at connection time, not module load time
+    redisConfig = getRedisConfiguration();
     
+    logger.info('Attempting Redis connection with config:', {
+      type: redisConfig.type,
+      url: redisConfig.url
+    });
+
+    // Create Redis client with production-ready settings
+    redis = new Redis(redisConfig.url, {
+      maxRetriesPerRequest: 3,
+      retryDelayOnFailover: 100,
+      enableReadyCheck: true,
+      lazyConnect: false,
+      connectTimeout: 10000,
+      family: 4, // Force IPv4
+      retryStrategy: (times) => {
+        if (times > 3) {
+          logger.error('Redis connection failed after 3 retries');
+          return null; // Stop retrying
+        }
+        const delay = Math.min(times * 100, 3000);
+        logger.info(`Retrying Redis connection in ${delay}ms...`);
+        return delay;
+      }
+    });
+
+    // Set up event handlers
+    redis.on('connect', () => {
+      logger.info('Redis client connected successfully');
+      isRedisAvailable = true;
+    });
+
+    redis.on('ready', () => {
+      logger.info('Redis client ready');
+      isRedisAvailable = true;
+    });
+
     redis.on('error', (err) => {
       logger.error('Redis error:', err);
       isRedisAvailable = false;
     });
-    
-    redis.on('reconnecting', () => {
-      logger.info('Redis reconnecting...');
+
+    redis.on('close', () => {
+      logger.warn('Redis connection closed');
       isRedisAvailable = false;
     });
-    
-    redis.on('ready', () => {
-      logger.info('Redis ready');
-      isRedisAvailable = true;
-    });
+
+    // Test the connection
+    await redis.ping();
+    logger.info('Redis ping successful');
+    isRedisAvailable = true;
     
   } catch (error) {
     logger.error('Failed to connect to Redis:', error);
-    logger.warn('Falling back to database-only mode');
-    isRedisAvailable = false;
-    redis = mockRedisClient;
+    
+    if (process.env.NODE_ENV === 'production') {
+      // In production, this is critical - but let's try one more thing
+      logger.error('Redis connection failed in production - attempting fallback to mock client');
+      // Don't exit immediately - use mock client to keep service running
+      redis = mockRedisClient;
+      isRedisAvailable = false;
+      logger.warn('Using mock Redis client in production - OAuth features will be limited');
+    } else {
+      // In development, use mock client
+      logger.warn('Using mock Redis client for development');
+      redis = mockRedisClient;
+      isRedisAvailable = false;
+    }
   }
 };
 
 const disconnectRedis = async () => {
   try {
-    await redis.disconnect();
-    logger.info('Disconnected from Redis');
+    if (redis && redis.quit) {
+      await redis.quit();
+      logger.info('Disconnected from Redis');
+    }
+    isRedisAvailable = false;
   } catch (error) {
     logger.error('Error disconnecting from Redis:', error);
   }

@@ -487,4 +487,4 @@ class GmailIntegration {
   }
 }
 
-module.exports = new GmailIntegration();
+module.exports = GmailIntegration;

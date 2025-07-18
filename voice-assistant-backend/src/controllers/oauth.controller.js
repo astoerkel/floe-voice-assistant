@@ -2,6 +2,7 @@ const GoogleOAuthService = require('../services/oauth/googleOAuth');
 const AirtableOAuthService = require('../services/oauth/airtableOAuth');
 const { prisma } = require('../config/database');
 const logger = require('../utils/logger');
+const crypto = require('crypto');
 
 class OAuthController {
     constructor() {
@@ -41,11 +42,29 @@ class OAuthController {
                 return res.redirect(`${process.env.FRONTEND_URL || 'voiceassistant://oauth'}?error=missing_parameters`);
             }
             
-            const result = await this.googleOAuth.handleCallback(code, state);
+            // Check if this is a public OAuth flow
+            const { redis: redisClient } = require('../config/redis');
+            const sessionData = await redisClient.get(`oauth_session:${state}`);
             
-            // Redirect back to app (iOS deep link)
-            const returnUrl = result.returnUrl || `${process.env.FRONTEND_URL || 'voiceassistant://oauth'}`;
-            res.redirect(`${returnUrl}?success=google_connected`);
+            if (sessionData) {
+                // Handle public OAuth flow
+                const session = JSON.parse(sessionData);
+                const result = await this.googleOAuth.handlePublicCallback(code, state, session);
+                
+                // Clean up session
+                await redisClient.del(`oauth_session:${state}`);
+                
+                // Redirect back to app with JWT token
+                const returnUrl = session.returnUrl || `${process.env.FRONTEND_URL || 'voiceassistant://oauth'}`;
+                res.redirect(`${returnUrl}?success=google_connected&token=${result.jwtToken}&deviceId=${session.deviceId}`);
+            } else {
+                // Handle traditional OAuth flow (legacy)
+                const result = await this.googleOAuth.handleCallback(code, state);
+                
+                // Redirect back to app (iOS deep link)
+                const returnUrl = result.returnUrl || `${process.env.FRONTEND_URL || 'voiceassistant://oauth'}`;
+                res.redirect(`${returnUrl}?success=google_connected`);
+            }
             
         } catch (error) {
             logger.error('Google OAuth callback error:', error);
@@ -85,11 +104,29 @@ class OAuthController {
                 return res.redirect(`${process.env.FRONTEND_URL || 'voiceassistant://oauth'}?error=missing_parameters`);
             }
             
-            const result = await this.airtableOAuth.handleCallback(code, state);
+            // Check if this is a public OAuth flow
+            const { redis: redisClient } = require('../config/redis');
+            const sessionData = await redisClient.get(`oauth_session:${state}`);
             
-            // Redirect back to app (iOS deep link)
-            const returnUrl = result.returnUrl || `${process.env.FRONTEND_URL || 'voiceassistant://oauth'}`;
-            res.redirect(`${returnUrl}?success=airtable_connected`);
+            if (sessionData) {
+                // Handle public OAuth flow
+                const session = JSON.parse(sessionData);
+                const result = await this.airtableOAuth.handlePublicCallback(code, state, session);
+                
+                // Clean up session
+                await redisClient.del(`oauth_session:${state}`);
+                
+                // Redirect back to app with JWT token
+                const returnUrl = session.returnUrl || `${process.env.FRONTEND_URL || 'voiceassistant://oauth'}`;
+                res.redirect(`${returnUrl}?success=airtable_connected&token=${result.jwtToken}&deviceId=${session.deviceId}`);
+            } else {
+                // Handle traditional OAuth flow (legacy)
+                const result = await this.airtableOAuth.handleCallback(code, state);
+                
+                // Redirect back to app (iOS deep link)
+                const returnUrl = result.returnUrl || `${process.env.FRONTEND_URL || 'voiceassistant://oauth'}`;
+                res.redirect(`${returnUrl}?success=airtable_connected`);
+            }
             
         } catch (error) {
             logger.error('Airtable OAuth callback error:', error);
@@ -97,9 +134,105 @@ class OAuthController {
         }
     }
     
+    // Public OAuth endpoints (no authentication required)
+    async initGoogleOAuthPublic(req, res) {
+        try {
+            const { deviceId, returnUrl } = req.body;
+            
+            if (!deviceId) {
+                return res.status(400).json({
+                    error: 'Device ID is required'
+                });
+            }
+            
+            // Generate secure state token
+            const state = crypto.randomBytes(32).toString('hex');
+            
+            // Store OAuth session in Redis (5 minutes expiry)
+            const sessionData = {
+                deviceId,
+                returnUrl,
+                type: 'google',
+                createdAt: new Date().toISOString()
+            };
+            
+            // Store in Redis with expiration
+            const { redis: redisClient } = require('../config/redis');
+            await redisClient.setex(`oauth_session:${state}`, 300, JSON.stringify(sessionData));
+            
+            // Create Google OAuth URL
+            const result = await this.googleOAuth.createAuthUrl(state, returnUrl);
+            
+            res.json({
+                success: true,
+                authUrl: result.authUrl,
+                state: state
+            });
+            
+        } catch (error) {
+            logger.error('Public Google OAuth init error:', error);
+            res.status(500).json({
+                error: 'Failed to start Google OAuth',
+                message: error.message
+            });
+        }
+    }
+    
+    async initAirtableOAuthPublic(req, res) {
+        try {
+            const { deviceId, returnUrl } = req.body;
+            
+            if (!deviceId) {
+                return res.status(400).json({
+                    error: 'Device ID is required'
+                });
+            }
+            
+            // Generate secure state token
+            const state = crypto.randomBytes(32).toString('hex');
+            
+            // Store OAuth session in Redis (5 minutes expiry)
+            const sessionData = {
+                deviceId,
+                returnUrl,
+                type: 'airtable',
+                createdAt: new Date().toISOString()
+            };
+            
+            // Store in Redis with expiration
+            const { redis: redisClient } = require('../config/redis');
+            await redisClient.setex(`oauth_session:${state}`, 300, JSON.stringify(sessionData));
+            
+            // Create Airtable OAuth URL
+            const result = await this.airtableOAuth.createAuthUrl(state, returnUrl);
+            
+            res.json({
+                success: true,
+                authUrl: result.authUrl,
+                state: state
+            });
+            
+        } catch (error) {
+            logger.error('Public Airtable OAuth init error:', error);
+            res.status(500).json({
+                error: 'Failed to start Airtable OAuth',
+                message: error.message
+            });
+        }
+    }
+    
     // Integration management
     async getIntegrations(req, res) {
         try {
+            // If user is not authenticated, return empty integrations
+            if (!req.user) {
+                return res.json({
+                    success: true,
+                    integrations: [],
+                    status: 'not_authenticated'
+                });
+            }
+            
             const integrations = await prisma.integration.findMany({
                 where: { userId: req.user.id },
                 select: {

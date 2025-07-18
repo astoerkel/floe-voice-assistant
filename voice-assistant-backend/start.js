@@ -6,6 +6,12 @@ console.log('Starting Voice Assistant Backend...');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Port:', process.env.PORT || 3000);
 
+// Log Redis configuration for debugging
+console.log('Redis Configuration:');
+console.log('- REDIS_URL:', process.env.REDIS_URL ? 'Set (hidden)' : 'Not set');
+console.log('- REDIS_HOST:', process.env.REDIS_HOST || 'Not set');
+console.log('- REDIS_PORT:', process.env.REDIS_PORT || 'Not set');
+
 // Attempt database migration with fix
 try {
   console.log('Running database migrations...');

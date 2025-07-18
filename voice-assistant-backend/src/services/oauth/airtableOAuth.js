@@ -249,6 +249,123 @@ class AirtableOAuthService {
             // Don't throw error, just log it
         }
     }
+    
+    // Public OAuth methods (no existing user required)
+    async createAuthUrl(state, returnUrl = null) {
+        try {
+            const authUrl = `https://airtable.com/oauth2/v1/authorize?` +
+                `client_id=${process.env.AIRTABLE_CLIENT_ID}&` +
+                `redirect_uri=${process.env.BACKEND_URL}/api/oauth/airtable/callback&` +
+                `response_type=code&` +
+                `state=${state}&` +
+                `scope=data.records:read data.records:write`;
+            
+            logger.info(`Airtable OAuth URL created for state: ${state}`);
+            
+            return {
+                authUrl,
+                state
+            };
+            
+        } catch (error) {
+            logger.error('Airtable OAuth createAuthUrl error:', error);
+            throw error;
+        }
+    }
+    
+    async handlePublicCallback(code, state, sessionData) {
+        try {
+            // Exchange code for tokens
+            const tokenResponse = await axios.post('https://airtable.com/oauth2/v1/token', {
+                grant_type: 'authorization_code',
+                client_id: process.env.AIRTABLE_CLIENT_ID,
+                client_secret: process.env.AIRTABLE_CLIENT_SECRET,
+                code: code,
+                redirect_uri: `${process.env.BACKEND_URL}/api/oauth/airtable/callback`
+            });
+            
+            const tokens = tokenResponse.data;
+            
+            // Get user info
+            const userResponse = await axios.get('https://api.airtable.com/v0/meta/whoami', {
+                headers: {
+                    'Authorization': `Bearer ${tokens.access_token}`
+                }
+            });
+            
+            const userInfo = userResponse.data;
+            
+            // Create or get user
+            let user = await prisma.user.findUnique({
+                where: { email: userInfo.email }
+            });
+            
+            if (!user) {
+                // Create new user
+                user = await prisma.user.create({
+                    data: {
+                        email: userInfo.email,
+                        name: userInfo.name || userInfo.email,
+                        isActive: true,
+                        lastActive: new Date()
+                    }
+                });
+            }
+            
+            // Create or update integration
+            const integration = await prisma.integration.upsert({
+                where: {
+                    userId_type: {
+                        userId: user.id,
+                        type: 'airtable'
+                    }
+                },
+                update: {
+                    accessToken: tokens.access_token,
+                    refreshToken: tokens.refresh_token,
+                    expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+                    scope: tokens.scope,
+                    isActive: true,
+                    lastSyncAt: new Date(),
+                    serviceData: {
+                        userInfo: userInfo,
+                        tokenType: tokens.token_type
+                    }
+                },
+                create: {
+                    userId: user.id,
+                    type: 'airtable',
+                    accessToken: tokens.access_token,
+                    refreshToken: tokens.refresh_token,
+                    expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+                    scope: tokens.scope,
+                    isActive: true,
+                    lastSyncAt: new Date(),
+                    serviceData: {
+                        userInfo: userInfo,
+                        tokenType: tokens.token_type
+                    }
+                }
+            });
+            
+            // Generate JWT token for the user
+            const jwtService = require('../auth/jwt');
+            const jwtToken = jwtService.generateAccessToken(user.id);
+            
+            logger.info(`Airtable OAuth completed for user ${user.id}`);
+            
+            return {
+                integration,
+                user,
+                jwtToken,
+                returnUrl: sessionData.returnUrl
+            };
+            
+        } catch (error) {
+            logger.error('Airtable OAuth handlePublicCallback error:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = AirtableOAuthService;

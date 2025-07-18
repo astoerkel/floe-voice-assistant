@@ -22,7 +22,7 @@ router.post('/tasks', authenticateToken, integrationsController.createTask);
 router.put('/tasks/:taskId', authenticateToken, integrationsController.updateTask);
 router.delete('/tasks/:taskId', authenticateToken, integrationsController.deleteTask);
 
-// Integration status
-router.get('/:type/status', authenticateToken, integrationsController.getIntegrationStatus);
+// Integration status (allow unauthenticated requests)
+router.get('/:type/status', integrationsController.getIntegrationStatus);
 
 module.exports = router;

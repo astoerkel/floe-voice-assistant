@@ -418,4 +418,4 @@ class GoogleCalendarIntegration {
   }
 }
 
-module.exports = new GoogleCalendarIntegration();
+module.exports = GoogleCalendarIntegration;

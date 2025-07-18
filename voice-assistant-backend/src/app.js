@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 
 const logger = require('./utils/logger');
 const errorHandler = require('./middleware/errorHandler');
+const authenticateApiKey = require('./middleware/apiKeyAuth');
 const { connectRedis } = require('./config/redis');
 const { connectDatabase } = require('./config/database');
 
@@ -73,7 +74,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Logging middleware
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
 
-// Health check endpoint
+// Health check endpoint (no auth required)
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy', 
@@ -83,16 +84,25 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/voice', voiceRoutes);
-app.use('/api/calendar', calendarRoutes);
-app.use('/api/email', emailRoutes);
-app.use('/api/tasks', tasksRoutes);
-app.use('/api/integrations', integrationsRoutes);
-app.use('/api/sync', syncRoutes);
-app.use('/api/queue', queueRoutes);
-app.use('/api/oauth', oauthRoutes);
+// Public health endpoint for unauthenticated access
+app.get('/public/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    service: 'voice-assistant-backend'
+  });
+});
+
+// API routes (with authentication)
+app.use('/api/auth', authRoutes); // Auth routes handle their own authentication
+app.use('/api/voice', authenticateApiKey, voiceRoutes);
+app.use('/api/calendar', authenticateApiKey, calendarRoutes);
+app.use('/api/email', authenticateApiKey, emailRoutes);
+app.use('/api/tasks', authenticateApiKey, tasksRoutes);
+app.use('/api/integrations', authenticateApiKey, integrationsRoutes);
+app.use('/api/sync', authenticateApiKey, syncRoutes);
+app.use('/api/queue', authenticateApiKey, queueRoutes);
+app.use('/api/oauth', oauthRoutes); // OAuth routes handle their own authentication
 
 // Static file serving for audio files
 app.use('/audio', express.static(process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data/audio'));

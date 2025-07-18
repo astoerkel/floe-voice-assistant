@@ -1,10 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
 const logger = require('../utils/logger');
+const { getDatabaseUrl } = require('./gcp');
+
+// Get the appropriate database URL based on environment
+const databaseUrl = getDatabaseUrl();
 
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL,
+      url: databaseUrl,
     },
   },
   log: process.env.NODE_ENV === 'development' ? 
@@ -24,7 +28,7 @@ prisma.$on('error', (e) => {
 });
 
 const connectDatabase = async () => {
-  if (!process.env.DATABASE_URL) {
+  if (!databaseUrl) {
     logger.warn('DATABASE_URL not found, skipping database connection');
     return;
   }
@@ -34,6 +38,7 @@ const connectDatabase = async () => {
     try {
       await prisma.$connect();
       logger.info('Connected to PostgreSQL database');
+      logger.info(`Database connection: ${databaseUrl.replace(/:[^:@]*@/, ':***@')}`);
       return;
     } catch (error) {
       logger.error(`Failed to connect to database (${retries} retries left):`, error.message);

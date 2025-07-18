@@ -340,6 +340,19 @@ class IntegrationsController {
         try {
             const { type } = req.params;
             
+            // If user is not authenticated, return not connected status
+            if (!req.user || !req.user.id) {
+                return res.json({
+                    success: true,
+                    integration: {
+                        type: type,
+                        isActive: false,
+                        isConnected: false,
+                        status: 'not_authenticated'
+                    }
+                });
+            }
+            
             const integration = await prisma.integration.findUnique({
                 where: {
                     userId_type: {
@@ -359,8 +372,14 @@ class IntegrationsController {
             });
             
             if (!integration) {
-                return res.status(404).json({
-                    error: 'Integration not found'
+                return res.json({
+                    success: true,
+                    integration: {
+                        type: type,
+                        isActive: false,
+                        isConnected: false,
+                        status: 'not_connected'
+                    }
                 });
             }
             
