@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>YOUR_TEAM_ID</string>
+    <key>uploadBitcode</key>
+    <true/>
+    <key>compileBitcode</key>
+    <true/>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>signingStyle</key>
+    <string>automatic</string>
+    <key>stripSwiftSymbols</key>
+    <true/>
+    <key>destination</key>
+    <string>upload</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.your.app.bundle.id</key>
+        <string>YOUR_PROVISIONING_PROFILE_NAME</string>
+        <key>com.your.app.bundle.id.watchkitapp</key>
+        <string>YOUR_WATCH_PROVISIONING_PROFILE_NAME</string>
+        <key>com.your.app.bundle.id.watchkitapp.watchkitextension</key>
+        <string>YOUR_WATCH_EXTENSION_PROVISIONING_PROFILE_NAME</string>
+    </dict>
+</dict>
+</plist>

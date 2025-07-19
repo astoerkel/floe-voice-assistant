@@ -1,0 +1,71 @@
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.xcuserstate
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+
+# SPM
+.swiftpm/
+.build/
+
+# CocoaPods
+Pods/
+*.xcworkspace
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# App Store Connect
+AuthKey_*.p8
+
+# Logs
+*.log
+combined.log
+error.log
+
+# Backend folder (should be in separate repository)
+voice-assistant-backend/
+
+# Node modules (if any)
+node_modules/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+*.plist
+!Info.plist
+
+# Test coverage
+*.gcda
+*.gcno
+*.gcov
+
+# Instruments
+*.trace
+
+# Backup files
+*.backup
+*~
+
+# Temporary files
+*.tmp
+*.temp

@@ -9,10 +9,14 @@ import Foundation
 
 struct Constants {
     struct API {
-        static let baseURL = "https://voiceassistant-floe-production.up.railway.app"
-        static let webhookURL = "https://0s1sa1fd.rpcld.co/webhook-test/c8609ff3-adfe-4982-804a-5792f41f4443" // Legacy - to be removed
+        static let baseURL = "https://voice-assistant-backend-899362685715.us-central1.run.app"
+        static let webhookURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api/voice/process-audio"
+        static let devWebhookURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api/voice/dev/process-audio"
+        static let apiBaseURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api"
+        static let websocketURL = "wss://voice-assistant-backend-899362685715.us-central1.run.app"
         static let defaultVoiceId = "default"
         static let requestTimeout: TimeInterval = 30.0
+        static let apiKey = "voice-assistant-api-key-secure-2024"
     }
     
     struct Audio {

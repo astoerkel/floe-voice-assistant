@@ -59,6 +59,15 @@ class APIClient: ObservableObject {
         connectWebSocket()
     }
     
+    private func addCommonHeaders(to request: inout URLRequest) {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+    }
+    
     private func clearTokens() {
         UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.accessToken)
         UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.refreshToken)
@@ -72,6 +81,19 @@ class APIClient: ObservableObject {
         webSocketManager.disconnect()
     }
     
+    // MARK: - Public Authentication Methods
+    
+    func setAuthToken(_ token: String) {
+        self.accessToken = token
+        UserDefaults.standard.set(token, forKey: Constants.StorageKeys.accessToken)
+        DispatchQueue.main.async {
+            self.isAuthenticated = true
+        }
+        
+        // Connect to WebSocket after authentication
+        connectWebSocket()
+    }
+    
     // MARK: - WebSocket Management
     
     private func setupWebSocketCallbacks() {
@@ -81,7 +103,7 @@ class APIClient: ObservableObject {
             }
         }
         
-        webSocketManager.onAuthError = { [weak self] error in
+        webSocketManager.onAuthError = { error in
             print("❌ WebSocket authentication error: \(error)")
             // Handle auth error - might need to refresh tokens
         }
@@ -111,7 +133,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addCommonHeaders(to: &request)
         
         let body: [String: Any] = [
             "idToken": idToken,
@@ -164,7 +186,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addCommonHeaders(to: &request)
         
         if let refreshToken = refreshToken {
             let body: [String: Any] = ["refreshToken": refreshToken]
@@ -190,7 +212,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addCommonHeaders(to: &request)
         
         let body: [String: Any] = ["refreshToken": refreshToken]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
@@ -325,7 +347,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addCommonHeaders(to: &request)
         
         if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
@@ -349,6 +371,7 @@ class APIClient: ObservableObject {
         
         let boundary = "Boundary-\(UUID().uuidString)"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
         
         if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
@@ -542,7 +565,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addCommonHeaders(to: &request)
         
         if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
@@ -565,7 +588,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addCommonHeaders(to: &request)
         
         if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
@@ -590,7 +613,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addCommonHeaders(to: &request)
         
         if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
@@ -615,7 +638,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addCommonHeaders(to: &request)
         
         if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")

@@ -121,8 +121,17 @@ struct PermissionsFlowView: View {
     
     private func checkCurrentPermissions() {
         // Check microphone permission
-        let micStatus = AVAudioSession.sharedInstance().recordPermission
-        microphonePermission = PermissionStatus(from: micStatus)
+        let micStatus = AVAudioApplication.shared.recordPermission
+        switch micStatus {
+        case .granted:
+            microphonePermission = .granted
+        case .denied:
+            microphonePermission = .denied
+        case .undetermined:
+            microphonePermission = .unknown
+        @unknown default:
+            microphonePermission = .unknown
+        }
         
         // Check speech recognition permission
         let speechStatus = SFSpeechRecognizer.authorizationStatus()
@@ -132,7 +141,7 @@ struct PermissionsFlowView: View {
     private func requestMicrophonePermission() {
         isCheckingPermissions = true
         
-        AVAudioSession.sharedInstance().requestRecordPermission { granted in
+        AVAudioApplication.requestRecordPermission { granted in
             DispatchQueue.main.async {
                 self.microphonePermission = granted ? .granted : .denied
                 self.isCheckingPermissions = false
@@ -161,7 +170,7 @@ struct PermissionsFlowView: View {
         // Request microphone permission
         if microphonePermission != .granted {
             group.enter()
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
+            AVAudioApplication.requestRecordPermission { granted in
                 DispatchQueue.main.async {
                     self.microphonePermission = granted ? .granted : .denied
                     group.leave()

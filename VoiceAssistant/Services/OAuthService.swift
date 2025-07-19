@@ -9,6 +9,7 @@ import Foundation
 import AuthenticationServices
 import SafariServices
 
+@MainActor
 class OAuthService: NSObject, ObservableObject {
     static let shared = OAuthService()
     
@@ -26,87 +27,106 @@ class OAuthService: NSObject, ObservableObject {
     // MARK: - Google Calendar OAuth
     
     func connectGoogleCalendar() async throws {
+        isLoading = true
         return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.main.async {
-                self.isLoading = true
-                self.currentCompletionHandler = { result in
-                    switch result {
-                    case .success(_):
-                        continuation.resume(with: .success(()))
-                    case .failure(let error):
-                        continuation.resume(with: .failure(error))
-                    }
+            self.currentCompletionHandler = { result in
+                switch result {
+                case .success(_):
+                    continuation.resume(with: .success(()))
+                case .failure(let error):
+                    continuation.resume(with: .failure(error))
                 }
-                
-                self.startGoogleOAuthFlow(scope: "https://www.googleapis.com/auth/calendar")
             }
+            
+            self.startGoogleOAuthFlow(scope: "https://www.googleapis.com/auth/calendar")
         }
     }
     
     // MARK: - Gmail OAuth
     
     func connectGmail() async throws {
+        isLoading = true
         return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.main.async {
-                self.isLoading = true
-                self.currentCompletionHandler = { result in
-                    switch result {
-                    case .success(_):
-                        continuation.resume(with: .success(()))
-                    case .failure(let error):
-                        continuation.resume(with: .failure(error))
-                    }
+            self.currentCompletionHandler = { result in
+                switch result {
+                case .success(_):
+                    continuation.resume(with: .success(()))
+                case .failure(let error):
+                    continuation.resume(with: .failure(error))
                 }
-                
-                self.startGoogleOAuthFlow(scope: "https://www.googleapis.com/auth/gmail.readonly")
             }
+            
+            self.startGoogleOAuthFlow(scope: "https://www.googleapis.com/auth/gmail.readonly")
         }
     }
     
     // MARK: - Airtable OAuth
     
     func connectAirtable() async throws {
+        isLoading = true
         return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.main.async {
-                self.isLoading = true
-                self.currentCompletionHandler = { result in
-                    switch result {
-                    case .success(_):
-                        continuation.resume(with: .success(()))
-                    case .failure(let error):
-                        continuation.resume(with: .failure(error))
-                    }
+            self.currentCompletionHandler = { result in
+                switch result {
+                case .success(_):
+                    continuation.resume(with: .success(()))
+                case .failure(let error):
+                    continuation.resume(with: .failure(error))
                 }
-                
-                self.startAirtableOAuthFlow()
             }
+            
+            self.startAirtableOAuthFlow()
         }
     }
     
     // MARK: - Private OAuth Flow Methods
     
     private func startGoogleOAuthFlow(scope: String) {
-        let clientId = "YOUR_GOOGLE_CLIENT_ID" // Replace with actual client ID
-        let redirectURI = "com.voiceassistant://oauth/callback"
+        // Use backend OAuth endpoint instead of direct OAuth
+        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let state = "\(deviceId):\(UUID().uuidString)"
         
-        let authURL = "https://accounts.google.com/o/oauth2/v2/auth?" +
-            "client_id=\(clientId)&" +
-            "redirect_uri=\(redirectURI)&" +
-            "response_type=code&" +
-            "scope=\(scope.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&" +
-            "access_type=offline"
+        let authURL = "\(Constants.API.baseURL)/api/oauth/public/google/init?" +
+            "state=\(state)&" +
+            "scope=\(scope.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
         
-        guard let url = URL(string: authURL) else {
+        // Make API request to get the OAuth URL
+        Task {
+            do {
+                let request = URLRequest(url: URL(string: authURL)!)
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
+                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let oauthURL = json["authUrl"] as? String {
+                    
+                    await MainActor.run {
+                        self.startWebAuthSession(url: oauthURL, service: "google", state: state)
+                    }
+                } else {
+                    await MainActor.run {
+                        self.handleOAuthError(OAuthError.invalidURL)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.handleOAuthError(OAuthError.networkError)
+                }
+            }
+        }
+    }
+    
+    private func startWebAuthSession(url: String, service: String, state: String) {
+        guard let authURL = URL(string: url) else {
             handleOAuthError(OAuthError.invalidURL)
             return
         }
         
         authenticationSession = ASWebAuthenticationSession(
-            url: url,
-            callbackURLScheme: "com.voiceassistant"
+            url: authURL,
+            callbackURLScheme: "com.amitstoerkel.VoiceAssistant"
         ) { [weak self] callbackURL, error in
             DispatchQueue.main.async {
-                self?.handleOAuthCallback(callbackURL: callbackURL, error: error, service: "google")
+                self?.handleBackendOAuthCallback(callbackURL: callbackURL, error: error, service: service, state: state)
             }
         }
         
@@ -116,32 +136,37 @@ class OAuthService: NSObject, ObservableObject {
     }
     
     private func startAirtableOAuthFlow() {
-        let clientId = "YOUR_AIRTABLE_CLIENT_ID" // Replace with actual client ID
-        let redirectURI = "com.voiceassistant://oauth/callback"
+        // Use backend OAuth endpoint instead of direct OAuth
+        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        let state = "\(deviceId):\(UUID().uuidString)"
         
-        let authURL = "https://airtable.com/oauth2/v1/authorize?" +
-            "client_id=\(clientId)&" +
-            "redirect_uri=\(redirectURI)&" +
-            "response_type=code&" +
-            "scope=data.records:read data.records:write"
+        let authURL = "\(Constants.API.baseURL)/api/oauth/public/airtable/init?" +
+            "state=\(state)"
         
-        guard let url = URL(string: authURL) else {
-            handleOAuthError(OAuthError.invalidURL)
-            return
-        }
-        
-        authenticationSession = ASWebAuthenticationSession(
-            url: url,
-            callbackURLScheme: "com.voiceassistant"
-        ) { [weak self] callbackURL, error in
-            DispatchQueue.main.async {
-                self?.handleOAuthCallback(callbackURL: callbackURL, error: error, service: "airtable")
+        // Make API request to get the OAuth URL
+        Task {
+            do {
+                let request = URLRequest(url: URL(string: authURL)!)
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
+                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let oauthURL = json["authUrl"] as? String {
+                    
+                    await MainActor.run {
+                        self.startWebAuthSession(url: oauthURL, service: "airtable", state: state)
+                    }
+                } else {
+                    await MainActor.run {
+                        self.handleOAuthError(OAuthError.invalidURL)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.handleOAuthError(OAuthError.networkError)
+                }
             }
         }
-        
-        authenticationSession?.presentationContextProvider = self
-        authenticationSession?.prefersEphemeralWebBrowserSession = false
-        authenticationSession?.start()
     }
     
     private func handleOAuthCallback(callbackURL: URL?, error: Error?, service: String) {
@@ -224,6 +249,77 @@ class OAuthService: NSObject, ObservableObject {
         print("✅ Successfully connected to \(service)")
     }
     
+    private func handleBackendOAuthCallback(callbackURL: URL?, error: Error?, service: String, state: String) {
+        isLoading = false
+        
+        if let error = error {
+            handleOAuthError(error)
+            return
+        }
+        
+        guard callbackURL != nil else {
+            handleOAuthError(OAuthError.noCallbackURL)
+            return
+        }
+        
+        // For backend OAuth, the callback should contain success information
+        // The backend has already handled the token exchange
+        Task {
+            do {
+                // Check OAuth completion status with backend
+                let statusURL = "\(Constants.API.baseURL)/api/oauth/integrations?deviceId=\(extractDeviceId(from: state))"
+                let request = URLRequest(url: URL(string: statusURL)!)
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    // Parse the response to check if OAuth was successful
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let integrations = json["integrations"] as? [[String: Any]] {
+                        
+                        let isConnected = integrations.contains { integration in
+                            (integration["type"] as? String) == service && (integration["isConnected"] as? Bool) == true
+                        }
+                        
+                        await MainActor.run {
+                            if isConnected {
+                                self.updateConnectedService(service: service)
+                                self.currentCompletionHandler?(.success("connected"))
+                            } else {
+                                self.handleOAuthError(OAuthError.tokenExchangeFailed)
+                            }
+                            self.currentCompletionHandler = nil
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        self.handleOAuthError(OAuthError.networkError)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.handleOAuthError(OAuthError.networkError)
+                }
+            }
+        }
+    }
+    
+    private func extractDeviceId(from state: String) -> String {
+        return state.components(separatedBy: ":").first ?? ""
+    }
+    
+    private func updateConnectedService(service: String) {
+        connectedServices[service] = ConnectedServiceInfo(
+            serviceName: service,
+            isConnected: true,
+            connectedAt: Date(),
+            accessToken: "backend_managed",
+            refreshToken: nil,
+            expiresAt: nil
+        )
+        saveConnectedServices()
+        print("✅ Successfully connected to \(service) via backend")
+    }
+    
     private func handleOAuthError(_ error: Error) {
         currentCompletionHandler?(.failure(error))
         currentCompletionHandler = nil
@@ -298,9 +394,9 @@ class OAuthService: NSObject, ObservableObject {
     
     func refreshTokens() async {
         for (service, info) in connectedServices {
-            if info.isTokenExpired {
+            if info.isTokenExpired, let refreshTokenValue = info.refreshToken {
                 do {
-                    let newTokens = try await refreshToken(for: service, refreshToken: info.refreshToken)
+                    let newTokens = try await refreshToken(for: service, refreshToken: refreshTokenValue)
                     await handleTokenResponse(newTokens, service: service)
                 } catch {
                     print("❌ Failed to refresh token for \(service): \(error)")
@@ -341,10 +437,11 @@ struct ConnectedServiceInfo: Codable {
     let isConnected: Bool
     let connectedAt: Date
     let accessToken: String
-    let refreshToken: String
-    let expiresAt: Date
+    let refreshToken: String?
+    let expiresAt: Date?
     
     var isTokenExpired: Bool {
+        guard let expiresAt = expiresAt else { return false }
         return Date() > expiresAt
     }
 }
@@ -358,6 +455,7 @@ enum OAuthError: Error, LocalizedError {
     case tokenExchangeFailed
     case tokenRefreshFailed
     case keychainError
+    case networkError
     
     var errorDescription: String? {
         switch self {
@@ -373,6 +471,8 @@ enum OAuthError: Error, LocalizedError {
             return "Failed to refresh token"
         case .keychainError:
             return "Keychain operation failed"
+        case .networkError:
+            return "Network connection error"
         }
     }
 }

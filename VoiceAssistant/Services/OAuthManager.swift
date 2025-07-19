@@ -38,7 +38,16 @@ class OAuthManager: ObservableObject {
         
         Task {
             do {
-                let response = try await apiClient.get("/api/oauth/google/init")
+                // Get device ID
+                let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+                
+                // Use new public OAuth endpoint
+                let requestBody: [String: Any] = [
+                    "deviceId": deviceId,
+                    "returnUrl": "voiceassistant://oauth/callback"
+                ]
+                
+                let response = try await apiClient.post("/api/oauth/public/google/init", body: requestBody)
                 
                 if let authUrl = response["authUrl"] as? String {
                     await openAuthURL(authUrl)
@@ -46,7 +55,7 @@ class OAuthManager: ObservableObject {
                     errorMessage = "Failed to get authorization URL"
                 }
             } catch {
-                errorMessage = "Failed to start Google OAuth: \(error.localizedDescription)"
+                errorMessage = "Failed to start Google OAuth. \(error.localizedDescription)"
             }
             
             isLoading = false
@@ -59,7 +68,16 @@ class OAuthManager: ObservableObject {
         
         Task {
             do {
-                let response = try await apiClient.get("/api/oauth/airtable/init")
+                // Get device ID
+                let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+                
+                // Use new public OAuth endpoint
+                let requestBody: [String: Any] = [
+                    "deviceId": deviceId,
+                    "returnUrl": "voiceassistant://oauth/callback"
+                ]
+                
+                let response = try await apiClient.post("/api/oauth/public/airtable/init", body: requestBody)
                 
                 if let authUrl = response["authUrl"] as? String {
                     await openAuthURL(authUrl)
@@ -67,7 +85,7 @@ class OAuthManager: ObservableObject {
                     errorMessage = "Failed to get authorization URL"
                 }
             } catch {
-                errorMessage = "Failed to start Airtable OAuth: \(error.localizedDescription)"
+                errorMessage = "Failed to start Airtable OAuth. \(error.localizedDescription)"
             }
             
             isLoading = false

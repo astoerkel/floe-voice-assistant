@@ -9,6 +9,7 @@ import Foundation
 import EventKit
 import SwiftUI
 
+@MainActor
 class CalendarService: ObservableObject {
     static let shared = CalendarService()
     
@@ -28,13 +29,17 @@ class CalendarService: ObservableObject {
             return true
         case .notDetermined:
             do {
-                return try await eventStore.requestAccess(to: .event)
+                return try await eventStore.requestFullAccessToEvents()
             } catch {
                 print("❌ Calendar permission request failed: \(error)")
                 return false
             }
         case .denied, .restricted:
             return false
+        case .fullAccess:
+            return true
+        case .writeOnly:
+            return true
         @unknown default:
             return false
         }
@@ -257,7 +262,7 @@ class CalendarService: ObservableObject {
         }
         
         // If Google Calendar is connected, also save there
-        if oauthService.isConnected("google_calendar") {
+        if await oauthService.isConnected("google_calendar") {
             do {
                 try await saveToGoogleCalendar(details)
                 print("✅ Event saved to Google Calendar: \(details.title)")

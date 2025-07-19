@@ -22,6 +22,8 @@ struct ContentView: View {
     @State private var audioLevels: [CGFloat] = Array(repeating: 0.3, count: 50)
     @State private var showMenu = false
     @State private var currentResult: VoiceCommandResult?
+    @State private var showError = false
+    @State private var lastError = ""
     
     // Quick Actions
     private let quickActions: [QuickAction] = [
@@ -665,7 +667,7 @@ struct ContentView: View {
         SoundManager.shared.playRecordingStart()
         
         // Check microphone permission first
-        let microphoneStatus = AVAudioSession.sharedInstance().recordPermission
+        let microphoneStatus = AVAudioApplication.shared.recordPermission
         print("📱 iPhone: Microphone permission status: \(microphoneStatus.rawValue)")
         
         if microphoneStatus == .denied {
@@ -679,7 +681,7 @@ struct ContentView: View {
         
         if microphoneStatus == .undetermined {
             print("📱 iPhone: Requesting microphone permission...")
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
+            AVAudioApplication.requestRecordPermission { granted in
                 DispatchQueue.main.async {
                     if granted {
                         print("✅ iPhone: Microphone permission granted")
@@ -825,130 +827,24 @@ struct ContentView: View {
             generateAudio: true
         )
         
-        // Check if in development mode and use legacy webhook for testing
-        if UserDefaults.standard.bool(forKey: "development_mode") {
-            print("🔄 Development mode: Using legacy webhook API")
-            sendToLegacyWebhook(transcription: transcription, fromWatch: fromWatch)
-        } else {
-            apiClient.sendVoiceCommandEnhanced(request) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let enhancedResponse):
-                        self.handleEnhancedAPIResponse(enhancedResponse, fromWatch: fromWatch)
-                    case .failure(let error):
-                        print("❌ New API failed, falling back to legacy webhook")
-                        self.sendToLegacyWebhook(transcription: transcription, fromWatch: fromWatch)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func sendToLegacyWebhook(transcription: String, fromWatch: Bool = false) {
-        print("🔄 Development mode: Using Google Text-to-Speech")
-        
-        // Generate a contextual response based on the transcription
-        let responseText = generateMockResponse(for: transcription)
-        
-        // Use Google TTS to generate audio
-        GoogleTTSService.shared.synthesizeText(responseText) { result in
+        // Use secure backend API exclusively
+        apiClient.sendVoiceCommandEnhanced(request) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let audioData):
-                    print("✅ Google TTS: Generated audio (\(audioData.count) bytes)")
-                    let audioBase64 = audioData.base64EncodedString()
-                    
-                    let response = VoiceResponse(
-                        text: responseText,
-                        success: true,
-                        audioBase64: audioBase64
-                    )
-                    
-                    self.handleAPIResponse(response, fromWatch: fromWatch)
-                    
+                case .success(let enhancedResponse):
+                    self.handleEnhancedAPIResponse(enhancedResponse, fromWatch: fromWatch)
                 case .failure(let error):
-                    print("❌ Google TTS error: \(error)")
-                    
-                    // Fallback to text-only response
-                    let response = VoiceResponse(
-                        text: responseText,
-                        success: true,
-                        audioBase64: nil
-                    )
-                    
-                    self.handleAPIResponse(response, fromWatch: fromWatch)
+                    print("❌ Voice API failed: \(error)")
+                    // Handle error appropriately without falling back to insecure methods
+                    self.isRecording = false
+                    self.showError = true
+                    self.lastError = "Voice processing failed. Please try again."
                 }
             }
         }
     }
     
-    private func generateMockResponse(for transcription: String) -> String {
-        let lowercased = transcription.lowercased()
-        
-        // Generate contextual responses based on the user's input
-        if lowercased.contains("time") {
-            return "The current time is \(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short))."
-        } else if lowercased.contains("weather") {
-            return "I'm sorry, I don't have access to weather information right now."
-        } else if lowercased.contains("hello") || lowercased.contains("hi") {
-            return "Hello! How can I help you today?"
-        } else if lowercased.contains("how are you") {
-            return "I'm doing well, thank you for asking! How can I assist you?"
-        } else if lowercased.contains("what") && lowercased.contains("name") {
-            return "I'm your voice assistant, powered by advanced AI technology."
-        } else if lowercased.contains("help") {
-            return "I can help you with various tasks. Try asking me about the time, or just say hello!"
-        } else {
-            return "I heard you say: \(transcription). I'm still learning, but I'm here to help!"
-        }
-    }
     
-    private func parseLegacyWebhookResponse(_ data: Data, fromWatch: Bool) {
-        print("📥 Legacy webhook raw response size: \(data.count) bytes")
-        
-        // Try to parse as JSON first
-        if let jsonString = String(data: data, encoding: .utf8),
-           jsonString.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") {
-            
-            print("📋 Legacy webhook JSON response: \(jsonString)")
-            
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("📋 Legacy webhook parsed JSON: \(json)")
-                    
-                    let responseText = json["text"] as? String ?? 
-                                     json["response"] as? String ?? 
-                                     "Legacy response"
-                    
-                    let audioBase64 = json["audioBase64"] as? String
-                    
-                    print("📋 Legacy webhook extracted text: '\(responseText)'")
-                    print("📋 Legacy webhook extracted audio length: \(audioBase64?.count ?? 0)")
-                    
-                    let response = VoiceResponse(
-                        text: responseText,
-                        success: true,
-                        audioBase64: audioBase64
-                    )
-                    
-                    handleAPIResponse(response, fromWatch: fromWatch)
-                }
-            } catch {
-                print("❌ Failed to parse legacy JSON response: \(error)")
-            }
-        } else {
-            // Treat as binary audio response
-            print("🎵 Legacy webhook binary response, converting to base64")
-            let audioBase64 = data.base64EncodedString()
-            let response = VoiceResponse(
-                text: "Voice response",
-                success: true,
-                audioBase64: audioBase64
-            )
-            
-            handleAPIResponse(response, fromWatch: fromWatch)
-        }
-    }
     
     private func handleAPIResponse(_ response: VoiceResponse, fromWatch: Bool = false) {
         print("📱 iPhone: Received API response: '\(response.text)'")

@@ -16,8 +16,6 @@
 		<string>com.amitstoerkel.VoiceAssistant.sync</string>
 		<string>com.amitstoerkel.VoiceAssistant.cleanup</string>
 	</array>
-	<key>GOOGLE_TTS_API_KEY</key>
-	<string>AIzaSyC1qfvgVaXJKz5bRK3V0HzLSXz9VlTiJ3I</string>
 	
 	<!-- ADD THIS SECTION FOR OAUTH -->
 	<key>CFBundleURLTypes</key>
@@ -28,6 +26,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.amitstoerkel.VoiceAssistant</string>
+				<string>voiceassistant</string>
 			</array>
 		</dict>
 		<dict>
