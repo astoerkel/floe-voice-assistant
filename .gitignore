@@ -53,6 +53,12 @@ Thumbs.db
 .env
 *.plist
 !Info.plist
+VoiceAssistant/Config/Secrets.swift
+**/Secrets.swift
+**/*[Ss]ecret*
+**/*[Kk]ey*.swift
+!**/OAuthService.swift
+!**/APIClient.swift
 
 # Test coverage
 *.gcda
