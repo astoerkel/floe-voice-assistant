@@ -16,7 +16,7 @@ struct Constants {
         static let websocketURL = "wss://voice-assistant-backend-899362685715.us-central1.run.app"
         static let defaultVoiceId = "default"
         static let requestTimeout: TimeInterval = 30.0
-        static let apiKey = "voice-assistant-api-key-secure-2024"
+        static let apiKey = "voice-assistant-api-key-2024"
     }
     
     struct Audio {
