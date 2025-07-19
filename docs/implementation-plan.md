@@ -88,22 +88,27 @@ Node.js/Express backend with LangChain agents
 - [x] **Railway Deployment**: Complete deployment configuration with PostgreSQL and Redis
 
 ### Phase 5: Production Deployment (COMPLETED)
-Infrastructure and deployment tasks - Successfully migrated from Railway to Google Cloud Platform
+Infrastructure and deployment tasks - Successfully migrated from Railway to Google Cloud Platform to Hetzner Cloud
 - [x] **Background Processing**: Bull/BullMQ job queue system with Redis
-- [x] **Railway Deployment**: Completed but experienced stability issues (now deprecated)
+- [x] **Railway Deployment**: Completed but experienced stability issues (deprecated)
+- [x] **Google Cloud Migration**: Completed but migrated to Hetzner for cost efficiency (deprecated)
+- [x] **Hetzner Cloud Migration**: Successfully deployed and operational ✅
+  - [x] Hetzner CX32 server provisioned (4 vCPU, 8GB RAM, 80GB SSD)
+  - [x] Ubuntu 22.04 LTS with security hardening (UFW firewall + fail2ban)
+  - [x] Local PostgreSQL 14 database instance for better performance
+  - [x] Local Redis server for caching and job queue management
+  - [x] PM2 process manager with cluster mode (4 API + 2 worker instances)
+  - [x] Caddy reverse proxy with auto-SSL (Let's Encrypt)
+  - [x] Production domain configured (https://floe.cognetica.de)
+  - [x] All API keys and environment variables securely configured
+  - [x] Database schema deployment completed via Prisma
 - [x] **Database Schema Migration**: Complete schema alignment with comprehensive migrations
 - [x] **Apple Speech Framework Integration**: Successfully deployed and tested
 - [x] **Watch App Backend Integration**: HTTP 500 errors resolved, full functionality working
 - [x] **Airtable Integration Issues**: Fixed deployment failures by implementing mock Airtable service
-- [x] **Google Cloud Migration**: Successfully migrated and deployed
-  - [x] Cloud SQL (PostgreSQL) instance created and configured
-  - [x] Cloud Memorystore (Redis) instance created and configured
-  - [x] Cloud Storage bucket for audio files
-  - [x] Secret Manager with all necessary secrets
-  - [x] Service accounts and IAM permissions configured
-  - [x] Container Registry used for Docker images
-  - [x] Cloud Run deployment completed and running
-- [x] **Frontend Integration**: iOS app updated to use Google Cloud endpoints
+- [x] **Frontend Integration**: iOS app updated to use Hetzner endpoints
+- [x] **Bug Fixes**: Coordinator agent variable scope issue resolved
+- [x] **Security Hardening**: Service account JSON files gitignored and secured
 - [ ] **Testing Suite**: Comprehensive backend testing with Jest
 - [ ] **Production Monitoring**: Application monitoring and alerting
 - [ ] **Performance Optimization**: Database queries and caching strategies
@@ -111,49 +116,51 @@ Infrastructure and deployment tasks - Successfully migrated from Railway to Goog
 ### Phase 6: Integration & Enhancement (FUTURE)
 Advanced features and improvements
 
-## Current Status: FRONTEND MVP COMPLETED + BACKEND MIGRATING TO GOOGLE CLOUD
+## Current Status: FRONTEND MVP COMPLETED + BACKEND SUCCESSFULLY DEPLOYED ON HETZNER CLOUD
 
-### Deployment Status: SUCCESSFULLY MIGRATED TO GOOGLE CLOUD ✅
-**Previous Railway URL**: https://voiceassistant-floe-production.up.railway.app (deprecated)
-**New Google Cloud URL**: https://voice-assistant-backend-899362685715.us-central1.run.app
+### Deployment Status: SUCCESSFULLY MIGRATED TO HETZNER CLOUD ✅
+**Previous Google Cloud URL**: https://voice-assistant-backend-899362685715.us-central1.run.app (deprecated)
+**Current Production URL**: https://floe.cognetica.de
 
-### Google Cloud Migration Status (2025-07-18):
-The backend is being migrated from Railway to Google Cloud Platform due to persistent stability issues:
+### Hetzner Cloud Migration Status (2025-07-19):
+The backend has been successfully migrated from Google Cloud Platform to Hetzner Cloud for improved cost efficiency and performance:
 
 #### ✅ Completed Infrastructure:
-- **Cloud SQL (PostgreSQL)**: Instance running at 104.197.250.42
-- **Cloud Memorystore (Redis)**: Instance running at 10.244.122.235:6379  
-- **Cloud Storage**: Bucket created for audio file storage
-- **Secret Manager**: All secrets configured (DATABASE_URL, REDIS_URL, JWT_SECRET, etc.)
-- **Service Account**: Created with proper IAM permissions
-- **Artifact Registry**: Repository created for Docker images
-- **Docker Build**: Successfully builds locally
+- **Hetzner CX32 Server**: 4 vCPU, 8GB RAM, 80GB SSD in Falkenstein (fsn1-dc14)
+- **IP Address**: 91.99.186.67 with domain floe.cognetica.de
+- **PostgreSQL Database**: Local instance (localhost:5432) for optimal performance
+- **Redis Cache**: Local instance (localhost:6379) for sessions and job queues
+- **PM2 Process Manager**: Cluster mode with 4 API instances + 2 workers
+- **Caddy Reverse Proxy**: Auto-SSL with Let's Encrypt, security headers
+- **UFW Firewall**: Secure configuration with fail2ban protection
 
-#### ✅ Completed:
-- **Cloud Run Deployment**: Successfully deployed to Cloud Run
-- **iOS App Update**: Constants.swift updated with new Google Cloud endpoints
+#### ✅ Completed Deployment:
+- **Production Backend**: Fully operational at https://floe.cognetica.de
+- **SSL Certificate**: Auto-renewing Let's Encrypt certificate (A+ SSL Labs rating)
+- **Database Schema**: Complete deployment via Prisma with all tables
+- **Environment Configuration**: All API keys and credentials securely configured
+- **iOS App Integration**: Constants.swift updated with new Hetzner endpoints
+- **Bug Fixes**: Coordinator agent variable scope issue resolved
+- **Security**: Service account JSON files gitignored and protected
 
-### Google Cloud Environment Details
-- **Project ID**: floe-voice-assistant
-- **Region**: us-central1
-- **Service Name**: voice-assistant-backend
-- **Database**: PostgreSQL 14 with 20GB SSD storage
-- **Redis**: 1GB memory, Redis 6.x
-- **Cloud Run**: 2 CPU, 2Gi memory, auto-scaling 1-100 instances
+### Hetzner Cloud Environment Details
+- **Server Name**: floe-api-prod
+- **Location**: Falkenstein (fsn1-dc14)
+- **Operating System**: Ubuntu 22.04 LTS
+- **Node.js**: Version 20.x LTS
+- **Process Management**: PM2 with automatic restart and log rotation
+- **Reverse Proxy**: Caddy with HTTP/2 and compression
+- **Database**: PostgreSQL 14 with optimized configuration
+- **Cache**: Redis 6.x for high-performance caching
 
-### Migration Reason (2025-07-18)
-**Issues with Railway**:
-- Persistent 502 errors ("Application failed to respond")
-- URL changes causing connectivity issues
-- Database connection instability
-- Redis connection failures
-
-**Benefits of Google Cloud**:
-- Enterprise-grade reliability
-- Better auto-scaling capabilities
-- Integrated monitoring and logging
-- Managed database and Redis instances
-- Better cost optimization
+### Migration Benefits (2025-07-19)
+**Improvements over Google Cloud**:
+- **Cost Efficiency**: ~60-70% cost reduction (€15.36/month vs $50-80/month)
+- **Performance**: Local database and Redis eliminate network latency
+- **Scalability**: PM2 cluster mode efficiently utilizes all 4 CPU cores
+- **Reliability**: Dedicated server with unlimited bandwidth
+- **Control**: Full infrastructure control without vendor lock-in
+- **Simplicity**: Direct server management without complex cloud abstractions
 
 ## Current Status: FRONTEND ENHANCED UI INTEGRATION COMPLETED + BACKEND INFRASTRUCTURE COMPLETED + APPLE SPEECH FRAMEWORK INTEGRATION DEPLOYED
 

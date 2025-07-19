@@ -1,4 +1,4 @@
-const langChainService = require('../ai/langchain');
+const { getLangChainService } = require('../ai/langchain-fixed');
 const intentClassifier = require('../ai/intentClassifier');
 const calendarAgent = require('./calendarAgent');
 const emailAgent = require('./emailAgent');
@@ -12,6 +12,7 @@ class CoordinatorAgent {
     this.agentName = 'coordinator';
     this.specializedAgents = new Map();
     this.conversationCache = new Map();
+    this.langChainService = getLangChainService();
     this.initializeSpecializedAgents();
   }
 
@@ -31,11 +32,12 @@ class CoordinatorAgent {
   }
 
   async processVoiceCommand(userId, input, context = {}) {
+    let voiceCommand;
     try {
       const startTime = Date.now();
       
       // Store the voice command in database
-      const voiceCommand = await prisma.voiceCommand.create({
+      voiceCommand = await prisma.voiceCommand.create({
         data: {
           userId,
           text: input,
@@ -147,8 +149,18 @@ class CoordinatorAgent {
 
   async handleGeneralCommand(userId, input, context) {
     try {
+      // Check if LangChain service is available
+      if (!this.langChainService.isAvailable()) {
+        logger.warn('LangChain service not available, using fallback');
+        return {
+          text: this.generateFallbackResponse(input),
+          actions: [],
+          suggestions: this.generateSuggestions(input)
+        };
+      }
+      
       // Use LangChain service for general processing
-      const result = await langChainService.processVoiceCommand(userId, input, context);
+      const result = await this.langChainService.processVoiceCommand(userId, input, context);
       
       if (result.success) {
         return {
@@ -295,7 +307,9 @@ class CoordinatorAgent {
       });
 
       // Clear memory from LangChain service
-      langChainService.clearUserMemory(userId);
+      if (this.langChainService.isAvailable()) {
+        this.langChainService.clearUserMemory(userId);
+      }
       
       // Clear cache
       this.conversationCache.delete(userId);

@@ -9,11 +9,12 @@ import Foundation
 
 struct Constants {
     struct API {
-        static let baseURL = "https://voice-assistant-backend-899362685715.us-central1.run.app"
-        static let webhookURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api/voice/process-audio"
-        static let devWebhookURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api/voice/dev/process-audio"
-        static let apiBaseURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api"
-        static let websocketURL = "wss://voice-assistant-backend-899362685715.us-central1.run.app"
+        static let baseURL = "https://floe.cognetica.de"
+        static let webhookURL = "https://floe.cognetica.de/api/voice/process-audio"
+        static let textProcessURL = "https://floe.cognetica.de/api/voice/process-text"
+        static let devWebhookURL = "https://floe.cognetica.de/api/voice/dev/process-audio"
+        static let apiBaseURL = "https://floe.cognetica.de/api"
+        static let websocketURL = "wss://floe.cognetica.de"
         static let defaultVoiceId = "default"
         static let requestTimeout: TimeInterval = 30.0
         static let apiKey = "voice-assistant-api-key-2024"

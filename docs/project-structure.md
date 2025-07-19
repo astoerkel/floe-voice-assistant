@@ -311,6 +311,54 @@ const airtableService = {
 - **Logging**: Clear warnings in logs when mock service is used
 - **Future Work**: Re-enable Airtable service when API key is available
 
+## Hetzner Cloud Migration (2025-07-19)
+
+### Migration Overview
+The backend infrastructure has been successfully migrated from Google Cloud Platform to Hetzner Cloud for improved cost efficiency and performance.
+
+#### Infrastructure Details
+- **Server**: Hetzner CX32 (4 vCPU, 8GB RAM, 80GB SSD)
+- **Location**: Falkenstein (fsn1-dc14)
+- **IP Address**: 91.99.186.67
+- **Domain**: https://floe.cognetica.de
+- **OS**: Ubuntu 22.04 LTS
+
+#### Deployment Configuration
+- **Process Manager**: PM2 with cluster mode (4 API instances + 2 workers)
+- **Reverse Proxy**: Caddy with auto-SSL (Let's Encrypt)
+- **Database**: Local PostgreSQL 14 instance
+- **Cache**: Local Redis server for sessions and job queues
+- **Security**: UFW firewall + fail2ban protection
+
+#### Migration Benefits
+- **Cost Reduction**: ~60-70% savings (€15.36/month vs $50-80/month)
+- **Performance**: Local database and Redis for faster response times
+- **Control**: Full infrastructure control without vendor lock-in
+- **Scalability**: Efficient resource utilization via PM2 clustering
+- **Reliability**: Dedicated server with unlimited bandwidth
+
+#### Updated File Locations
+```
+Backend Deployment: /opt/voice-assistant/ (on Hetzner server)
+Configuration: /opt/voice-assistant/.env
+Process Config: /opt/voice-assistant/ecosystem.config.js
+Caddy Config: /etc/caddy/Caddyfile
+SSL Certificates: Auto-managed by Caddy
+Logs: /opt/voice-assistant/logs/
+```
+
+#### iOS App Integration
+The iOS application has been updated to use the new Hetzner backend:
+```swift
+struct API {
+    static let baseURL = "https://floe.cognetica.de"
+    static let webhookURL = "https://floe.cognetica.de/api/voice/process-audio"
+    static let textProcessURL = "https://floe.cognetica.de/api/voice/process-text"
+    static let apiBaseURL = "https://floe.cognetica.de/api"
+    static let websocketURL = "wss://floe.cognetica.de"
+}
+```
+
 ## File Naming Conventions
 
 ### Frontend (Swift) Files
