@@ -1,5 +1,0 @@
----
-triple:          'arm64_32-apple-darwin'
-binary-path:     '/Volumes/Intenso/Coding/Projects/VoiceAssistantIOS/VoiceAssistant/build/Release-watchos/VoiceAssistant Watch App Watch App.app/VoiceAssistant Watch App Watch App'
-relocations:     []
-...

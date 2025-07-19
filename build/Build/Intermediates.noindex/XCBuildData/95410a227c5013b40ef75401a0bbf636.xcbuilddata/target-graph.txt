@@ -1,8 +1,0 @@
-Target dependency graph (4 targets)
-Target 'VoiceAssistantUITests' in project 'VoiceAssistant'
-➜ Explicit dependency on target 'VoiceAssistant' in project 'VoiceAssistant'
-Target 'VoiceAssistantTests' in project 'VoiceAssistant'
-➜ Explicit dependency on target 'VoiceAssistant' in project 'VoiceAssistant'
-Target 'VoiceAssistant' in project 'VoiceAssistant'
-➜ Explicit dependency on target 'VoiceAssistant Watch App Watch App' in project 'VoiceAssistant'
-Target 'VoiceAssistant Watch App Watch App' in project 'VoiceAssistant' (no dependencies)

@@ -88,14 +88,22 @@ Node.js/Express backend with LangChain agents
 - [x] **Railway Deployment**: Complete deployment configuration with PostgreSQL and Redis
 
 ### Phase 5: Production Deployment (COMPLETED)
-Infrastructure and deployment tasks completed
+Infrastructure and deployment tasks - Successfully migrated from Railway to Google Cloud Platform
 - [x] **Background Processing**: Bull/BullMQ job queue system with Redis
-- [x] **Railway Deployment**: Complete deployment configuration with PostgreSQL and Redis
+- [x] **Railway Deployment**: Completed but experienced stability issues (now deprecated)
 - [x] **Database Schema Migration**: Complete schema alignment with comprehensive migrations
 - [x] **Apple Speech Framework Integration**: Successfully deployed and tested
 - [x] **Watch App Backend Integration**: HTTP 500 errors resolved, full functionality working
 - [x] **Airtable Integration Issues**: Fixed deployment failures by implementing mock Airtable service
-- [ ] **Frontend Integration**: Migrate frontend from n8n to new backend APIs
+- [x] **Google Cloud Migration**: Successfully migrated and deployed
+  - [x] Cloud SQL (PostgreSQL) instance created and configured
+  - [x] Cloud Memorystore (Redis) instance created and configured
+  - [x] Cloud Storage bucket for audio files
+  - [x] Secret Manager with all necessary secrets
+  - [x] Service accounts and IAM permissions configured
+  - [x] Container Registry used for Docker images
+  - [x] Cloud Run deployment completed and running
+- [x] **Frontend Integration**: iOS app updated to use Google Cloud endpoints
 - [ ] **Testing Suite**: Comprehensive backend testing with Jest
 - [ ] **Production Monitoring**: Application monitoring and alerting
 - [ ] **Performance Optimization**: Database queries and caching strategies
@@ -103,34 +111,49 @@ Infrastructure and deployment tasks completed
 ### Phase 6: Integration & Enhancement (FUTURE)
 Advanced features and improvements
 
-## Current Status: FRONTEND MVP COMPLETED + BACKEND DEPLOYED TO PRODUCTION
+## Current Status: FRONTEND MVP COMPLETED + BACKEND MIGRATING TO GOOGLE CLOUD
 
-### Deployment Status: PRODUCTION READY ✅
-**Railway Deployment URL**: https://voiceassistant-sora-production.up.railway.app
+### Deployment Status: SUCCESSFULLY MIGRATED TO GOOGLE CLOUD ✅
+**Previous Railway URL**: https://voiceassistant-floe-production.up.railway.app (deprecated)
+**New Google Cloud URL**: https://voice-assistant-backend-899362685715.us-central1.run.app
 
-The backend has been successfully deployed to Railway with all services running:
-- **Main Application**: Node.js/Express server with comprehensive API endpoints
-- **Database**: PostgreSQL with complete schema and migrations  
-- **Redis**: Caching and session management
-- **WebSocket**: Real-time communication with voice streaming support
-- **Background Processing**: BullMQ job queue system for async processing
-- **Airtable Integration**: Temporarily disabled with mock service to prevent deployment failures
+### Google Cloud Migration Status (2025-07-18):
+The backend is being migrated from Railway to Google Cloud Platform due to persistent stability issues:
 
-### Production Environment Details
-- **Health Check**: https://voiceassistant-sora-production.up.railway.app/health
-- **API Base URL**: https://voiceassistant-sora-production.up.railway.app/api
-- **WebSocket URL**: wss://voiceassistant-sora-production.up.railway.app
-- **Environment**: Production with proper security headers and rate limiting
-- **SSL/TLS**: Fully encrypted HTTPS/WSS connections
+#### ✅ Completed Infrastructure:
+- **Cloud SQL (PostgreSQL)**: Instance running at 104.197.250.42
+- **Cloud Memorystore (Redis)**: Instance running at 10.244.122.235:6379  
+- **Cloud Storage**: Bucket created for audio file storage
+- **Secret Manager**: All secrets configured (DATABASE_URL, REDIS_URL, JWT_SECRET, etc.)
+- **Service Account**: Created with proper IAM permissions
+- **Artifact Registry**: Repository created for Docker images
+- **Docker Build**: Successfully builds locally
 
-### Recent Deployment Fixes (2025-07-18)
-**Issue**: Railway deployment was failing with "Failed to create code snapshot" error
-**Root Cause**: Airtable service import issues when AIRTABLE_API_KEY environment variable not set
-**Resolution**: 
-- Commented out Airtable service imports in `integrations.controller.js`
-- Added mock Airtable service in `taskProcessor.js` to prevent runtime errors
-- Deployment now succeeds without Airtable API key dependency
-**Status**: Fixed and deployed, monitoring for successful startup
+#### ✅ Completed:
+- **Cloud Run Deployment**: Successfully deployed to Cloud Run
+- **iOS App Update**: Constants.swift updated with new Google Cloud endpoints
+
+### Google Cloud Environment Details
+- **Project ID**: floe-voice-assistant
+- **Region**: us-central1
+- **Service Name**: voice-assistant-backend
+- **Database**: PostgreSQL 14 with 20GB SSD storage
+- **Redis**: 1GB memory, Redis 6.x
+- **Cloud Run**: 2 CPU, 2Gi memory, auto-scaling 1-100 instances
+
+### Migration Reason (2025-07-18)
+**Issues with Railway**:
+- Persistent 502 errors ("Application failed to respond")
+- URL changes causing connectivity issues
+- Database connection instability
+- Redis connection failures
+
+**Benefits of Google Cloud**:
+- Enterprise-grade reliability
+- Better auto-scaling capabilities
+- Integrated monitoring and logging
+- Managed database and Redis instances
+- Better cost optimization
 
 ## Current Status: FRONTEND ENHANCED UI INTEGRATION COMPLETED + BACKEND INFRASTRUCTURE COMPLETED + APPLE SPEECH FRAMEWORK INTEGRATION DEPLOYED
 

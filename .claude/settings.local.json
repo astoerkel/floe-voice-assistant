@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Context7__resolve-library-id",
+      "mcp__cli_Docs__fetch_cli_documentation",
+      "mcp__cli_Docs__search_cli_documentation",
+      "mcp__XcodeBuildMCP__discover_projs",
+      "mcp__XcodeBuildMCP__list_schems_proj",
+      "mcp__XcodeBuildMCP__list_sims",
+      "mcp__ide__getDiagnostics",
+      "mcp__ide__executeCode"
+    ],
+    "deny": []
+  }
+}
