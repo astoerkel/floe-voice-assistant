@@ -354,7 +354,8 @@ public class ModelQuantization: ObservableObject {
             .combineLatest(performanceOptimizer.$batteryLevel, performanceOptimizer.$isCharging)
             .debounce(for: .seconds(1), scheduler: RunLoop.main)
             .sink { [weak self] thermalState, batteryLevel, isCharging in
-                self?.adaptQuantizationToConditions(
+                guard let self = self else { return }
+                self.adaptQuantizationToConditions(
                     thermalState: thermalState,
                     batteryLevel: batteryLevel,
                     isCharging: isCharging

@@ -1337,6 +1337,7 @@ final class MLTestingFramework: ObservableObject {
             recommendations.append("System is performing well - continue monitoring")
         }
         
+        let finalRecommendations = recommendations
         await MainActor.run {
             testingSummary = TestingSummary(
                 totalTests: totalTests,
@@ -1348,7 +1349,7 @@ final class MLTestingFramework: ObservableObject {
                 averageLatency: averageLatency,
                 overallScore: overallScore,
                 timestamp: Date(),
-                recommendations: recommendations
+                recommendations: finalRecommendations
             )
         }
     }

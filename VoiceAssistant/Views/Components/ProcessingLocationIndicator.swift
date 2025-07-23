@@ -319,7 +319,8 @@ struct ProcessingLocationIndicator_Previews: PreviewProvider {
                 ProcessingLocationIndicator(
                     location: .hybrid,
                     confidence: 0.95,
-                    isProcessing: false
+                    isProcessing: false,
+                    compact: false
                 )
             }
         }
