@@ -977,21 +977,21 @@ final class MLTestingFramework: ObservableObject {
     
     // MARK: - Helper Methods
     
-    private func generateMockAudioData(for text: String) -> Data {
+    func generateMockAudioData(for text: String) -> Data {
         // Generate mock audio data based on text length
         let baseSize = 1024
         let sizeMultiplier = max(1, text.count / 10)
         return Data(repeating: 0x42, count: baseSize * sizeMultiplier)
     }
     
-    private func testSpeechRecognitionWithMockAudio(_ audioData: Data, expectedText: String) async -> (recognizedText: String, confidence: Double) {
+    func testSpeechRecognitionWithMockAudio(_ audioData: Data, expectedText: String) async -> (recognizedText: String, confidence: Double) {
         // Mock speech recognition result
         let similarity = Double.random(in: 0.7...0.95)
         let recognizedText = similarity > 0.8 ? expectedText : generateVariation(of: expectedText)
         return (recognizedText, similarity)
     }
     
-    private func generateVariation(of text: String) -> String {
+    func generateVariation(of text: String) -> String {
         let variations = [
             text.lowercased(),
             text.replacingOccurrences(of: "a", with: "e"),
@@ -1001,7 +1001,7 @@ final class MLTestingFramework: ObservableObject {
         return variations.randomElement() ?? text
     }
     
-    private func calculateTextSimilarity(_ text1: String, _ text2: String) -> Double {
+    func calculateTextSimilarity(_ text1: String, _ text2: String) -> Double {
         let words1 = Set(text1.lowercased().components(separatedBy: .whitespacesAndNewlines))
         let words2 = Set(text2.lowercased().components(separatedBy: .whitespacesAndNewlines))
         
@@ -1011,7 +1011,7 @@ final class MLTestingFramework: ObservableObject {
         return union.isEmpty ? 0.0 : Double(intersection.count) / Double(union.count)
     }
     
-    private func evaluateResponseQuality(_ response: ResponseGenerationResult) -> Double {
+    func evaluateResponseQuality(_ response: ResponseGenerationResult) -> Double {
         var score = 0.0
         
         // Check response length
@@ -1041,7 +1041,7 @@ final class MLTestingFramework: ObservableObject {
         return min(score, 1.0)
     }
     
-    private func simulateServerResult(for input: String) -> (intent: String, confidence: Double) {
+    func simulateServerResult(for input: String) -> (intent: String, confidence: Double) {
         // Simulate server response based on input patterns
         let serverIntents: [String: (intent: String, confidence: Double)] = [
             "meeting": ("calendar_query", 0.92),
@@ -1062,7 +1062,7 @@ final class MLTestingFramework: ObservableObject {
         return ("general_conversation", 0.75)
     }
     
-    private func benchmarkModelLoading() async -> TestResult {
+    func benchmarkModelLoading() async -> TestResult {
         let startTime = Date()
         
         do {
@@ -1111,7 +1111,7 @@ final class MLTestingFramework: ObservableObject {
         }
     }
     
-    private func benchmarkBatchProcessing() async -> TestResult {
+    func benchmarkBatchProcessing() async -> TestResult {
         let startTime = Date()
         let batchSize = 10
         
@@ -1178,7 +1178,7 @@ final class MLTestingFramework: ObservableObject {
         }
     }
     
-    private func benchmarkMemoryEfficiency() async -> TestResult {
+    func benchmarkMemoryEfficiency() async -> TestResult {
         let startTime = Date()
         let initialMemory = getCurrentMemoryUsage()
         
@@ -1225,7 +1225,7 @@ final class MLTestingFramework: ObservableObject {
         )
     }
     
-    private func benchmarkConcurrentProcessing() async -> TestResult {
+    func benchmarkConcurrentProcessing() async -> TestResult {
         let startTime = Date()
         let concurrency = 5
         
