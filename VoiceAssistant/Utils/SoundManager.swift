@@ -348,17 +348,22 @@ class SoundManager: ObservableObject {
     
     // MARK: - Context-Aware Sound Management
     
-    func playContextualSound(for commandType: VoiceCommandType) {
-        switch commandType {
-        case .calendar:
+    func playContextualSound(for intent: String?) {
+        guard let intent = intent?.lowercased() else {
+            playCommandSuccess()
+            return
+        }
+        
+        switch intent {
+        case "calendar":
             playCalendarEventCreated()
-        case .email:
+        case "email":
             playEmailSent()
-        case .task:
+        case "task", "todo":
             playTaskCreated()
-        case .weather:
+        case "weather":
             playDataLoaded()
-        case .general:
+        default:
             playCommandSuccess()
         }
     }

@@ -336,11 +336,7 @@ class WatchAPIClient: ObservableObject {
         do {
             let backendResponse = try JSONDecoder().decode(BackendVoiceResponse.self, from: data)
             
-            let response = VoiceResponse(
-                text: backendResponse.response ?? "",
-                success: backendResponse.success,
-                audioBase64: backendResponse.audioResponse?.audioBase64
-            )
+            let response = VoiceResponse(from: backendResponse)
             
             DispatchQueue.main.async {
                 completion(.success(response))

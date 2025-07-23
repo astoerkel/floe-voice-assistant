@@ -8,7 +8,8 @@
       "mcp__XcodeBuildMCP__list_schems_proj",
       "mcp__XcodeBuildMCP__list_sims",
       "mcp__ide__getDiagnostics",
-      "mcp__ide__executeCode"
+      "mcp__ide__executeCode",
+      "mcp__XcodeBuildMCP__build_sim_name_proj"
     ],
     "deny": []
   }

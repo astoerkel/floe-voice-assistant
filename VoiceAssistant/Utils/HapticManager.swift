@@ -314,18 +314,23 @@ enum HapticFeedbackType {
 
 extension HapticManager {
     
-    /// Plays context-aware haptic feedback based on voice command type
-    func playContextualFeedback(for commandType: VoiceCommandType) {
-        switch commandType {
-        case .calendar:
-            calendarEventCreated()
-        case .email:
-            emailSent()
-        case .task:
-            taskCreated()
-        case .weather:
+    /// Plays context-aware haptic feedback based on voice command intent
+    func playContextualFeedback(for intent: String?) {
+        guard let intent = intent?.lowercased() else {
             buttonPressed()
-        case .general:
+            return
+        }
+        
+        switch intent {
+        case "calendar":
+            calendarEventCreated()
+        case "email":
+            emailSent()
+        case "task", "todo":
+            taskCreated()
+        case "weather":
+            buttonPressed()
+        default:
             buttonPressed()
         }
     }

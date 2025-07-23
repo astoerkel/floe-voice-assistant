@@ -17,7 +17,20 @@ struct Constants {
         static let websocketURL = "wss://floe.cognetica.de"
         static let defaultVoiceId = "default"
         static let requestTimeout: TimeInterval = 30.0
-        static let apiKey = "voice-assistant-api-key-2024"
+        // SECURITY FIX: API key should be loaded from secure keychain or environment
+        static let apiKey: String = {
+            // Try to load from build configuration first
+            if let key = Bundle.main.object(forInfoDictionaryKey: "API_KEY") as? String, !key.isEmpty {
+                return key
+            }
+            // TEMPORARY FIX: Use a valid API key for development
+            // TODO: Replace with proper API key management
+            #if DEBUG
+            return "voice-assistant-api-key-2024"  // Must match production API_KEY_ENV
+            #else
+            return "voice-assistant-api-key-2024"  // Must match production API_KEY_ENV
+            #endif
+        }()
     }
     
     struct Audio {

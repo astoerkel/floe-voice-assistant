@@ -9,17 +9,40 @@ const {
   synthesizeSpeechValidation 
 } = require('../controllers/voice.controller');
 const { authenticateToken } = require('../services/auth/middleware');
+// SECURITY FIX: Add parameter validation middleware
+const { validateJobId, handleValidationErrors } = require('../middleware/parameterValidation');
 
-// Configure multer for audio file uploads
+// SECURITY FIX: Enhanced file upload validation
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { 
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1 // Only one file allowed
+  },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('audio/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only audio files are allowed'), false);
+    // Validate MIME type more strictly
+    const allowedMimeTypes = [
+      'audio/wav', 'audio/wave', 'audio/x-wav',
+      'audio/mpeg', 'audio/mp3',
+      'audio/mp4', 'audio/m4a',
+      'audio/ogg', 'audio/webm'
+    ];
+    
+    if (!allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
+      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed: ${allowedMimeTypes.join(', ')}`), false);
+      return;
     }
+    
+    // Validate file extension
+    const allowedExtensions = ['.wav', '.mp3', '.m4a', '.ogg', '.webm'];
+    const fileExtension = require('path').extname(file.originalname).toLowerCase();
+    
+    if (!allowedExtensions.includes(fileExtension)) {
+      cb(new Error(`Invalid file extension: ${fileExtension}. Allowed: ${allowedExtensions.join(', ')}`), false);
+      return;
+    }
+    
+    cb(null, true);
   }
 });
 
@@ -34,7 +57,7 @@ router.post('/process-audio', upload.single('audio'), processVoiceAudioValidatio
 // Async voice processing routes (using queue)
 router.post('/process-async', processVoiceValidation, controller.processVoiceCommandAsync.bind(controller));
 router.post('/process-audio-async', upload.single('audio'), processVoiceAudioValidation, controller.processVoiceAudioAsync.bind(controller));
-router.get('/job/:jobId', controller.getJobStatus.bind(controller));
+router.get('/job/:jobId', validateJobId, handleValidationErrors, controller.getJobStatus.bind(controller));
 
 // Speech-to-text and text-to-speech routes
 router.post('/transcribe', upload.single('audio'), controller.transcribeAudio.bind(controller));

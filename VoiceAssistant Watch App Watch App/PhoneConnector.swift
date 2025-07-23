@@ -228,17 +228,77 @@ class PhoneConnector: NSObject, ObservableObject {
     private func generateAudioResponse(for text: String, completion: @escaping (String?) -> Void) {
         print("🔊 Watch: Generating audio for text: \(text)")
         
-        GoogleTTSService.shared.synthesizeText(text) { result in
-            switch result {
-            case .success(let audioData):
-                print("✅ Watch: Audio generated successfully (\(audioData.count) bytes)")
-                let audioBase64 = audioData.base64EncodedString()
-                completion(audioBase64)
-            case .failure(let error):
-                print("❌ Watch: Failed to generate audio: \(error)")
-                completion(nil)
+        // Use backend TTS service directly since GoogleTTSService was removed for security
+        synthesizeTextViaBackend(text) { audioBase64 in
+            DispatchQueue.main.async {
+                if let audioBase64 = audioBase64 {
+                    print("✅ Watch: Audio generated successfully")
+                    completion(audioBase64)
+                } else {
+                    print("❌ Watch: Failed to generate audio")
+                    completion(nil)
+                }
             }
         }
+    }
+    
+    private func synthesizeTextViaBackend(_ text: String, completion: @escaping (String?) -> Void) {
+        guard let url = URL(string: "https://floe.cognetica.de/api/voice/synthesize") else {
+            completion(nil)
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("voice-assistant-api-key-2024", forHTTPHeaderField: "X-API-Key")
+        
+        let requestBody: [String: Any] = [
+            "text": text,
+            "voice": "en-US-Neural2-C",
+            "languageCode": "en-US",
+            "speakingRate": 1.1,
+            "pitch": 0.0,
+            "volumeGainDb": 2.0,
+            "audioEncoding": "MP3"
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            print("❌ Watch: Failed to serialize TTS request: \(error)")
+            completion(nil)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Watch: TTS request failed: \(error)")
+                completion(nil)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let data = data else {
+                print("❌ Watch: Invalid TTS response")
+                completion(nil)
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let audioContent = json["audioBase64"] as? String {
+                    completion(audioContent)
+                } else {
+                    print("❌ Watch: No audio content in TTS response")
+                    completion(nil)
+                }
+            } catch {
+                print("❌ Watch: Failed to parse TTS response: \(error)")
+                completion(nil)
+            }
+        }.resume()
     }
 }
 

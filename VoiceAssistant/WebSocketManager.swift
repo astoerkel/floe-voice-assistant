@@ -191,7 +191,7 @@ class WebSocketManager: NSObject, ObservableObject {
             let backendResponse = try JSONDecoder().decode(BackendVoiceResponse.self, from: jsonData)
             
             let response = VoiceResponse(
-                text: backendResponse.response ?? "",
+                text: backendResponse.response?.text ?? backendResponse.text ?? "",
                 success: backendResponse.success,
                 audioBase64: backendResponse.audioResponse?.audioBase64
             )
@@ -302,9 +302,9 @@ class WebSocketManager: NSObject, ObservableObject {
         let message: [String: Any] = [
             "type": "voice-command",
             "text": request.text,
-            "sessionId": request.sessionId,
-            "metadata": request.metadata ?? [:],
-            "generateAudio": request.generateAudio
+            "sessionId": request.context.sessionId,
+            "metadata": request.context.metadata ?? [:],
+            "platform": request.platform
         ]
         
         sendMessage(message)

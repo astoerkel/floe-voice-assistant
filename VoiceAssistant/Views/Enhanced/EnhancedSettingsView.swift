@@ -56,6 +56,9 @@ class SettingsViewModel: ObservableObject {
     @Published var useAppleSpeech = true
     @Published var useWhisperFallback = true
     @Published var showDeleteAccountConfirmation = false
+    @Published var preferredName: String = ""
+    @Published var isUpdatingPreferences = false
+    @Published var preferencesUpdateMessage: String? = nil
     
     func loadSettings() {
         // Load user settings
@@ -74,6 +77,29 @@ class SettingsViewModel: ObservableObject {
             profilePictureURL: nil,
             createdAt: Date().addingTimeInterval(-2592000) // 30 days ago
         )
+        
+        // Load preferred name from UserDefaults first
+        preferredName = UserDefaults.standard.string(forKey: "preferred_name") ?? ""
+        
+        // Try to load preferences from server if authenticated
+        if APIClient.shared.isAuthenticated {
+            Task {
+                do {
+                    let serverPreferences = try await APIClient.shared.getUserPreferences()
+                    
+                    // Update with server preferences if available
+                    if let serverPreferredName = serverPreferences.preferredName, !serverPreferredName.isEmpty {
+                        await MainActor.run {
+                            self.preferredName = serverPreferredName
+                            UserDefaults.standard.set(serverPreferredName, forKey: "preferred_name")
+                        }
+                    }
+                } catch {
+                    // Silently fail - we'll use local preferences
+                    print("❌ Failed to load user preferences from server: \(error)")
+                }
+            }
+        }
     }
     
     private func loadUsageData() {
@@ -129,6 +155,34 @@ class SettingsViewModel: ObservableObject {
         // Delete user account
         print("Deleting account...")
     }
+    
+    func updatePreferredName(_ newName: String) async {
+        isUpdatingPreferences = true
+        preferencesUpdateMessage = nil
+        
+        do {
+            let preferences = UserPreferences(preferredName: newName)
+            let success = try await APIClient.shared.updateUserPreferences(preferences)
+            
+            if success {
+                // Update local state
+                preferredName = newName
+                UserDefaults.standard.set(newName, forKey: "preferred_name")
+                preferencesUpdateMessage = "Preferred name updated successfully"
+            } else {
+                preferencesUpdateMessage = "Failed to update preferred name"
+            }
+        } catch {
+            preferencesUpdateMessage = "Error updating preferred name: \(error.localizedDescription)"
+        }
+        
+        isUpdatingPreferences = false
+        
+        // Clear message after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.preferencesUpdateMessage = nil
+        }
+    }
 }
 
 @MainActor
@@ -156,6 +210,11 @@ struct EnhancedSettingsView: View {
     @ObservedObject private var apiClient = APIClient.shared
     @Environment(\.dismiss) private var dismiss
     
+    // Hidden debug menu access
+    @State private var debugTapCount = 0
+    @State private var showDebugMenu = false
+    @State private var lastDebugTapTime = Date()
+    
     var body: some View {
         NavigationStack {
             List {
@@ -171,6 +230,9 @@ struct EnhancedSettingsView: View {
                 } header: {
                     Text("Account")
                 }
+                
+                // Personalization Section
+                PersonalizationSection(viewModel: settingsViewModel)
                 
                 // Usage Section
                 Section {
@@ -297,6 +359,29 @@ struct EnhancedSettingsView: View {
                     Text("Apple Watch")
                 }
                 
+                // Performance & Optimization
+                Section {
+                    NavigationLink("Performance Monitor") {
+                        PerformanceSettingsView()
+                    }
+                    
+                    NavigationLink("Model Optimization") {
+                        ModelOptimizationView()
+                    }
+                    
+                    NavigationLink("Battery Impact") {
+                        BatteryOptimizationView()
+                    }
+                    
+                    NavigationLink("Batch Processing") {
+                        BatchProcessingSettingsView()
+                    }
+                } header: {
+                    Text("Performance & Optimization")
+                } footer: {
+                    Text("Optimize Core ML performance for better battery efficiency and processing speed.")
+                }
+                
                 // Advanced Settings
                 Section {
                     NavigationLink("Backend Settings") {
@@ -311,7 +396,18 @@ struct EnhancedSettingsView: View {
                         AboutView()
                     }
                 } header: {
-                    Text("Advanced")
+                    // Hidden debug menu access - tap "Advanced" 7 times within 3 seconds
+                    Button(action: handleDebugTap) {
+                        HStack {
+                            Text("Advanced")
+                                .font(.system(.footnote))
+                                .textCase(.uppercase)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
             .navigationTitle("Settings")
@@ -335,6 +431,49 @@ struct EnhancedSettingsView: View {
             }
         } message: {
             Text("Are you sure you want to delete your account? This action cannot be undone.")
+        }
+        .sheet(isPresented: $showDebugMenu) {
+            if #available(iOS 15.0, *) {
+                DebugMenuView()
+            } else {
+                Text("Debug menu requires iOS 15.0+")
+                    .padding()
+            }
+        }
+    }
+    
+    // MARK: - Debug Menu Access
+    private func handleDebugTap() {
+        let now = Date()
+        let timeSinceLastTap = now.timeIntervalSince(lastDebugTapTime)
+        
+        // Reset counter if more than 3 seconds have passed
+        if timeSinceLastTap > 3.0 {
+            debugTapCount = 1
+        } else {
+            debugTapCount += 1
+        }
+        
+        lastDebugTapTime = now
+        
+        // Provide subtle haptic feedback for each tap
+        hapticManager.settingToggled()
+        
+        // After 5 taps, give stronger feedback
+        if debugTapCount == 5 {
+            hapticManager.commandSuccess()
+        }
+        
+        // Show debug menu after 7 taps within 3 seconds
+        if debugTapCount >= 7 {
+            hapticManager.commandSuccess() // Strong success feedback
+            showDebugMenu = true
+            debugTapCount = 0 // Reset counter
+            
+            // Add visual feedback by briefly showing an alert
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                print("🧪 Debug menu activated!")
+            }
         }
     }
 }
@@ -580,6 +719,100 @@ struct VoiceSettingsRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+struct PersonalizationSection: View {
+    @ObservedObject var viewModel: SettingsViewModel
+    @State private var tempPreferredName: String = ""
+    @State private var showingNameAlert = false
+    @FocusState private var isTextFieldFocused: Bool
+    
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Preferred Name")
+                            .font(.headline)
+                        
+                        if viewModel.preferredName.isEmpty {
+                            Text("Set how you'd like the assistant to address you")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Currently: \(viewModel.preferredName)")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Button(viewModel.preferredName.isEmpty ? "Set Name" : "Change") {
+                        tempPreferredName = viewModel.preferredName
+                        showingNameAlert = true
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(viewModel.isUpdatingPreferences)
+                }
+                
+                if let message = viewModel.preferencesUpdateMessage {
+                    HStack {
+                        Image(systemName: message.contains("successfully") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundColor(message.contains("successfully") ? .green : .orange)
+                        
+                        Text(message)
+                            .font(.caption)
+                            .foregroundColor(message.contains("successfully") ? .green : .orange)
+                    }
+                    .transition(.opacity.combined(with: .scale))
+                }
+                
+                if viewModel.isUpdatingPreferences {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        
+                        Text("Updating preferences...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("Personalization")
+        } footer: {
+            Text("Your preferred name helps the voice assistant provide more personalized responses.")
+                .font(.caption)
+        }
+        .alert("Set Preferred Name", isPresented: $showingNameAlert) {
+            TextField("Enter your preferred name", text: $tempPreferredName)
+                .focused($isTextFieldFocused)
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(true)
+            
+            Button("Cancel", role: .cancel) {
+                tempPreferredName = ""
+            }
+            
+            Button("Save") {
+                guard !tempPreferredName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                
+                Task {
+                    await viewModel.updatePreferredName(tempPreferredName.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+            }
+            .disabled(tempPreferredName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter the name you'd like the voice assistant to use when addressing you.")
+        }
+        .onAppear {
+            if showingNameAlert {
+                isTextFieldFocused = true
+            }
+        }
     }
 }
 

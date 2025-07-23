@@ -1,10 +1,113 @@
 import SwiftUI
 import AVFoundation
 
+// Temporary debug helper - inline to avoid import issues
+struct AuthDebugger {
+    static func printFullAuthStatus() {
+        print("🔍 ===== AUTHENTICATION DEBUG INFO =====")
+        
+        // Check API configuration
+        print("🔧 API Configuration:")
+        print("   Base URL: \(Constants.API.baseURL)")
+        print("   API Key: \(Constants.API.apiKey.isEmpty ? "EMPTY" : "SET (\(Constants.API.apiKey.count) chars)")")
+        print("   Webhook URL: \(Constants.API.webhookURL)")
+        
+        // Check stored tokens
+        print("🔑 Token Status:")
+        let accessToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.accessToken)
+        let refreshToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.refreshToken)
+        
+        print("   Access Token: \(accessToken?.isEmpty == false ? "SET (\(accessToken!.count) chars)" : "MISSING")")
+        print("   Refresh Token: \(refreshToken?.isEmpty == false ? "SET (\(refreshToken!.count) chars)" : "MISSING")")
+        
+        if let accessToken = accessToken, !accessToken.isEmpty {
+            print("   Access Token Preview: \(String(accessToken.prefix(20)))...")
+        }
+        
+        // Check APIClient state
+        print("📱 APIClient Status:")
+        let apiClient = APIClient.shared
+        print("   isAuthenticated: \(apiClient.isAuthenticated)")
+        print("   isWebSocketConnected: \(apiClient.isWebSocketConnected)")
+        
+        // Check development mode
+        print("🔧 Development Mode:")
+        let devMode = UserDefaults.standard.bool(forKey: "development_mode")
+        print("   Development Mode: \(devMode)")
+        
+        // Check onboarding status
+        print("📋 Onboarding Status:")
+        let onboardingCompleted = UserDefaults.standard.bool(forKey: "onboarding_completed")
+        print("   Onboarding Completed: \(onboardingCompleted)")
+        
+        print("🔍 ======================================")
+    }
+    
+    static func testAPIKeyFormat() {
+        let apiKey = Constants.API.apiKey
+        print("🔍 ===== API KEY TEST =====")
+        print("API Key: '\(apiKey)'")
+        print("Length: \(apiKey.count)")
+        print("Is Empty: \(apiKey.isEmpty)")
+        print("First 10 chars: \(String(apiKey.prefix(10)))")
+        
+        if apiKey == "dev-api-key" {
+            print("⚠️  Using development API key!")
+        } else if apiKey.isEmpty {
+            print("❌ API key is EMPTY!")
+        } else {
+            print("✅ API key appears to be set")
+        }
+        print("🔍 =========================")
+    }
+    
+    static func simulateAuthenticatedRequest() {
+        print("🔍 ===== SIMULATING API REQUEST =====")
+        
+        let apiClient = APIClient.shared
+        
+        // Check if we're authenticated
+        if !apiClient.isAuthenticated {
+            print("❌ NOT AUTHENTICATED - This will cause 401 error")
+            return
+        }
+        
+        // Create a test request
+        guard let url = URL(string: "\(Constants.API.baseURL)/api/voice/process") else {
+            print("❌ Invalid URL")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        // Check what headers would be added
+        print("📤 Request would be sent with headers:")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
+        
+        if let accessToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.accessToken) {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            print("   Content-Type: application/json")
+            print("   x-api-key: \(Constants.API.apiKey.isEmpty ? "EMPTY!" : "SET")")
+            print("   Authorization: Bearer \(String(accessToken.prefix(20)))...")
+        } else {
+            print("   Content-Type: application/json")
+            print("   x-api-key: \(Constants.API.apiKey.isEmpty ? "EMPTY!" : "SET")")
+            print("   Authorization: MISSING!")
+        }
+        
+        print("🔍 ===================================")
+    }
+}
+
 struct ContentView: View {
     @ObservedObject private var watchConnector = WatchConnector.shared
     @ObservedObject private var apiClient = APIClient.shared
     @StateObject private var speechRecognizer = SpeechRecognizer()
+    @StateObject private var enhancedVoiceProcessor: EnhancedVoiceProcessor
+    @StateObject private var offlineProcessor = OfflineProcessor()
+    @StateObject private var transitionManager = OfflineTransitionManager.shared
     
     @State private var isConnected = false
     @State private var lastMessage = ""
@@ -16,14 +119,25 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var audioRecorder: AVAudioRecorder?
     @State private var audioPlayer: AVAudioPlayer?
+    @State private var audioPlayerDelegate = AudioPlayerDelegate()
     @State private var audioSession = AVAudioSession.sharedInstance()
     @State private var conversationHistory: [ConversationMessage] = []
     @State private var currentTranscription = ""
     @State private var audioLevels: [CGFloat] = Array(repeating: 0.3, count: 50)
     @State private var showMenu = false
-    @State private var currentResult: VoiceCommandResult?
+    @State private var selectedMessage: ConversationMessage?
     @State private var showError = false
     @State private var lastError = ""
+    
+    // MARK: - Initialization
+    init() {
+        let speechRecognizer = SpeechRecognizer()
+        let apiClient = APIClient.shared
+        _enhancedVoiceProcessor = StateObject(wrappedValue: EnhancedVoiceProcessor(
+            speechRecognizer: speechRecognizer,
+            apiClient: apiClient
+        ))
+    }
     
     // Quick Actions
     private let quickActions: [QuickAction] = [
@@ -80,8 +194,8 @@ struct ContentView: View {
         .sheet(isPresented: $showMenu) {
             MenuView(conversationHistory: $conversationHistory, apiClient: apiClient)
         }
-        .sheet(item: $currentResult) { result in
-            ResultBottomSheet(result: result)
+        .sheet(item: $selectedMessage) { message in
+            ResultBottomSheet(message: message)
         }
     }
     
@@ -103,6 +217,7 @@ struct ContentView: View {
     private var contentView: some View {
         VStack {
             headerViewMain
+            offlineStatusView
             quickActionsSection
             conversationView
             voiceButtonSection
@@ -168,6 +283,24 @@ struct ContentView: View {
         .padding(.top, 16)
     }
     
+    private var offlineStatusView: some View {
+        Group {
+            if transitionManager.currentMode != .online || transitionManager.degradedModeActive {
+                OfflineStatusCard(
+                    mode: transitionManager.currentMode,
+                    connectionQuality: transitionManager.connectionStatus.quality,
+                    availableCapabilities: offlineProcessor.getCurrentCapabilities(),
+                    queuedCommandsCount: offlineProcessor.queuedCommandsCount,
+                    isDegraded: transitionManager.degradedModeActive
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.3), value: transitionManager.currentMode)
+            }
+        }
+    }
+    
     private var conversationView: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -177,7 +310,15 @@ struct ContentView: View {
                     } else {
                         // Show conversation history
                         ForEach(conversationHistory) { message in
-                            ConversationBubbleChat(message: message)
+                            ConversationBubbleChat(
+                                message: message,
+                                onTap: {
+                                    if !message.isUser {
+                                        selectedMessage = message
+                                        HapticManager.shared.cardTapped()
+                                    }
+                                }
+                            )
                         }
                     }
                     
@@ -595,6 +736,11 @@ struct ContentView: View {
     
     // MARK: - Functions
     private func setupView() {
+        // DEBUG: Print authentication status on startup
+        AuthDebugger.printFullAuthStatus()
+        AuthDebugger.testAPIKeyFormat()
+        AuthDebugger.simulateAuthenticatedRequest()
+        
         // Set up watch connector callbacks
         watchConnector.onAudioReceived = { audioData in
             print("📱 iPhone: Received audio from Watch (\(audioData.count) bytes)")
@@ -820,31 +966,122 @@ struct ContentView: View {
         
         currentStatus = .processing
         
-        let request = VoiceRequest(
-            text: transcription,
-            sessionId: Constants.getCurrentSessionId(),
-            metadata: ["voiceId": Constants.API.defaultVoiceId],
-            generateAudio: true
-        )
+        // Create voice processing context
+        let context = createVoiceProcessingContext()
         
-        // Use secure backend API exclusively
-        apiClient.sendVoiceCommandEnhanced(request) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let enhancedResponse):
-                    self.handleEnhancedAPIResponse(enhancedResponse, fromWatch: fromWatch)
-                case .failure(let error):
-                    print("❌ Voice API failed: \(error)")
-                    // Handle error appropriately without falling back to insecure methods
-                    self.isRecording = false
-                    self.showError = true
-                    self.lastError = "Voice processing failed. Please try again."
+        // Use enhanced voice processor for intent classification and routing
+        Task {
+            do {
+                let result = try await enhancedVoiceProcessor.processTextCommand(
+                    text: transcription,
+                    context: context
+                )
+                
+                DispatchQueue.main.async {
+                    self.handleEnhancedVoiceResult(result, fromWatch: fromWatch)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.handleProcessingError(error)
                 }
             }
         }
     }
     
+    // MARK: - Enhanced Voice Processing Support Methods
     
+    private func createVoiceProcessingContext() -> VoiceProcessingContext {
+        let currentTime = Date()
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: currentTime)
+        
+        let timeOfDay: String
+        switch hour {
+        case 5..<12:
+            timeOfDay = "morning"
+        case 12..<17:
+            timeOfDay = "afternoon"
+        case 17..<21:
+            timeOfDay = "evening"
+        default:
+            timeOfDay = "night"
+        }
+        
+        let deviceState = DeviceState(
+            batteryLevel: UIDevice.current.batteryLevel,
+            isLowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
+            isNetworkAvailable: true, // Simplified for now
+            isWifiConnected: true, // Simplified for now
+            memoryUsage: 0.5 // Simplified for now
+        )
+        
+        let previousIntent = conversationHistory.last?.isUser == false ? nil : nil // Could be enhanced to track actual intents
+        
+        return VoiceProcessingContext(
+            timeOfDay: timeOfDay,
+            location: nil, // Could be enhanced with location services
+            previousIntent: previousIntent,
+            conversationHistory: conversationHistory,
+            userPreferences: [:], // Could be enhanced with user settings
+            deviceState: deviceState
+        )
+    }
+    
+    private func handleEnhancedVoiceResult(_ result: EnhancedVoiceProcessingResult, fromWatch: Bool) {
+        print("🧠 Enhanced processing completed:")
+        print("   Intent: \(result.intent.displayName)")
+        print("   Confidence: \(result.confidence)")
+        print("   Method: \(result.processingMethod)")
+        print("   Time: \(String(format: "%.2f", result.processingTime))s")
+        print("   Offline: \(result.wasProcessedOffline)")
+        print("   Explanation: \(result.routingExplanation)")
+        
+        // Create assistant response message
+        let assistantMessage = ConversationMessage(
+            id: UUID(),
+            text: result.response.text,
+            isUser: false,
+            timestamp: Date(),
+            audioBase64: result.response.audioBase64,
+            isTranscribed: false
+        )
+        conversationHistory.append(assistantMessage)
+        
+        // Update UI with processing information
+        currentStatus = .completed
+        
+        // Play audio response if available
+        if let audioBase64 = result.response.audioBase64 {
+            playAudioResponse(audioBase64, fromWatch: fromWatch)
+        } else {
+            // No audio, just show text response
+            currentStatus = .idle
+        }
+        
+        // Send to watch if not from watch
+        if !fromWatch {
+            watchConnector.sendResponse(result.response.text)
+        }
+        
+        // Log the successful processing
+        print("✅ Enhanced voice processing completed successfully")
+    }
+    
+    private func handleProcessingError(_ error: Error) {
+        print("❌ Enhanced voice processing failed: \(error.localizedDescription)")
+        
+        currentStatus = .error
+        showError = true
+        lastError = "Voice processing failed: \(error.localizedDescription)"
+        
+        // Send error to watch
+        watchConnector.sendError(error.localizedDescription)
+        
+        // Reset to idle after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.currentStatus = .idle
+        }
+    }
     
     private func handleAPIResponse(_ response: VoiceResponse, fromWatch: Bool = false) {
         print("📱 iPhone: Received API response: '\(response.text)'")
@@ -963,9 +1200,7 @@ struct ContentView: View {
         
         currentStatus = .playing
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            currentStatus = .idle
-        }
+        // Status will be updated to idle when audio playback completes
     }
     
     private func transcribeEnhancedAudioResponse(_ enhancedResponse: EnhancedVoiceResponse, fromWatch: Bool = false) {
@@ -985,6 +1220,14 @@ struct ContentView: View {
         )
         
         conversationHistory.append(enhancedMessage)
+        
+        // Show result bottom sheet for AI responses (only for iPhone interactions, not Watch)
+        if !fromWatch && enhancedResponse.audioBase64 != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                selectedMessage = enhancedMessage
+                HapticManager.shared.cardTapped()
+            }
+        }
         
         if fromWatch {
             // Send response back to watch - Watch will handle audio playback
@@ -1009,9 +1252,7 @@ struct ContentView: View {
         
         currentStatus = .playing
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            currentStatus = .idle
-        }
+        // Status will be updated to idle when audio playback completes
     }
     
     private func processEnhancedVoiceResponse(_ enhancedResponse: EnhancedVoiceResponse, fromWatch: Bool = false) {
@@ -1052,18 +1293,22 @@ struct ContentView: View {
             watchConnector.sendVoiceResponse(updatedResponse)
             print("📤 iPhone: Enhanced response sent to Watch successfully")
         } else {
-            // iPhone initiated - iPhone handles audio playback
+            // iPhone initiated - iPhone handles audio playback with autoplay
             print("🔊 iPhone: Playing enhanced audio response (iPhone initiated)")
             if let audioBase64 = enhancedResponse.audioBase64 {
                 playAudioResponse(audioBase64)
+            }
+            
+            // Show result bottom sheet after starting audio playback
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                selectedMessage = enhancedMessage
+                HapticManager.shared.cardTapped()
             }
         }
         
         currentStatus = .playing
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            currentStatus = .idle
-        }
+        // Status will be updated to idle when audio playback completes
     }
     
     private func playAudioResponse(_ audioBase64: String) {
@@ -1089,38 +1334,112 @@ struct ContentView: View {
         
         print("🔊 Playing audio response (\(audioData.count) bytes)")
         
+        // Debug: Check audio format by examining first few bytes
+        if audioData.count >= 4 {
+            let firstBytes = audioData.prefix(4).map { String(format: "%02x", $0) }.joined()
+            print("🔊 Audio format signature: \(firstBytes)")
+            
+            // Common audio format signatures:
+            // MP3: "494433" (ID3) or "FFFB"/"FFF3" (MP3 frame header)
+            // WAV: "52494646" (RIFF)
+            // M4A: "00000020" or "66747970"
+            if firstBytes.hasPrefix("4944") {
+                print("🔊 Detected ID3-tagged MP3 format")
+            } else if firstBytes.hasPrefix("fff") {
+                print("🔊 Detected raw MP3 format")
+            } else if firstBytes.hasPrefix("5249") {
+                print("🔊 Detected WAV format")
+            } else {
+                print("⚠️ Unknown audio format - first bytes: \(firstBytes)")
+            }
+        }
+        
         do {
-            // Set up audio session for playback with simple settings
+            // Set up audio session for playback
             print("🔊 Setting up audio session for playback...")
-            try audioSession.setCategory(.playback)
+            try audioSession.setCategory(.playback, mode: .default, options: [])
             try audioSession.setActive(true)
+            print("🔊 Audio session active: \(audioSession.isOtherAudioPlaying ? "Other audio playing" : "Ready")")
             
             // Create audio player
             print("🔊 Creating AVAudioPlayer...")
             audioPlayer = try AVAudioPlayer(data: audioData)
+            
+            // Set up delegate with callbacks
+            audioPlayerDelegate.onFinished = { _ in
+                DispatchQueue.main.async {
+                    self.cleanupAudioPlayback()
+                }
+            }
+            audioPlayerDelegate.onDecodeError = { _ in
+                DispatchQueue.main.async {
+                    self.currentStatus = .idle
+                    self.cleanupAudioPlayback()
+                }
+            }
+            audioPlayer?.delegate = audioPlayerDelegate
             audioPlayer?.volume = 1.0
+            
+            // Log audio player properties
+            if let player = audioPlayer {
+                print("🔊 Audio player created successfully")
+                print("🔊 Player URL: \(player.url?.absoluteString ?? "Data-based")")
+                print("🔊 Player numberOfChannels: \(player.numberOfChannels)")
+                print("🔊 Player format: \(player.format.description)")
+            }
             
             // Check if audio player is ready
             if audioPlayer?.prepareToPlay() == true {
                 print("🔊 Audio player prepared successfully")
-                let success = audioPlayer?.play()
-                print("🔊 Audio playback started: \(success == true ? "SUCCESS" : "FAILED")")
                 
                 if let duration = audioPlayer?.duration {
                     print("🔊 Audio duration: \(duration) seconds")
-                    
+                }
+                
+                let success = audioPlayer?.play()
+                print("🔊 Audio playback started: \(success == true ? "SUCCESS" : "FAILED")")
+                
+                // Check if actually playing
+                if let isPlaying = audioPlayer?.isPlaying {
+                    print("🔊 Audio player isPlaying: \(isPlaying)")
+                }
+                
+                if let currentTime = audioPlayer?.currentTime {
+                    print("🔊 Audio current time: \(currentTime)")
+                }
+                
+                // Double-check playback status after a brief moment
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    if let isStillPlaying = self.audioPlayer?.isPlaying {
+                        print("🔊 Audio still playing after 0.1s: \(isStillPlaying)")
+                    }
+                }
+                
+                if let duration = audioPlayer?.duration, duration > 0 {
                     // Schedule cleanup after playback completes
                     DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.5) {
-                        cleanupAudioPlayback()
+                        self.cleanupAudioPlayback()
+                    }
+                } else {
+                    // Fallback cleanup in case duration is invalid
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                        self.cleanupAudioPlayback()
                     }
                 }
             } else {
                 print("❌ Audio player failed to prepare")
+                currentStatus = .idle
             }
             
         } catch {
             print("❌ Failed to play audio: \(error)")
             print("❌ Audio error details: \(error.localizedDescription)")
+            if let nsError = error as NSError? {
+                print("❌ Audio error code: \(nsError.code)")
+                print("❌ Audio error domain: \(nsError.domain)")
+                print("❌ Audio error userInfo: \(nsError.userInfo)")
+            }
+            currentStatus = .idle
         }
     }
     
@@ -1140,6 +1459,11 @@ struct ContentView: View {
             print("🔊 Audio session reset to record mode")
         } catch {
             print("❌ Failed to reset audio session: \(error)")
+        }
+        
+        // Update status to idle after cleanup
+        DispatchQueue.main.async {
+            self.currentStatus = .idle
         }
     }
     
@@ -1412,8 +1736,14 @@ struct ConversationBubble: View {
 // Chat-optimized bubble for dark theme
 struct ConversationBubbleChat: View {
     let message: ConversationMessage
+    let onTap: (() -> Void)?
     @State private var audioPlayer: AVAudioPlayer?
     @State private var isPlaying = false
+    
+    init(message: ConversationMessage, onTap: (() -> Void)? = nil) {
+        self.message = message
+        self.onTap = onTap
+    }
     
     var body: some View {
         HStack {
@@ -1424,17 +1754,37 @@ struct ConversationBubbleChat: View {
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
                 if !message.text.isEmpty {
                     VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-                        Text(message.text)
-                            .font(.body)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(message.isUser ? 
-                                         Color(red: 0.8, green: 0.7, blue: 1.0) : // lilac for user
-                                         Color.white.opacity(0.15)) // semi-transparent white for AI
-                            )
+                        Group {
+                            if !message.isUser && onTap != nil {
+                                // Make AI responses tappable
+                                Button(action: { onTap?() }) {
+                                    Text(message.text)
+                                        .font(.body)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 20)
+                                                .fill(Color.white.opacity(0.15))
+                                        )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .accessibilityLabel("AI response: \(message.text). Double tap to view details")
+                            } else {
+                                // User messages (non-tappable)
+                                Text(message.text)
+                                    .font(.body)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(message.isUser ? 
+                                                 Color(red: 0.8, green: 0.7, blue: 1.0) : // lilac for user
+                                                 Color.white.opacity(0.15)) // semi-transparent white for AI
+                                    )
+                            }
+                        }
                         
                         // Show transcription indicator and replay button for AI responses
                         if !message.isUser && message.isTranscribed {
@@ -1959,6 +2309,162 @@ struct CompactQuickActionButton: View {
         case "pink": return .pink
         case "gray": return .gray
         default: return .blue
+        }
+    }
+}
+
+// MARK: - Audio Player Delegate Helper
+class AudioPlayerDelegate: NSObject, AVAudioPlayerDelegate {
+    var onFinished: ((Bool) -> Void)?
+    var onDecodeError: ((Error?) -> Void)?
+    
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        print("🔊 Audio playback finished successfully: \(flag)")
+        onFinished?(flag)
+    }
+    
+    func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        print("❌ Audio decode error occurred: \(error?.localizedDescription ?? "Unknown error")")
+        onDecodeError?(error)
+    }
+    
+    func audioPlayerBeginInterruption(_ player: AVAudioPlayer) {
+        print("🔊 Audio playback interrupted")
+    }
+    
+    func audioPlayerEndInterruption(_ player: AVAudioPlayer, withOptions flags: Int) {
+        print("🔊 Audio playback interruption ended with options: \(flags)")
+    }
+}
+
+// MARK: - Offline Status Card
+struct OfflineStatusCard: View {
+    let mode: OfflineTransitionManager.ProcessingMode
+    let connectionQuality: OfflineTransitionManager.ConnectionStatus.ConnectionQuality
+    let availableCapabilities: [String]
+    let queuedCommandsCount: Int
+    let isDegraded: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                // Mode icon and title
+                HStack(spacing: 8) {
+                    Image(systemName: mode.icon)
+                        .foregroundColor(Color(mode.color))
+                        .font(.system(size: 16, weight: .medium))
+                    
+                    Text(mode.description)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                // Connection quality indicator
+                if mode != .offline {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(connectionQuality == .excellent || connectionQuality == .good ? "green" : 
+                                      connectionQuality == .fair ? "yellow" : "red"))
+                            .frame(width: 8, height: 8)
+                        
+                        Text(connectionQuality.description)
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                }
+            }
+            
+            // Status message
+            Text(getStatusMessage())
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.8))
+                .multilineTextAlignment(.leading)
+            
+            // Capabilities and queue info
+            if mode == .offline || !availableCapabilities.isEmpty {
+                HStack {
+                    if mode == .offline && !availableCapabilities.isEmpty {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Available offline:")
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.6))
+                            
+                            Text(availableCapabilities.prefix(3).joined(separator: ", "))
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.8))
+                                .lineLimit(1)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    if queuedCommandsCount > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock.badge")
+                                .font(.system(size: 10))
+                                .foregroundColor(.orange)
+                            
+                            Text("\(queuedCommandsCount) queued")
+                                .font(.system(size: 10))
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.black.opacity(0.3))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(mode.color).opacity(0.3), lineWidth: 1)
+                )
+        )
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.ultraThinMaterial)
+        )
+    }
+    
+    private func getStatusMessage() -> String {
+        switch mode {
+        case .online:
+            return "All features available with full internet connectivity"
+        case .offline:
+            return "Working offline. Commands will sync when connection is restored."
+        case .hybrid:
+            return "Smart processing - using both online and offline capabilities"
+        case .degraded:
+            return isDegraded ? "Limited functionality due to connection issues" : "Running in reduced capability mode"
+        }
+    }
+}
+
+extension OfflineTransitionManager.ConnectionStatus.ConnectionQuality {
+    var description: String {
+        switch self {
+        case .unknown: return "Unknown"
+        case .poor: return "Poor"
+        case .fair: return "Fair"
+        case .good: return "Good"
+        case .excellent: return "Excellent"
+        }
+    }
+}
+
+extension Color {
+    init(_ name: String) {
+        switch name.lowercased() {
+        case "green": self = .green
+        case "yellow": self = .yellow
+        case "orange": self = .orange
+        case "red": self = .red
+        case "blue": self = .blue
+        case "purple": self = .purple
+        default: self = .primary
         }
     }
 }
