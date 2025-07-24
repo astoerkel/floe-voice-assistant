@@ -24,6 +24,169 @@
 - Shows mock response after recording
 - Bypasses all authentication and onboarding
 
+## Enhanced Recovery Strategy
+
+### Pre-Phase Checklist (Do Before Each Phase)
+
+Before starting any new phase:
+- [ ] Commit current working state with descriptive message
+- [ ] Create a new branch: `phase-X-feature-name`
+- [ ] Run full test suite on current build
+- [ ] Document current memory usage and build time
+- [ ] Backup derived data state (in case of Xcode issues)
+
+### Feature Flags System
+
+Add this to your MinimalContentView.swift:
+```swift
+struct FeatureFlags {
+    static let useRealAPI = false
+    static let enableSpeechRecognition = false
+    static let enableWatchConnectivity = false
+    static let enableConversationHistory = false
+    static let enableOAuth = false
+    static let enableAnalytics = false
+}
+```
+
+This allows you to:
+- Toggle features without removing code
+- Test combinations of features
+- Quickly disable problematic features
+- Ship with features hidden but ready
+
+### Dependency Mapping
+
+Before Phase 6, create a dependency map:
+```
+Core Features (No Dependencies):
+├── MinimalAudioRecorder
+├── MinimalAPIClient
+└── Basic UI
+
+Dependent Features:
+├── Speech Recognition → MinimalAudioRecorder
+├── Conversation History → MinimalAPIClient
+├── Watch Connectivity → MinimalAudioRecorder + MinimalAPIClient
+└── OAuth → MinimalAPIClient + Settings Storage
+
+Complex Dependencies (Add Last):
+├── Analytics → Everything
+├── ML Models → Analytics + API Client
+└── Enhanced UI → All Core Features
+```
+
+### Performance Benchmarks
+
+Track these after each phase:
+- Build time (clean build)
+- App launch time
+- Memory usage (idle)
+- Memory usage (recording)
+- API response time
+
+Create a simple tracking table:
+```
+| Phase | Build Time | Launch Time | Memory (Idle) | Memory (Recording) |
+|-------|------------|-------------|---------------|-------------------|
+| 0     | 45s        | 0.8s        | 32MB          | 35MB              |
+| 1     | TBD        | TBD         | TBD           | TBD               |
+```
+
+### Integration Test Suite
+
+Create `MinimalIntegrationTests.swift`:
+```swift
+class MinimalIntegrationTests {
+    static func runAll() {
+        print("🧪 Running Integration Tests...")
+        testAudioRecording()
+        testAPIConnection()
+        testUIResponsiveness()
+        // Add more as features are added
+        print("✅ All tests passed!")
+    }
+    
+    static func testAudioRecording() {
+        // Basic recording test
+    }
+    
+    static func testAPIConnection() {
+        // API connectivity test
+    }
+    
+    static func testUIResponsiveness() {
+        // UI performance test
+    }
+}
+```
+
+### Problem File Quarantine
+
+Create a `Quarantine` folder (not in build target):
+```
+VoiceAssistant/
+├── Quarantine/
+│   ├── PrivateAnalytics.swift
+│   ├── ComplexFeatures/
+│   └── README.md (explaining why each file is quarantined)
+```
+
+### Success Metrics
+
+Define what "working" means for each phase:
+- **Phase 1**: Can record 30-second audio without crash
+- **Phase 2**: API responds in <3 seconds, 95% success rate
+- **Phase 3**: Speech recognition accuracy >80% for common phrases
+- **Phase 4**: UI animations at 60fps, no jank
+- **Phase 5**: Watch connection stable for 10+ minutes
+- **Phase 6**: Each feature works independently when enabled
+
+### Circuit Breaker Pattern
+
+For each new feature, implement a circuit breaker:
+```swift
+class FeatureCircuitBreaker {
+    private var failureCount = 0
+    private let maxFailures = 3
+    
+    func executeFeature(_ feature: () throws -> Void) {
+        guard failureCount < maxFailures else {
+            print("Feature disabled due to repeated failures")
+            return
+        }
+        
+        do {
+            try feature()
+            failureCount = 0 // Reset on success
+        } catch {
+            failureCount += 1
+            print("Feature failed \(failureCount)/\(maxFailures) times")
+        }
+    }
+}
+```
+
+### Daily Backup Strategy
+
+```bash
+#!/bin/bash
+# backup.sh
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="~/VoiceAssistant_Backups/$DATE"
+mkdir -p "$BACKUP_DIR"
+cp -r /Users/amitstorkel/Projects/VoiceAssistantIOS "$BACKUP_DIR"
+echo "Backup created at $BACKUP_DIR"
+```
+
+### Communication Strategy
+
+If working with Claude Code or team:
+- Always share the current phase number
+- Include the last successful commit hash
+- Describe any deviations from the plan
+- Report performance metrics after each phase
+
 ## Recovery Phases
 
 ### Phase 1: Basic Recording (NEXT STEP)
