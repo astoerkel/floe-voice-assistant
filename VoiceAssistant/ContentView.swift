@@ -10,20 +10,33 @@ struct ContentView: View {
     @State private var showResponse = false
     
     var body: some View {
-        VStack(spacing: 20) {
-            headerView
-            permissionView
-            statusView
-            recordingButton
-            recordingTimeView
-            audioLevelMeter
-            quickActionsView
-            responseView
-            transcriptionView
-            Spacer()
-            debugView
+        ZStack {
+            // Dark background
+            Color.black
+                .ignoresSafeArea()
+            
+            // Particle effect background
+            ParticleBackgroundView(
+                isVoiceActive: audioRecorder.isRecording,
+                isAudioPlaying: false
+            )
+            
+            // Main content
+            VStack(spacing: 20) {
+                headerView
+                permissionView
+                statusView
+                recordingButton
+                recordingTimeView
+                audioLevelMeter
+                quickActionsView
+                responseView
+                transcriptionView
+                Spacer()
+                debugView
+            }
+            .padding()
         }
-        .padding()
         .alert("Recording Error", isPresented: $showError) {
             Button("OK") { showError = false }
         } message: {
@@ -38,14 +51,16 @@ struct ContentView: View {
     
     private var headerView: some View {
         VStack(spacing: 8) {
-            Text("Voice Assistant")
-                .font(.largeTitle)
-                .fontWeight(.bold)
+            Text("Floe")
+                .font(.custom("Corinthia", size: 48))
+                .fontWeight(.medium)
+                .foregroundColor(.white)
             
             Text("Your AI-powered assistant")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
         }
+        .padding(.top, 20)
     }
     
     private var permissionView: some View {
@@ -60,7 +75,7 @@ struct ContentView: View {
     
     private var statusView: some View {
         Text(statusMessage)
-            .foregroundColor(.gray)
+            .foregroundColor(.white.opacity(0.6))
             .font(.subheadline)
     }
     
@@ -95,7 +110,7 @@ struct ContentView: View {
         VStack(spacing: 12) {
             Text("Quick Actions")
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
@@ -207,6 +222,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Transcription", systemImage: "text.bubble")
                         .font(.headline)
+                        .foregroundColor(.white)
                     
                     Text(transcribedText)
                         .padding()
@@ -474,7 +490,7 @@ struct SimpleQuickActionButton: View {
                 
                 Text(action.title)
                     .font(.caption)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.white)
             }
         }
         .buttonStyle(PlainButtonStyle())
