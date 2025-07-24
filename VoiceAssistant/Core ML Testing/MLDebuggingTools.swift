@@ -472,20 +472,29 @@ final class MLDebuggingTools: ObservableObject {
         // Step 4: Model Inference
         let inferenceStep = await measureProcessingStep(name: "Model Inference") {
             do {
-                let result = await intentClassifier.classifyIntent(text: input)
+                let result = try await intentClassifier.classifyIntent(text: input)
                 intermediateResults.append(IntermediateResult(
                     stepName: "Model Inference",
                     stepType: .modelInference,
                     input: "Feature vector",
                     output: "Intent: \(result.intent), Confidence: \(String(format: "%.3f", result.confidence))",
-                    confidence: result.confidence,
+                    confidence: Double(result.confidence),
                     metadata: ["modelVersion": "1.0", "inferenceTime": String(format: "%.3f", 0.1)],
                     processingTime: 0.1
                 ))
                 return result
             } catch {
                 logError("Model inference failed: \(error.localizedDescription)", category: .inference)
-                return IntentClassificationResult(intent: "error", confidence: 0.0, metadata: [:])
+                return IntentClassificationResult(
+                    intent: .general,
+                    confidence: 0.0,
+                    processingTime: 0.1,
+                    processingMethod: .rulesBased,
+                    alternativeIntents: [],
+                    extractedEntities: [:],
+                    shouldRouteToServer: false,
+                    routingExplanation: "Error during classification"
+                )
             }
         }
         processingSteps.append(inferenceStep.step)
@@ -514,13 +523,13 @@ final class MLDebuggingTools: ObservableObject {
         // Generate alternative intents
         let alternativeIntents = generateAlternativeIntents(
             input: input,
-            primaryIntent: inferenceStep.result.intent,
-            confidence: inferenceStep.result.confidence
+            primaryIntent: inferenceStep.result.intent.rawValue,
+            confidence: Double(inferenceStep.result.confidence)
         )
         
         let predictionDetails = PredictionDetails(
-            primaryIntent: inferenceStep.result.intent,
-            confidence: inferenceStep.result.confidence,
+            primaryIntent: inferenceStep.result.intent.rawValue,
+            confidence: Double(inferenceStep.result.confidence),
             alternativeIntents: alternativeIntents,
             processingTime: Date().timeIntervalSince(inspectionStartTime),
             modelVersion: "IntentClassifier-v1.0",
@@ -572,10 +581,10 @@ final class MLDebuggingTools: ObservableObject {
         while Date() < endTime && inferenceCount < 1000 { // Safety limit
             let input = testInputs[inferenceCount % testInputs.count]
             let startTime = Date()
-            let memoryBefore = getCurrentMemoryUsage()
+            let _ = getCurrentMemoryUsage()
             
             do {
-                let result = await intentClassifier.classifyIntent(text: input)
+                let _ = try await intentClassifier.classifyIntent(text: input)
                 let latency = Date().timeIntervalSince(startTime)
                 latencies.append(latency)
                 
@@ -737,8 +746,8 @@ final class MLDebuggingTools: ObservableObject {
         // Collect predictions
         for testCase in testCases {
             do {
-                let result = await intentClassifier.classifyIntent(text: testCase.input)
-                predictions.append((result.intent, result.confidence, testCase.expectedIntent))
+                let result = try await intentClassifier.classifyIntent(text: testCase.input)
+                predictions.append((result.intent.rawValue, Double(result.confidence), testCase.expectedIntent))
             } catch {
                 logError("Failed to get prediction for confidence analysis: \(error.localizedDescription)", category: .inference)
             }
@@ -793,7 +802,7 @@ final class MLDebuggingTools: ObservableObject {
         confidenceAnalysis = nil
         debugLogs.removeAll()
         
-        logInfo("Debugging data cleared", category: .general)
+        logInfo("Debugging data cleared", category: .performance)
     }
     
     /// Export debugging data
@@ -1110,7 +1119,6 @@ final class MLDebuggingTools: ObservableObject {
                 callCount: 150
             ),
             CPUHotspot(
-                id: UUID(),
                 function: "Tokenizer.tokenize",
                 cpuTime: 0.15,
                 percentage: 11.8,

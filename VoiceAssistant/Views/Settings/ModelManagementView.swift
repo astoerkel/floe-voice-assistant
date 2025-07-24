@@ -4,6 +4,7 @@ import SwiftUI
 struct ModelManagementView: View {
     @StateObject private var updateManager: ModelUpdateManager
     @StateObject private var versionControl: ModelVersionControl
+    @StateObject private var safetyManager: ModelUpdateSafetyManager
     @State private var showUpdateDetails = false
     @State private var showPerformanceDetails = false
     @State private var showRollbackConfirmation = false
@@ -21,9 +22,14 @@ struct ModelManagementView: View {
             updateServerURL: URL(string: "https://api.voiceassistant.com/models")!,
             versionControl: versionControl
         )
+        let safetyManager = ModelUpdateSafetyManager(
+            versionControl: versionControl,
+            updateManager: updateManager
+        )
         
         self._updateManager = StateObject(wrappedValue: updateManager)
         self._versionControl = StateObject(wrappedValue: versionControl)
+        self._safetyManager = StateObject(wrappedValue: safetyManager)
     }
     
     var body: some View {
@@ -110,14 +116,10 @@ struct ModelManagementView: View {
                 )
             }
             .sheet(isPresented: $showPerformanceDetails) {
-                PerformanceDetailsView(versionControl: versionControl)
+                PerformanceDetailsView(modelName: versionControl.currentVersion ?? "Unknown")
             }
             .sheet(isPresented: $showAutomaticUpdatesSheet) {
-                AutomaticUpdatesSettingsView(
-                    automaticUpdatesEnabled: $automaticUpdatesEnabled,
-                    updateOnlyOnWiFi: $updateOnlyOnWiFi,
-                    updateOnlyWhileCharging: $updateOnlyWhileCharging
-                )
+                AutomaticUpdatesSettingsView(safetyManager: safetyManager)
             }
             .alert("Confirm Rollback", isPresented: $showRollbackConfirmation) {
                 Button("Cancel", role: .cancel) { }
@@ -165,14 +167,14 @@ struct ModelManagementView: View {
                     HStack {
                         Label("Accuracy", systemImage: "target")
                         Spacer()
-                        Text("\(metrics.accuracy * 100, specifier: "%.1f")%")
+                        Text(String(format: "%.1f%%", metrics.accuracy * 100))
                             .fontWeight(.semibold)
                     }
                     
                     HStack {
                         Label("Avg. Response", systemImage: "timer")
                         Spacer()
-                        Text("\(metrics.inferenceTime * 1000, specifier: "%.0f")ms")
+                        Text(String(format: "%.0fms", metrics.inferenceTime * 1000))
                             .fontWeight(.semibold)
                     }
                 }
@@ -209,7 +211,7 @@ struct ModelManagementView: View {
                 ProgressView(value: updateManager.downloadProgress)
                     .progressViewStyle(LinearProgressViewStyle())
                 
-                Text("\(updateManager.downloadProgress * 100, specifier: "%.0f")% complete")
+                Text(String(format: "%.0f%% complete", updateManager.downloadProgress * 100))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -290,7 +292,7 @@ struct ModelManagementView: View {
                 HStack {
                     performanceMetricView(
                         title: "Success Rate",
-                        value: "\(metrics.successRate * 100, specifier: "%.1f")%",
+                        value: String(format: "%.1f%%", metrics.successRate * 100),
                         isGood: metrics.successRate > 0.95
                     )
                     
@@ -298,7 +300,7 @@ struct ModelManagementView: View {
                     
                     performanceMetricView(
                         title: "Error Rate",
-                        value: "\(metrics.errorRate * 100, specifier: "%.1f")%",
+                        value: String(format: "%.1f%%", metrics.errorRate * 100),
                         isGood: metrics.errorRate < 0.05
                     )
                     
@@ -376,7 +378,7 @@ struct ModelManagementView: View {
     // MARK: - Advanced Actions
     
     private var advancedActions: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 0) {
             Button("Force Update Check") {
                 Task {
                     await updateManager.forceUpdate()
@@ -394,10 +396,14 @@ struct ModelManagementView: View {
                 updateManager.cancelUpdate()
             }
             .foregroundColor(.red)
-            .disabled(![.downloading, .validating, .installing].contains { 
-                if case $0 = updateManager.updateStatus { return true }
-                return false
-            })
+            .disabled({
+                switch updateManager.updateStatus {
+                case .downloading, .validating, .installing:
+                    return false
+                default:
+                    return true
+                }
+            }())
         }
     }
     
@@ -572,6 +578,41 @@ struct ModelManagementView: View {
         default:
             return String(format: format, value)
         }
+    }
+}
+
+// MARK: - Stub Views (Temporarily disabled features)
+
+struct VersionHistoryView: View {
+    let versionControl: ModelVersionControl
+    
+    var body: some View {
+        Text("Version History (Coming Soon)")
+            .font(.headline)
+            .foregroundColor(.secondary)
+            .padding()
+    }
+}
+
+struct PerformanceDetailsView: View {
+    let modelName: String
+    
+    var body: some View {
+        Text("Performance Details (Coming Soon)")
+            .font(.headline)
+            .foregroundColor(.secondary)
+            .padding()
+    }
+}
+
+struct AutomaticUpdatesSettingsView: View {
+    @ObservedObject var safetyManager: ModelUpdateSafetyManager
+    
+    var body: some View {
+        Text("Automatic Updates Settings (Coming Soon)")
+            .font(.headline)
+            .foregroundColor(.secondary)
+            .padding()
     }
 }
 

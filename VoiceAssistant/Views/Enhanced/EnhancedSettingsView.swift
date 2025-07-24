@@ -416,12 +416,10 @@ struct EnhancedSettingsView: View {
             Text("Are you sure you want to delete your account? This action cannot be undone.")
         }
         .sheet(isPresented: $showDebugMenu) {
-            if #available(iOS 15.0, *) {
-                DebugMenuView()
-            } else {
-                Text("Debug menu requires iOS 15.0+")
-                    .padding()
-            }
+            Text("Debug menu is temporarily disabled")
+                .padding()
+                .font(.headline)
+                .foregroundColor(.secondary)
         }
     }
     

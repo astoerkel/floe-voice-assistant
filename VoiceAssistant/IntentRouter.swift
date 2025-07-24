@@ -26,6 +26,53 @@ public enum ProcessingRoute: Codable {
     case server
     case hybrid(onDeviceFirst: Bool)
     case offline(cached: Bool)
+    
+    // MARK: - Codable Implementation
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case handler
+        case onDeviceFirst
+        case cached
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        
+        switch type {
+        case "onDevice":
+            let handler = try container.decode(String.self, forKey: .handler)
+            self = .onDevice(handler: handler)
+        case "server":
+            self = .server
+        case "hybrid":
+            let onDeviceFirst = try container.decode(Bool.self, forKey: .onDeviceFirst)
+            self = .hybrid(onDeviceFirst: onDeviceFirst)
+        case "offline":
+            let cached = try container.decode(Bool.self, forKey: .cached)
+            self = .offline(cached: cached)
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown ProcessingRoute type: \(type)")
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        switch self {
+        case .onDevice(let handler):
+            try container.encode("onDevice", forKey: .type)
+            try container.encode(handler, forKey: .handler)
+        case .server:
+            try container.encode("server", forKey: .type)
+        case .hybrid(let onDeviceFirst):
+            try container.encode("hybrid", forKey: .type)
+            try container.encode(onDeviceFirst, forKey: .onDeviceFirst)
+        case .offline(let cached):
+            try container.encode("offline", forKey: .type)
+            try container.encode(cached, forKey: .cached)
+        }
+    }
 }
 
 // MARK: - Intent Routing Configuration

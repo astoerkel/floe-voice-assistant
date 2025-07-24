@@ -1,14 +1,14 @@
 import SwiftUI
 import AVFoundation
 
-struct ContentView: View {
+struct MinimalContentView: View {
     @StateObject private var audioRecorder = MinimalAudioRecorder()
     @State private var transcribedText = ""
     @State private var statusMessage = "Tap to record"
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("VoiceAssistant - Minimal")
+            Text("VoiceAssistant")
                 .font(.largeTitle)
             
             Text(statusMessage)
