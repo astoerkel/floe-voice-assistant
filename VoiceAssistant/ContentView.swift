@@ -120,16 +120,33 @@ struct ContentView: View {
                 statusMessage = "Processing..."
                 if let audioURL = audioRecorder.stopRecording() {
                     Task {
-                        do {
-                            let response = try await MinimalAPIClient.shared.processAudio(url: audioURL)
-                            await MainActor.run {
-                                transcribedText = response
-                                statusMessage = "Tap to record"
-                            }
-                        } catch {
-                            await MainActor.run {
-                                transcribedText = "Error: \(error.localizedDescription)"
-                                statusMessage = "Tap to record"
+                        // Use API connection circuit breaker for network calls
+                        await FeatureCircuitBreakers.apiConnection.executeFeature {
+                            do {
+                                let response = try await MinimalAPIClient.shared.processAudio(url: audioURL)
+                                await MainActor.run {
+                                    transcribedText = response
+                                    statusMessage = "Tap to record"
+                                }
+                            } catch {
+                                await MainActor.run {
+                                    // Provide user-friendly error messages
+                                    switch error {
+                                    case APIError.httpError(let code) where code == 401:
+                                        transcribedText = "Authentication required. Please sign in."
+                                    case APIError.httpError(let code) where code == 429:
+                                        transcribedText = "Rate limit exceeded. Please try again later."
+                                    case APIError.httpError(let code) where code >= 500:
+                                        transcribedText = "Server error. Please try again later."
+                                    case APIError.fileReadError:
+                                        transcribedText = "Failed to read audio file."
+                                    case APIError.noResponseText:
+                                        transcribedText = "No response from server. Please try again."
+                                    default:
+                                        transcribedText = "Connection error: \(error.localizedDescription)"
+                                    }
+                                    statusMessage = "Tap to record"
+                                }
                             }
                         }
                     }
