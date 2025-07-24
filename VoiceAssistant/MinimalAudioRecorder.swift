@@ -17,7 +17,7 @@ class MinimalAudioRecorder: NSObject, ObservableObject {
     private let recordingSession = AVAudioSession.sharedInstance()
     
     // MARK: - Error Types
-    enum RecorderError: LocalizedError {
+    enum RecorderError: LocalizedError, Equatable {
         case permissionDenied
         case setupFailed(String)
         case recordingFailed(String)
