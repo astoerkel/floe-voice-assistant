@@ -96,7 +96,9 @@ public class PrivateAnalytics: ObservableObject {
     init(modelManager: CoreMLManager? = nil) {
         self.modelManager = modelManager
         self.encryptionKey = SymmetricKey(size: .bits256)
-        self.storageManager = AnalyticsStorageManager(encryptionKey: encryptionKey)
+        
+        self.storageManager = try! AnalyticsStorageManager(encryptionKey: encryptionKey)
+        
         self.diffPrivacyManager = DifferentialPrivacyManager(epsilon: privacyEpsilon)
         
         loadConfiguration()
@@ -129,7 +131,7 @@ public class PrivateAnalytics: ObservableObject {
         analysisTimer?.invalidate()
         
         if deleteData {
-            await deleteAllAnalyticsData()
+            try? await deleteAllAnalyticsData()
         }
         
         saveConfiguration()
@@ -241,14 +243,14 @@ public class PrivateAnalytics: ObservableObject {
     }
     
     /// Delete all analytics data
-    public func deleteAllAnalyticsData() async {
+    public func deleteAllAnalyticsData() async throws {
         rawEvents.removeAll()
         processedPatterns.removeAll()
         accuracyMetrics.removeAll()
         performanceData.removeAll()
         behaviorInsights.removeAll()
         
-        await storageManager.deleteAllData()
+        try await storageManager.deleteAllData()
         analyticsDataSize = 0
         lastAnalysisDate = nil
         
@@ -285,18 +287,20 @@ public class PrivateAnalytics: ObservableObject {
         Task {
             do {
                 // Load usage pattern analysis model
-                if let model = try await modelManager.loadModel(name: "UsagePatternAnalyzer") {
-                    usagePatternModel = model
-                }
-                
-                // Load behavior analysis model
-                if let model = try await modelManager.loadModel(name: "BehaviorAnalyzer") {
-                    behaviorAnalysisModel = model
-                }
-                
-                // Load performance analysis model
-                if let model = try await modelManager.loadModel(name: "PerformanceAnalyzer") {
-                    performanceModel = model
+                if let modelManager = modelManager {
+                    if let model = try await modelManager.loadModel("UsagePatternAnalyzer") {
+                        usagePatternModel = model
+                    }
+                    
+                    // Load behavior analysis model
+                    if let model = try await modelManager.loadModel("BehaviorAnalyzer") {
+                        behaviorAnalysisModel = model
+                    }
+                    
+                    // Load performance analysis model
+                    if let model = try await modelManager.loadModel("PerformanceAnalyzer") {
+                        performanceModel = model
+                    }
                 }
             } catch {
                 print("Failed to load analytics ML models: \(error)")

@@ -175,10 +175,11 @@ class ResponseGenerationModel: MLModelProtocol {
         
         return ResponseGenerationOutput(
             generatedText: generatedText,
-            confidence: confidence,
-            responseType: input.responseType,
-            alternativeResponses: generateAlternatives(for: input),
-            suggestedFollowUps: generateFollowUps(for: input)
+            confidence: Double(confidence),
+            responseCategory: .general,
+            emotionalTone: .neutral,
+            suggestedFollowups: generateFollowUps(for: input),
+            processingMetrics: ProcessingMetrics(processingTimeMs: predictionTime * 1000)
         )
     }
     
@@ -208,10 +209,10 @@ class ResponseGenerationModel: MLModelProtocol {
     
     // MARK: - Private Helper Methods
     private func generateResponse(for input: ResponseGenerationInput) -> String {
-        let templates = getTemplates(for: input.responseType)
+        let templates = getTemplates(for: GenerationResponseType.confirmation)
         let selectedTemplate = templates.randomElement() ?? "I can help you with that."
         
-        return fillTemplate(selectedTemplate, with: input.context, intent: input.intent)
+        return fillTemplate(selectedTemplate, with: [:], intent: input.query)
     }
     
     private func getTemplates(for responseType: GenerationResponseType) -> [String] {
@@ -260,22 +261,13 @@ class ResponseGenerationModel: MLModelProtocol {
     }
     
     private func generateAlternatives(for input: ResponseGenerationInput) -> [String] {
-        let templates = getTemplates(for: input.responseType)
+        let templates = getTemplates(for: GenerationResponseType.confirmation)
         return Array(templates.prefix(3)).map { template in
-            fillTemplate(template, with: input.context, intent: input.intent)
+            fillTemplate(template, with: [:], intent: input.query)
         }
     }
     
     private func generateFollowUps(for input: ResponseGenerationInput) -> [String] {
-        switch input.responseType {
-        case .confirmation:
-            return ["Is there anything else I can help with?", "Would you like me to set a reminder?"]
-        case .clarification:
-            return ["Please provide more details.", "What specific information do you need?"]
-        case .error:
-            return ["Would you like to try a different approach?", "Can I help you with something else?"]
-        default:
-            return ["What else can I do for you?", "Any other requests?"]
-        }
+        return ["What else can I do for you?", "Any other requests?"]
     }
 }

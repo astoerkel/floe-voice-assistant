@@ -206,29 +206,23 @@ class ResponseGenerator: ObservableObject {
         do {
             let startTime = Date()
             
-            // Convert our custom input to MLFeatureProvider
-            let mlInput = input as MLFeatureProvider
-            
-            let output = try await withCheckedThrowingContinuation { continuation in
-                model.predict(input: mlInput) { (result: Result<MLFeatureProvider, MLModelError>) in
+            // Use the custom model's prediction interface 
+            let responseOutput = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ResponseGenerationOutput, Error>) in
+                model.predict(input: input) { (result: Result<ResponseGenerationOutput, MLModelError>) in
                     switch result {
-                    case .success(let mlOutput):
-                        // Convert MLFeatureProvider back to our custom output type
-                        if let responseOutput = ResponseGenerationOutput.from(featureProvider: mlOutput) {
-                            continuation.resume(returning: responseOutput)
-                        } else {
-                            continuation.resume(throwing: MLModelError.custom("Failed to convert model output"))
-                        }
+                    case .success(let output):
+                        continuation.resume(returning: output)
                     case .failure(let error):
-                        continuation.resume(throwing: error)
+                        continuation.resume(throwing: CoreMLResponseError.predictionFailed(error.localizedDescription))
                     }
                 }
             }
+            
             let processingTime = Date().timeIntervalSince(startTime)
             
             // Apply personalization
             let personalizedResponse = await personalizationEngine.personalizeResponse(
-                output.generatedText,
+                responseOutput.generatedText,
                 for: preferences ?? personalizationEngine.currentPreferences
             )
             
@@ -241,11 +235,11 @@ class ResponseGenerator: ObservableObject {
             
             return ResponseGenerationResult(
                 response: variedResponse,
-                confidence: output.confidence,
+                confidence: Double(responseOutput.confidence),
                 source: .coreML,
                 processingTime: processingTime,
                 personalized: true,
-                metadata: output.metadata
+                metadata: responseOutput.metadata
             )
             
         } catch {
@@ -389,9 +383,9 @@ class ResponseGenerator: ObservableObject {
         
         // Adjust speaking rate based on response length preference
         switch preferences.responseLength {
-        case .brief:
+        case .short, .brief:
             adaptedSettings.speakingRate = min(1.2, settings.speakingRate * 1.1)
-        case .detailed:
+        case .long, .detailed:
             adaptedSettings.speakingRate = max(0.8, settings.speakingRate * 0.95)
         case .medium:
             // Keep default rate
@@ -513,7 +507,9 @@ enum ResponseSource {
     case cache
 }
 
-enum ResponseType: String, CaseIterable {
+// Using ResponseType from SharedTypes.swift
+// Extended enum for ResponseGenerator-specific types
+enum ExtendedResponseType: String, CaseIterable {
     case calendar = "calendar"
     case email = "email"
     case task = "task"
@@ -526,54 +522,9 @@ enum ResponseType: String, CaseIterable {
     case general = "general"
 }
 
-struct ConversationContext {
-    var recentMessages: [ConversationMessage] = []
-    var conversationTurn: Int = 0
-    var lastResponseType: String?
-    var lastResponseConfidence: Double = 0.0
-    var userPreferences: UserPreferences?
-    var timeContext: TimeContext = TimeContext.current()
-    
-    var contextSummary: String {
-        let messageCount = recentMessages.count
-        let lastType = lastResponseType ?? "none"
-        return "\(messageCount)_\(lastType)_\(conversationTurn)"
-    }
-}
+// Using ConversationContext from SharedTypes.swift
 
-struct TimeContext {
-    let hour: Int
-    let dayOfWeek: Int
-    let isWeekend: Bool
-    let timeOfDay: TimeOfDay
-    
-    static func current() -> TimeContext {
-        let now = Date()
-        let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: now)
-        let dayOfWeek = calendar.component(.weekday, from: now)
-        let isWeekend = dayOfWeek == 1 || dayOfWeek == 7
-        
-        let timeOfDay: TimeOfDay
-        switch hour {
-        case 5..<12:
-            timeOfDay = .morning
-        case 12..<17:
-            timeOfDay = .afternoon
-        case 17..<21:
-            timeOfDay = .evening
-        default:
-            timeOfDay = .night
-        }
-        
-        return TimeContext(
-            hour: hour,
-            dayOfWeek: dayOfWeek,
-            isWeekend: isWeekend,
-            timeOfDay: timeOfDay
-        )
-    }
-}
+// Using TimeContext from SharedTypes.swift
 
 
 struct ResponseGenerationStats {
@@ -610,10 +561,21 @@ extension Notification.Name {
     static let personalizationUpdated = Notification.Name("personalizationUpdated")
 }
 
-// MARK: - MLModelError Extension
+// MARK: - CoreML Error Handling
 
-extension MLModelError {
-    static func custom(_ message: String) -> MLModelError {
-        return MLModelError(.customModelDownloadFailed, userInfo: [NSLocalizedDescriptionKey: message])
+enum CoreMLResponseError: LocalizedError {
+    case modelNotLoaded(String)
+    case invalidOutput(String)
+    case predictionFailed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .modelNotLoaded(let message):
+            return "Core ML model not loaded: \(message)"
+        case .invalidOutput(let message):
+            return "Invalid Core ML output: \(message)"
+        case .predictionFailed(let message):
+            return "Core ML prediction failed: \(message)"
+        }
     }
 }

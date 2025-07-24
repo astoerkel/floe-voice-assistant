@@ -115,7 +115,6 @@ class VocabularyManager: ObservableObject {
                     if !contact.nickname.isEmpty {
                         names.insert(contact.nickname.lowercased())
                     }
-                    return true
                 }
                 
                 contactNames = names
@@ -126,8 +125,8 @@ class VocabularyManager: ObservableObject {
                 try await contactStore.requestAccess(for: .contacts)
                 await loadContactNames()
                 
-            case .denied, .restricted:
-                print("⚠️ Contact access denied or restricted")
+            case .denied, .restricted, .limited:
+                print("⚠️ Contact access denied, restricted, or limited")
                 
             @unknown default:
                 print("⚠️ Unknown contact authorization status")

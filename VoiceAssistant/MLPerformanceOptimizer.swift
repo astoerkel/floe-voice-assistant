@@ -158,7 +158,7 @@ public class MLPerformanceOptimizer: ObservableObject {
         success: Bool,
         computeUnits: MLComputeUnits
     ) {
-        metricsQueue.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
             
             let metrics = MLPerformanceMetrics(
@@ -173,9 +173,7 @@ public class MLPerformanceOptimizer: ObservableObject {
                 successRate: success ? 1.0 : 0.0
             )
             
-            DispatchQueue.main.async {
-                self.updateMetrics(metrics)
-            }
+            self.updateMetrics(metrics)
         }
     }
     

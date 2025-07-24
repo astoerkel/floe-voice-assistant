@@ -382,7 +382,7 @@ final class MLDebuggingTools: ObservableObject {
     }
     
     struct DebugLog: Identifiable, Codable {
-        let id = UUID()
+        var id = UUID()
         let timestamp: Date
         let level: LogLevel
         let category: LogCategory
@@ -472,7 +472,7 @@ final class MLDebuggingTools: ObservableObject {
         // Step 4: Model Inference
         let inferenceStep = await measureProcessingStep(name: "Model Inference") {
             do {
-                let result = await intentClassifier.classifyIntent(input)
+                let result = await intentClassifier.classifyIntent(text: input)
                 intermediateResults.append(IntermediateResult(
                     stepName: "Model Inference",
                     stepType: .modelInference,
@@ -575,7 +575,7 @@ final class MLDebuggingTools: ObservableObject {
             let memoryBefore = getCurrentMemoryUsage()
             
             do {
-                let result = await intentClassifier.classifyIntent(input)
+                let result = await intentClassifier.classifyIntent(text: input)
                 let latency = Date().timeIntervalSince(startTime)
                 latencies.append(latency)
                 
@@ -737,7 +737,7 @@ final class MLDebuggingTools: ObservableObject {
         // Collect predictions
         for testCase in testCases {
             do {
-                let result = await intentClassifier.classifyIntent(testCase.input)
+                let result = await intentClassifier.classifyIntent(text: testCase.input)
                 predictions.append((result.intent, result.confidence, testCase.expectedIntent))
             } catch {
                 logError("Failed to get prediction for confidence analysis: \(error.localizedDescription)", category: .inference)
@@ -793,7 +793,7 @@ final class MLDebuggingTools: ObservableObject {
         confidenceAnalysis = nil
         debugLogs.removeAll()
         
-        logInfo("Debugging data cleared", category: .debug)
+        logInfo("Debugging data cleared", category: .general)
     }
     
     /// Export debugging data
@@ -951,9 +951,9 @@ final class MLDebuggingTools: ObservableObject {
         
         // Mock confidence breakdown calculation
         let vocabularyConfidence = min(1.0, Double(tokens.count) / 10.0)
-        let syntaxConfidence = prediction.confidence * Double.random(in: 0.8...1.2)
-        let semanticConfidence = prediction.confidence * Double.random(in: 0.7...1.1)
-        let contextConfidence = prediction.confidence * Double.random(in: 0.9...1.0)
+        let syntaxConfidence = Double(prediction.confidence) * Double.random(in: 0.8...1.2)
+        let semanticConfidence = Double(prediction.confidence) * Double.random(in: 0.7...1.1)
+        let contextConfidence = Double(prediction.confidence) * Double.random(in: 0.9...1.0)
         
         var uncertaintyFactors: [UncertaintyFactor] = []
         
@@ -975,10 +975,10 @@ final class MLDebuggingTools: ObservableObject {
             ))
         }
         
-        let confidenceDistribution = generateConfidenceDistribution(baseConfidence: prediction.confidence)
+        let confidenceDistribution = generateConfidenceDistribution(baseConfidence: Double(prediction.confidence))
         
         return ConfidenceBreakdown(
-            overallConfidence: prediction.confidence,
+            overallConfidence: Double(prediction.confidence),
             vocabularyConfidence: vocabularyConfidence,
             syntaxConfidence: min(1.0, syntaxConfidence),
             semanticConfidence: min(1.0, semanticConfidence),
@@ -1098,14 +1098,12 @@ final class MLDebuggingTools: ObservableObject {
     private func generateMockCPUHotspots() -> [CPUHotspot] {
         return [
             CPUHotspot(
-                id: UUID(),
                 function: "MLModel.prediction",
                 cpuTime: 0.45,
                 percentage: 35.2,
                 callCount: 150
             ),
             CPUHotspot(
-                id: UUID(),
                 function: "FeatureExtraction.process",
                 cpuTime: 0.28,
                 percentage: 22.1,

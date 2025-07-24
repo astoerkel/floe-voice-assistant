@@ -2,7 +2,7 @@ import Foundation
 import CoreML
 
 /// Input structure for Core ML response generation model
-class ResponseGenerationInput: NSObject, MLFeatureProvider {
+class ResponseGenerationInput: NSObject, MLFeatureProvider, MLModelInput {
     
     // MARK: - Input Properties
     let query: String
@@ -44,6 +44,12 @@ class ResponseGenerationInput: NSObject, MLFeatureProvider {
         
         self.appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         self.sessionId = UUID().uuidString
+    }
+    
+    // MARK: - MLModelInput Protocol
+    
+    var inputIdentifier: String {
+        return "response_generation_input"
     }
     
     // MARK: - MLFeatureProvider Protocol
@@ -134,26 +140,5 @@ class ResponseGenerationInput: NSObject, MLFeatureProvider {
 }
 
 // MARK: - Supporting Types
+// Using shared types from SharedTypes.swift
 
-enum DeviceType: String, CaseIterable {
-    case iPhone = "iphone"
-    case appleWatch = "apple_watch"
-    case other = "other"
-}
-
-// MARK: - TimeOfDay Extension
-
-extension TimeOfDay: CustomStringConvertible {
-    var description: String {
-        switch self {
-        case .morning: return "morning"
-        case .afternoon: return "afternoon"
-        case .evening: return "evening"
-        case .night: return "night"
-        }
-    }
-    
-    var rawValue: String {
-        return description
-    }
-}

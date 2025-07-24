@@ -151,10 +151,10 @@ public class PrivacyComplianceManager {
         var violations: [ComplianceViolation] = []
         
         // Audit data collection practices
-        violations.append(contentsOf: auditDataCollection())
+        violations.append(contentsOf: await auditDataCollection())
         
         // Audit data retention policies
-        violations.append(contentsOf: auditDataRetention())
+        violations.append(contentsOf: await auditDataRetention())
         
         // Audit encryption standards
         violations.append(contentsOf: auditEncryption())
@@ -193,7 +193,7 @@ public class PrivacyComplianceManager {
     }
     
     /// Check if current configuration meets iOS privacy guidelines
-    public func checkiOSPrivacyCompliance() -> Bool {
+    @MainActor public func checkiOSPrivacyCompliance() -> Bool {
         // Check App Tracking Transparency compliance
         guard checkATTCompliance() else { return false }
         
@@ -303,7 +303,7 @@ public class PrivacyComplianceManager {
         return violations
     }
     
-    private func auditDataRetention() -> [ComplianceViolation] {
+    @MainActor private func auditDataRetention() -> [ComplianceViolation] {
         var violations: [ComplianceViolation] = []
         
         if let analytics = privateAnalytics {
@@ -442,7 +442,7 @@ public class PrivacyComplianceManager {
         return true
     }
     
-    private func checkOnDeviceProcessingCompliance() -> Bool {
+    @MainActor private func checkOnDeviceProcessingCompliance() -> Bool {
         // Verify preference for on-device processing
         if let tracker = modelPerformanceTracker {
             return tracker.currentProcessingRatio.onDevicePercentage > 50.0
@@ -490,9 +490,10 @@ extension SymmetricKey {
             throw CryptoKitError.incorrectParameterSize
         }
         
-        // Use PBKDF2 to derive key
-        let derivedKey = try HKDF<SHA256>.deriveKey(
-            inputKeyMaterial: passwordData,
+        // Use HKDF to derive key (first convert Data to SymmetricKey)
+        let inputKey = SymmetricKey(data: passwordData)
+        let derivedKey = HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: inputKey,
             salt: salt,
             outputByteCount: 32
         )

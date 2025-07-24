@@ -8,6 +8,7 @@
 
 import Foundation
 import AVFoundation
+import UIKit
 import Combine
 import OSLog
 
@@ -126,7 +127,7 @@ public class EnhancedVoiceProcessor: ObservableObject {
         loadProcessingSettings()
         loadStatistics()
         
-        logger.info("EnhancedVoiceProcessor initialized with \(offlineHandlers.count) offline handlers")
+        logger.info("EnhancedVoiceProcessor initialized with \(self.offlineHandlers.count) offline handlers")
     }
     
     // MARK: - Main Processing Interface
@@ -452,7 +453,7 @@ public class EnhancedVoiceProcessor: ObservableObject {
             sessionId: Constants.getCurrentSessionId(),
             metadata: [
                 "intent": intent.rawValue,
-                "confidence": 1.0, // We already classified, so high confidence
+                "confidence": "1.0", // We already classified, so high confidence
                 "processingMethod": "server",
                 "timeOfDay": context.timeOfDay
             ],
@@ -464,9 +465,9 @@ public class EnhancedVoiceProcessor: ObservableObject {
                 switch result {
                 case .success(let enhancedResponse):
                     let voiceResponse = VoiceResponse(
-                        text: enhancedResponse.response?.text ?? "Server response",
+                        text: enhancedResponse.text,
                         success: enhancedResponse.success,
-                        audioBase64: enhancedResponse.audioResponse?.audioBase64
+                        audioBase64: enhancedResponse.audioBase64
                     )
                     
                     continuation.resume(returning: (

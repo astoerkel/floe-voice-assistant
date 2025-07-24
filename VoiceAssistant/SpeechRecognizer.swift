@@ -5,7 +5,7 @@ import Combine
 
 public class SpeechRecognizer: ObservableObject {
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
-    private let enhancedSpeechRecognizer: EnhancedSpeechRecognizer
+    let enhancedSpeechRecognizer: EnhancedSpeechRecognizer
     
     @Published var isAuthorized = false
     @Published var isEnhanced = false
@@ -313,7 +313,7 @@ public class SpeechRecognizer: ObservableObject {
         guard isEnhanced else { return }
         
         Task {
-            await enhancedSpeechRecognizer.vocabularyManager.learnFromTranscription(original, correctedText: corrected)
+            await enhancedSpeechRecognizer.getVocabularyManager().learnFromTranscription(original, correctedText: corrected)
             print("📚 SpeechRecognizer: Learned from correction: '\(original)' -> '\(corrected)'")
         }
     }
@@ -323,7 +323,7 @@ public class SpeechRecognizer: ObservableObject {
         
         Task {
             for term in terms {
-                await enhancedSpeechRecognizer.vocabularyManager.addCustomTerm(term, domain: domain)
+                await enhancedSpeechRecognizer.getVocabularyManager().addCustomTerm(term, domain: domain)
             }
             print("📝 SpeechRecognizer: Added \(terms.count) custom terms to \(domain.rawValue)")
         }
@@ -331,7 +331,7 @@ public class SpeechRecognizer: ObservableObject {
     
     func getVocabularyStats() -> VocabularyStats? {
         guard isEnhanced else { return nil }
-        return enhancedSpeechRecognizer.vocabularyManager.getVocabularyStats()
+        return enhancedSpeechRecognizer.getVocabularyManager().getVocabularyStats()
     }
     
     func getEnhancementStatus() -> [String: Any] {
@@ -344,9 +344,9 @@ public class SpeechRecognizer: ObservableObject {
         
         if isEnhanced {
             status["enhancements"] = enhancedSpeechRecognizer.enhancements
-            status["vocabularyCount"] = enhancedSpeechRecognizer.vocabularyManager.vocabularyCount
+            status["vocabularyCount"] = enhancedSpeechRecognizer.getVocabularyManager().vocabularyCount
             
-            if let patternLearning = enhancedSpeechRecognizer.patternLearning.exportLearningData() as? [String: Any] {
+            if let patternLearning = enhancedSpeechRecognizer.getPatternLearning().exportLearningData() as? [String: Any] {
                 status["patternLearning"] = patternLearning
             }
         }
@@ -360,7 +360,7 @@ public class SpeechRecognizer: ObservableObject {
         guard isEnhanced else { return }
         
         Task {
-            await enhancedSpeechRecognizer.patternLearning.resetLearning()
+            await enhancedSpeechRecognizer.getPatternLearning().resetLearning()
             print("🔄 SpeechRecognizer: Learning data reset")
         }
     }
@@ -372,7 +372,7 @@ public class SpeechRecognizer: ObservableObject {
         
         var report: [String: Any] = [
             "enhanced_features_enabled": true,
-            "learning_enabled": enhancedSpeechRecognizer.patternLearning.isLearningEnabled,
+            "learning_enabled": enhancedSpeechRecognizer.getPatternLearning().isLearningEnabled,
             "vocabulary_learning": true,
             "pattern_learning": true,
             "data_encryption": "AES-256-GCM",

@@ -296,7 +296,7 @@ struct ProcessingLocationIndicator_Previews: PreviewProvider {
             HStack(spacing: 12) {
                 ProcessingLocationIndicator(location: .onDevice, compact: true)
                 ProcessingLocationIndicator(location: .server, compact: true)
-                ProcessingLocationIndicator(location: .hybrid, compact: true, isProcessing: true)
+                ProcessingLocationIndicator(location: .hybrid, isProcessing: true, compact: true)
                 ProcessingLocationIndicator(location: .fallback, compact: true)
             }
             

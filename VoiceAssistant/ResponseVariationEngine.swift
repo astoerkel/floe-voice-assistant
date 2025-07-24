@@ -249,22 +249,22 @@ class ResponseVariationEngine {
         
         // Apply enthusiasm modifications
         if let modifier = personalityModifiers[.enthusiastic] {
-            result = modifier.apply(to: result, intensity: traits.enthusiasm)
+            result = modifier.apply(result, traits.enthusiasm)
         }
         
         // Apply helpfulness modifications
         if let modifier = personalityModifiers[.helpful] {
-            result = modifier.apply(to: result, intensity: traits.helpfulness)
+            result = modifier.apply(result, traits.helpfulness)
         }
         
         // Apply friendliness modifications
         if let modifier = personalityModifiers[.friendly] {
-            result = modifier.apply(to: result, intensity: traits.friendliness)
+            result = modifier.apply(result, traits.friendliness)
         }
         
         // Apply professionalism modifications
         if let modifier = personalityModifiers[.professional] {
-            result = modifier.apply(to: result, intensity: traits.professionalism)
+            result = modifier.apply(result, traits.professionalism)
         }
         
         return result
@@ -281,7 +281,7 @@ class ResponseVariationEngine {
         
         // Apply time-of-day contextual modifications
         if let modifier = contextualModifiers[context.timeContext.timeOfDay] {
-            result = modifier.apply(to: result, context: context)
+            result = modifier.apply(result, context)
         }
         
         // Apply conversation length variations

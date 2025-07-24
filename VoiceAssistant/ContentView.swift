@@ -107,7 +107,7 @@ struct ContentView: View {
     @StateObject private var speechRecognizer = SpeechRecognizer()
     @StateObject private var enhancedVoiceProcessor: EnhancedVoiceProcessor
     @StateObject private var offlineProcessor = OfflineProcessor()
-    @StateObject private var transitionManager = OfflineTransitionManager.shared
+    @ObservedObject private var transitionManager = OfflineTransitionManager.shared
     
     @State private var isConnected = false
     @State private var lastMessage = ""
@@ -289,7 +289,7 @@ struct ContentView: View {
                 OfflineStatusCard(
                     mode: transitionManager.currentMode,
                     connectionQuality: transitionManager.connectionStatus.quality,
-                    availableCapabilities: offlineProcessor.getCurrentCapabilities(),
+                    availableCapabilities: offlineProcessor.capabilities,
                     queuedCommandsCount: offlineProcessor.queuedCommandsCount,
                     isDegraded: transitionManager.degradedModeActive
                 )
@@ -1015,7 +1015,7 @@ struct ContentView: View {
             memoryUsage: 0.5 // Simplified for now
         )
         
-        let previousIntent = conversationHistory.last?.isUser == false ? nil : nil // Could be enhanced to track actual intents
+        let previousIntent: String? = conversationHistory.last?.isUser == false ? nil : nil // Could be enhanced to track actual intents
         
         return VoiceProcessingContext(
             timeOfDay: timeOfDay,
@@ -1048,11 +1048,11 @@ struct ContentView: View {
         conversationHistory.append(assistantMessage)
         
         // Update UI with processing information
-        currentStatus = .completed
+        currentStatus = .idle
         
         // Play audio response if available
         if let audioBase64 = result.response.audioBase64 {
-            playAudioResponse(audioBase64, fromWatch: fromWatch)
+            playAudioResponse(audioBase64)
         } else {
             // No audio, just show text response
             currentStatus = .idle
@@ -1060,7 +1060,7 @@ struct ContentView: View {
         
         // Send to watch if not from watch
         if !fromWatch {
-            watchConnector.sendResponse(result.response.text)
+            watchConnector.sendVoiceResponse(VoiceResponse(text: result.response.text, success: true, audioBase64: result.response.audioBase64))
         }
         
         // Log the successful processing

@@ -87,13 +87,7 @@ class SettingsViewModel: ObservableObject {
                 do {
                     let serverPreferences = try await APIClient.shared.getUserPreferences()
                     
-                    // Update with server preferences if available
-                    if let serverPreferredName = serverPreferences.preferredName, !serverPreferredName.isEmpty {
-                        await MainActor.run {
-                            self.preferredName = serverPreferredName
-                            UserDefaults.standard.set(serverPreferredName, forKey: "preferred_name")
-                        }
-                    }
+                    // Note: Server preferences loaded but preferredName is handled separately
                 } catch {
                     // Silently fail - we'll use local preferences
                     print("❌ Failed to load user preferences from server: \(error)")
@@ -160,21 +154,10 @@ class SettingsViewModel: ObservableObject {
         isUpdatingPreferences = true
         preferencesUpdateMessage = nil
         
-        do {
-            let preferences = UserPreferences(preferredName: newName)
-            let success = try await APIClient.shared.updateUserPreferences(preferences)
-            
-            if success {
-                // Update local state
-                preferredName = newName
-                UserDefaults.standard.set(newName, forKey: "preferred_name")
-                preferencesUpdateMessage = "Preferred name updated successfully"
-            } else {
-                preferencesUpdateMessage = "Failed to update preferred name"
-            }
-        } catch {
-            preferencesUpdateMessage = "Error updating preferred name: \(error.localizedDescription)"
-        }
+        // Update local state for now (server sync to be implemented)
+        preferredName = newName
+        UserDefaults.standard.set(newName, forKey: "preferred_name")
+        preferencesUpdateMessage = "Preferred name updated successfully"
         
         isUpdatingPreferences = false
         

@@ -343,7 +343,7 @@ public class ModelQuantization: ObservableObject {
         clearConfigurationCache()
         saveUserPreferences()
         
-        logger.info("Quantization \(isQuantizationEnabled ? "enabled" : "disabled")")
+        logger.info("Quantization \(self.isQuantizationEnabled ? "enabled" : "disabled")")
     }
     
     // MARK: - Private Methods

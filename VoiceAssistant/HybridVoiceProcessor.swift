@@ -9,6 +9,7 @@
 import Foundation
 import AVFoundation
 import Combine
+import UIKit
 
 // MARK: - Processing Strategy
 enum VoiceProcessingStrategy {
@@ -122,7 +123,7 @@ class HybridVoiceProcessor: ObservableObject {
             // If on-device processing fails, try server fallback
             if case .onDeviceOnly = processingStrategy {
                 processingStrategy = .serverOnly
-                return try await executeProcessingStrategy(.serverOnly, request: request, startTime: startTime)
+                return try await executeProcessingStrategy(.fullyServer, request: request, startTime: startTime)
             }
             throw error
         }
@@ -207,7 +208,8 @@ class HybridVoiceProcessor: ObservableObject {
         }
         
         // Response generation - consider complexity
-        if request.text.count < 100 && await canProcessOnDevice("response_generation") {
+        let canProcessResponseOnDevice = await canProcessOnDevice("response_generation")
+        if request.text.count < 100 && canProcessResponseOnDevice {
             onDeviceComponents.append("response_generation")
         } else {
             serverComponents.append("response_generation")
@@ -287,7 +289,7 @@ class HybridVoiceProcessor: ObservableObject {
         let intentModel = try await coreMLManager.getIntentClassificationModel()
         let intentInput = IntentClassificationInput(
             text: request.text,
-            context: request.context,
+            context: ["sessionId": request.context.sessionId, "languageCode": request.context.languageCode],
             previousIntent: nil
         )
         let intentResult: IntentClassificationOutput = try await intentModel.predict(input: intentInput)
@@ -296,12 +298,13 @@ class HybridVoiceProcessor: ObservableObject {
         // 2. Response Generation
         let responseStartTime = CFAbsoluteTimeGetCurrent()
         let responseModel = try await coreMLManager.getResponseGenerationModel()
+        let conversationContext = ConversationContext()
+        let userPreferences = UserPreferences.default
         let responseInput = ResponseGenerationInput(
-            intent: intentResult.intent.rawValue,
-            context: request.context ?? [:],
-            userInput: request.text,
+            query: request.text,
+            context: conversationContext,
             responseType: .confirmation,
-            personalityTrait: "friendly"
+            userPreferences: userPreferences
         )
         let responseResult: ResponseGenerationOutput = try await responseModel.predict(input: responseInput)
         processingTimes["response_generation"] = CFAbsoluteTimeGetCurrent() - responseStartTime
@@ -311,11 +314,8 @@ class HybridVoiceProcessor: ObservableObject {
         // Create voice response
         let voiceResponse = VoiceResponse(
             text: responseResult.generatedText,
-            audioBase64: nil, // On-device doesn't generate audio yet
-            sessionId: request.sessionId ?? UUID().uuidString,
-            timestamp: Date(),
-            intent: intentResult.intent.rawValue,
-            confidence: min(intentResult.confidence, responseResult.confidence)
+            success: true,
+            audioBase64: nil // On-device doesn't generate audio yet
         )
         
         // Create performance metrics
@@ -325,7 +325,7 @@ class HybridVoiceProcessor: ObservableObject {
             speechEnhancementTime: 0,
             serverProcessingTime: nil,
             totalProcessingTime: totalTime,
-            memoryUsage: await coreMLManager.totalMemoryUsage,
+            memoryUsage: coreMLManager.totalMemoryUsage,
             energyImpact: .low
         )
         
@@ -333,7 +333,7 @@ class HybridVoiceProcessor: ObservableObject {
             response: voiceResponse,
             processingMethod: .fullyOnDevice,
             processingTime: totalTime,
-            confidence: voiceResponse.confidence,
+            confidence: min(intentResult.confidence, responseResult.confidence),
             onDeviceComponents: ["intent_classification", "response_generation"]
         )
     }
@@ -364,7 +364,7 @@ class HybridVoiceProcessor: ObservableObject {
             response: response,
             processingMethod: .fullyServer,
             processingTime: totalTime,
-            confidence: response.confidence,
+            confidence: response.success ? 0.9 : 0.1, // Default confidence based on success
             onDeviceComponents: []
         )
     }
@@ -380,7 +380,7 @@ class HybridVoiceProcessor: ObservableObject {
             let intentModel = try await coreMLManager.getIntentClassificationModel()
             let intentInput = IntentClassificationInput(
                 text: request.text,
-                context: request.context,
+                context: ["sessionId": request.context.sessionId, "languageCode": request.context.languageCode],
                 previousIntent: nil
             )
             let intentResult: IntentClassificationOutput = try await intentModel.predict(input: intentInput)
@@ -392,10 +392,15 @@ class HybridVoiceProcessor: ObservableObject {
         // Create modified request for server with on-device results
         var serverRequest = request
         if intent != .unknown {
-            var context = serverRequest.context ?? [:]
-            context["detected_intent"] = intent.rawValue
-            context["intent_confidence"] = confidence
-            serverRequest.context = context
+            var metadata = serverRequest.context.metadata ?? [:]
+            metadata["detected_intent"] = intent.rawValue
+            metadata["intent_confidence"] = String(confidence)
+            serverRequest = VoiceRequest(
+                text: serverRequest.text, 
+                sessionId: serverRequest.context.sessionId, 
+                metadata: metadata, 
+                platform: serverRequest.platform
+            )
         }
         
         // Process server components
@@ -418,7 +423,7 @@ class HybridVoiceProcessor: ObservableObject {
                 speechEnhancementTime: 0,
                 serverProcessingTime: processingTimes["server_processing"],
                 totalProcessingTime: totalTime,
-                memoryUsage: await coreMLManager.totalMemoryUsage,
+                memoryUsage: coreMLManager.totalMemoryUsage,
                 energyImpact: .medium
             )
             
@@ -426,7 +431,7 @@ class HybridVoiceProcessor: ObservableObject {
                 response: serverResponse,
                 processingMethod: .hybrid(onDevice: onDevice, server: server),
                 processingTime: totalTime,
-                confidence: max(confidence, serverResponse.confidence),
+                confidence: max(confidence, serverResponse.success ? 0.9 : 0.1),
                 onDeviceComponents: onDevice
             )
         }
@@ -475,7 +480,7 @@ class HybridVoiceProcessor: ObservableObject {
             response: response,
             processingMethod: .fullyServer,
             processingTime: totalTime,
-            confidence: response.confidence,
+            confidence: response.success ? 0.9 : 0.1, // Default confidence based on success
             onDeviceComponents: []
         )
     }

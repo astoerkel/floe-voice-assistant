@@ -44,33 +44,53 @@ struct SpeechPatterns: Codable {
     var wordStress: [String: Float] = [:]
     var pausePatterns: [String: Float] = [:]
     var intonationCurves: [String: [Float]] = [:]
+    var commonPhrases: [CommonPhrase] = []
+    var wordOrderPatterns: [String: Float] = [:]
     
     init() {}
+}
+
+struct CommonPhrase: Codable {
+    var phrase: String
+    var frequency: Int
+    var averageConfidence: Float
+    var lastUsed: Date
+    
+    init(phrase: String, frequency: Int, averageConfidence: Float, lastUsed: Date) {
+        self.phrase = phrase
+        self.frequency = frequency
+        self.averageConfidence = averageConfidence
+        self.lastUsed = lastUsed
+    }
 }
 
 struct SpeakingRhythm: Codable {
     var averageWordsPerMinute: Float
     var pauseDuration: Float
+    var averagePauseDuration: TimeInterval
     var breathingPattern: [Float]
     
     init() {
         self.averageWordsPerMinute = 150.0
         self.pauseDuration = 0.3
+        self.averagePauseDuration = 0.3
         self.breathingPattern = []
     }
 }
 
 struct ContextPattern: Codable {
     var context: String
+    var keywords: [String]
+    var confidence: Float
     var frequency: Int
-    var accuracy: Float
-    var lastUsed: Date
+    var lastUpdated: Date
     
-    init(context: String) {
+    init(context: String, keywords: [String] = [], confidence: Float = 0.5, frequency: Int = 1, lastUpdated: Date = Date()) {
         self.context = context
-        self.frequency = 1
-        self.accuracy = 1.0
-        self.lastUsed = Date()
+        self.keywords = keywords
+        self.confidence = confidence
+        self.frequency = frequency
+        self.lastUpdated = lastUpdated
     }
 }
 
@@ -355,7 +375,7 @@ class SpeechPatternLearning: ObservableObject {
         // Check for common phrase patterns
         for pattern in speechPatterns.commonPhrases {
             if text.lowercased().contains(pattern.phrase.lowercased()) {
-                boost += pattern.frequency * 0.001
+                boost += Float(pattern.frequency) * 0.001
             }
         }
         
@@ -457,11 +477,11 @@ class SpeechPatternLearning: ObservableObject {
         // Update speaking rhythm patterns
         if !pauseDurations.isEmpty {
             let averagePause = pauseDurations.reduce(0, +) / Double(pauseDurations.count)
-            speakingRhythm.averagePauseDuration = updateAverage(
+            speakingRhythm.averagePauseDuration = TimeInterval(updateAverage(
                 current: speakingRhythm.averagePauseDuration,
                 new: averagePause,
                 weight: learningRate
-            )
+            ))
         }
         
         // Update speaking rate
@@ -506,11 +526,11 @@ class SpeechPatternLearning: ObservableObject {
         }
         
         pattern.frequency += 1
-        pattern.confidence = updateAverage(
+        pattern.confidence = Float(updateAverage(
             current: Double(pattern.confidence),
             new: Double(confidence),
             weight: Double(learningRate)
-        )
+        ))
         pattern.lastUpdated = Date()
         
         contextualPatterns[timeContext] = pattern
@@ -521,12 +541,13 @@ class SpeechPatternLearning: ObservableObject {
         let phrases = extractPhrases(from: text)
         for phrase in phrases {
             if let existingPhrase = speechPatterns.commonPhrases.first(where: { $0.phrase == phrase }) {
-                existingPhrase.frequency += 1
-                existingPhrase.averageConfidence = updateAverage(
+                var updatedPhrase = existingPhrase
+                updatedPhrase.frequency += 1
+                updatedPhrase.averageConfidence = Float(updateAverage(
                     current: Double(existingPhrase.averageConfidence),
                     new: Double(confidence),
                     weight: Double(learningRate)
-                )
+                ))
             } else if confidence > adaptationThreshold {
                 let newPhrase = CommonPhrase(
                     phrase: phrase,
@@ -559,7 +580,7 @@ class SpeechPatternLearning: ObservableObject {
         learningStats.lastLearningSession = Date()
         
         DispatchQueue.main.async {
-            self.adaptationAccuracy = Float(learningStats.averageConfidence)
+            self.adaptationAccuracy = Float(self.learningStats.averageConfidence)
         }
     }
     

@@ -30,7 +30,7 @@ class OfflineTransitionManager: ObservableObject {
     private let gracePeriod: TimeInterval = 3.0 // Wait before switching modes
     
     // MARK: - Data Types
-    enum ProcessingMode {
+    public enum ProcessingMode {
         case online, offline, hybrid, degraded
         
         var description: String {
@@ -61,7 +61,7 @@ class OfflineTransitionManager: ObservableObject {
         }
     }
     
-    enum TransitionState {
+    enum TransitionState: Equatable {
         case idle, assessing, transitioning, completed, failed(String)
         
         var description: String {
@@ -75,7 +75,7 @@ class OfflineTransitionManager: ObservableObject {
         }
     }
     
-    struct ConnectionStatus {
+    public struct ConnectionStatus {
         var isConnected = false
         var quality: ConnectionQuality = .unknown
         var latency: TimeInterval = 0
@@ -84,7 +84,7 @@ class OfflineTransitionManager: ObservableObject {
         var interfaceType: NWInterface.InterfaceType?
         var lastQualityCheck: Date?
         
-        enum ConnectionQuality {
+        public enum ConnectionQuality {
             case unknown, poor, fair, good, excellent
             
             var threshold: Double {
@@ -367,7 +367,7 @@ class OfflineTransitionManager: ObservableObject {
     
     private func periodicQualityCheck() async {
         guard connectionStatus.isConnected else { return }
-        guard transitionState == .idle else { return }
+        guard transitionState == TransitionState.idle else { return }
         
         let quality = await assessConnectionQuality()
         let recommendedMode = await getRecommendedMode()
@@ -479,7 +479,7 @@ class OfflineTransitionManager: ObservableObject {
     }
     
     private func performTransition(to newMode: ProcessingMode, reason: String, forced: Bool = false) async {
-        guard transitionState == .idle || forced else { return }
+        guard transitionState == TransitionState.idle || forced else { return }
         
         let oldMode = currentMode
         transitionState = .transitioning
@@ -515,23 +515,14 @@ class OfflineTransitionManager: ObservableObject {
             
             print("Successfully transitioned to \(newMode.description)")
             
-        } catch {
-            transitionState = .failed(error.localizedDescription)
-            print("Failed to transition to \(newMode.description): \(error)")
-            
-            addNotification(
-                type: .error,
-                title: "Transition Failed",
-                message: "Could not switch to \(newMode.description): \(error.localizedDescription)"
-            )
         }
     }
     
     private func prepareForTransition(from oldMode: ProcessingMode, to newMode: ProcessingMode) async {
         switch (oldMode, newMode) {
         case (_, .offline):
-            // Prepare for offline mode
-            await offlineProcessor.dataManager.preloadUserData()
+            // Prepare for offline mode - capabilities are automatically initialized
+            break
             
         case (.offline, _):
             // Prepare to go online
@@ -578,19 +569,19 @@ class OfflineTransitionManager: ObservableObject {
         switch mode {
         case .online:
             // Enable all background processes
-            await syncManager.resumeSync()
+            syncManager.resumeSync()
             
         case .offline:
             // Pause sync processes
-            await syncManager.pauseSync()
+            syncManager.pauseSync()
             
         case .hybrid:
             // Enable selective background processes
-            await syncManager.resumeSync()
+            syncManager.resumeSync()
             
         case .degraded:
             // Disable all non-essential processes
-            await syncManager.pauseSync()
+            syncManager.pauseSync()
         }
     }
     

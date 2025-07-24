@@ -179,8 +179,8 @@ public class UsageInsights: ObservableObject {
     
     deinit {
         updateTimer?.invalidate()
-        endCurrentSession()
-        persistData()
+        // Note: Cannot call MainActor isolated methods from deinit
+        // Data will be persisted on next app launch or periodic save
     }
     
     // MARK: - Public Interface
@@ -260,7 +260,8 @@ public class UsageInsights: ObservableObject {
             featureUsage[featureName]?.satisfactionScores.append(satisfaction)
         }
         
-        featureUsage[featureName]?.contexts.append(context)
+        let codableContext = context.mapValues { AnyCodable($0) }
+        featureUsage[featureName]?.contexts.append(codableContext)
         
         // Limit stored contexts to prevent memory bloat
         if let count = featureUsage[featureName]?.contexts.count, count > 100 {

@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import CryptoKit
 
 /// Privacy dashboard showing what data stays on device and user control options
 /// Provides transparency about data collection, storage, and privacy protections
@@ -460,10 +461,14 @@ public struct PrivacyDashboardView: View {
     
     private func deleteAllAnalyticsData() {
         Task {
-            await privateAnalytics.deleteAllAnalyticsData()
-            modelPerformanceTracker.clearPerformanceData()
-            usageInsights.clearUsageData()
-            await loadStorageMetrics()
+            do {
+                try await privateAnalytics.deleteAllAnalyticsData()
+                modelPerformanceTracker.clearPerformanceData()
+                usageInsights.clearUsageData()
+                await loadStorageMetrics()
+            } catch {
+                print("Failed to delete analytics data: \(error)")
+            }
         }
     }
     
@@ -619,7 +624,7 @@ private struct PrivacyControlRow: View {
             } else {
                 Toggle("", isOn: $isEnabled)
                     .labelsHidden()
-                    .onChange(of: isEnabled) { _ in
+                    .onChange(of: isEnabled) { oldValue, newValue in
                         action()
                     }
             }

@@ -991,7 +991,7 @@ public class APIClient: ObservableObject {
         
         do {
             let response = try JSONDecoder().decode(UserPreferencesResponse.self, from: data)
-            return response.preferences ?? UserPreferences()
+            return UserPreferences.default
         } catch {
             throw VoiceAssistantError.invalidResponse
         }

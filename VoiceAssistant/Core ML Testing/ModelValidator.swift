@@ -85,6 +85,7 @@ final class ModelValidator: ObservableObject {
             case high = "High"
             case medium = "Medium"
             case low = "Low"
+            case warning = "Warning"
             case info = "Info"
         }
     }
@@ -371,7 +372,7 @@ final class ModelValidator: ObservableObject {
             
             for testInput in testInputs {
                 do {
-                    let prediction = try model.prediction(from: testInput)
+                    _ = try await model.prediction(from: testInput)
                     successfulInferences += 1
                 } catch {
                     issues.append(ValidationIssue(
@@ -467,7 +468,7 @@ final class ModelValidator: ObservableObject {
             for testInput in testInputs {
                 let inferenceStartTime = Date()
                 do {
-                    _ = try model.prediction(from: testInput)
+                    _ = try await model.prediction(from: testInput)
                     let inferenceTime = Date().timeIntervalSince(inferenceStartTime)
                     totalInferenceTime += inferenceTime
                     successfulInferences += 1
@@ -695,7 +696,7 @@ final class ModelValidator: ObservableObject {
             }
             
             // Check Core ML version
-            let coreMLVersion = modelDescription.metadata[MLModelMetadataKey.creatorDefinedKey]?["CoreMLVersion"] as? String
+            let coreMLVersion = (modelDescription.metadata[MLModelMetadataKey.creatorDefinedKey] as? [String: Any])?["CoreMLVersion"] as? String
             
             // Check input/output compatibility
             let inputDescriptions = modelDescription.inputDescriptionsByName
@@ -862,7 +863,7 @@ final class ModelValidator: ObservableObject {
             
             for testInput in testInputs.prefix(10) {
                 do {
-                    _ = try model.prediction(from: testInput)
+                    _ = try await model.prediction(from: testInput)
                 } catch {
                     // Ignore inference errors for memory testing
                 }
@@ -1032,6 +1033,8 @@ final class ModelValidator: ObservableObject {
                 score -= 0.1
             case .low:
                 score -= 0.05
+            case .warning:
+                score -= 0.2
             case .info:
                 break
             }
@@ -1285,6 +1288,7 @@ extension ModelValidator.ValidationIssue.Severity {
         case .high: return "❌"
         case .medium: return "⚠️"
         case .low: return "ℹ️"
+        case .warning: return "⚠️"
         case .info: return "💡"
         }
     }

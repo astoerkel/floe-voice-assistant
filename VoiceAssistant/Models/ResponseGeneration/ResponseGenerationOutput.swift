@@ -2,11 +2,11 @@ import Foundation
 import CoreML
 
 /// Output structure for Core ML response generation model
-class ResponseGenerationOutput: NSObject, MLFeatureProvider {
+class ResponseGenerationOutput: NSObject, MLFeatureProvider, MLModelOutput {
     
     // MARK: - Primary Output
     let generatedText: String
-    let confidence: Double
+    let confidenceValue: Double
     
     // MARK: - Additional Metadata
     let responseCategory: ResponseCategory
@@ -26,12 +26,22 @@ class ResponseGenerationOutput: NSObject, MLFeatureProvider {
         metadata: [String: Any] = [:]
     ) {
         self.generatedText = generatedText
-        self.confidence = confidence
+        self.confidenceValue = confidence
         self.responseCategory = responseCategory
         self.emotionalTone = emotionalTone
         self.suggestedFollowups = suggestedFollowups
         self.processingMetrics = processingMetrics
         self.metadata = metadata
+    }
+    
+    // MARK: - MLModelOutput Protocol
+    
+    var confidence: Float {
+        return Float(self.confidenceValue)
+    }
+    
+    var outputIdentifier: String {
+        return "response_generation_output"
     }
     
     // MARK: - MLFeatureProvider Protocol
@@ -48,7 +58,7 @@ class ResponseGenerationOutput: NSObject, MLFeatureProvider {
         case "generated_text":
             return MLFeatureValue(string: generatedText)
         case "confidence":
-            return MLFeatureValue(double: confidence)
+            return MLFeatureValue(double: confidenceValue)
         case "response_category":
             return MLFeatureValue(string: responseCategory.rawValue)
         case "emotional_tone":
@@ -57,9 +67,9 @@ class ResponseGenerationOutput: NSObject, MLFeatureProvider {
             // MLFeatureValue doesn't support string arrays directly, use multiArray
             return nil
         case "processing_time":
-            return MLFeatureValue(double: processingMetrics.processingTime)
+            return MLFeatureValue(double: processingMetrics.processingTimeMs)
         case "model_version":
-            return MLFeatureValue(string: processingMetrics.modelVersion)
+            return MLFeatureValue(string: "1.0") // Default model version
         default:
             return nil
         }
@@ -125,7 +135,7 @@ class ResponseGenerationOutput: NSObject, MLFeatureProvider {
         guard !generatedText.isEmpty,
               generatedText.count >= 3,
               generatedText.count <= 1000,
-              confidence >= 0.0 && confidence <= 1.0 else {
+              confidenceValue >= 0.0 && confidenceValue <= 1.0 else {
             return false
         }
         
@@ -191,7 +201,7 @@ class ResponseGenerationOutput: NSObject, MLFeatureProvider {
             sentiment = .neutral
         }
         
-        let intensity = min(abs(netSentiment), 3) / 3.0 // Normalize to 0-1
+        let intensity = Double(min(abs(netSentiment), 3)) / 3.0 // Normalize to 0-1
         
         return SentimentAnalysis(sentiment: sentiment, intensity: intensity)
     }
@@ -221,7 +231,7 @@ class ResponseGenerationOutput: NSObject, MLFeatureProvider {
     var improvementSuggestions: [ImprovementSuggestion] {
         var suggestions: [ImprovementSuggestion] = []
         
-        if confidence < 0.6 {
+        if confidenceValue < 0.6 {
             suggestions.append(.lowConfidence)
         }
         

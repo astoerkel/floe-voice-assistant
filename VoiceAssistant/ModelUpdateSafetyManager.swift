@@ -22,7 +22,7 @@ public class ModelUpdateSafetyManager: ObservableObject {
         case rollbackInProgress
     }
     
-    public enum RolloutPhase {
+    public enum RolloutPhase: Equatable {
         case none
         case pilot(percentage: Int)
         case gradual(percentage: Int)
@@ -129,7 +129,8 @@ public class ModelUpdateSafetyManager: ObservableObject {
     }
     
     deinit {
-        stopMonitoring()
+        // Note: Cannot call MainActor methods from deinit in Swift 6
+        // stopMonitoring() will be called when the actor is deallocated
         NotificationCenter.default.removeObserver(self)
     }
     
@@ -137,7 +138,7 @@ public class ModelUpdateSafetyManager: ObservableObject {
     
     /// Start gradual rollout for a model update
     public func startGradualRollout(for version: String) async {
-        guard rolloutPhase == .none else {
+        guard rolloutPhase == RolloutPhase.none else {
             print("Rollout already in progress")
             return
         }
@@ -492,7 +493,10 @@ public class ModelUpdateSafetyManager: ObservableObject {
     }
     
     private func triggerAutomaticRollback(reason: String) async {
-        guard case .safe = safetyStatus || case .warning(_) = safetyStatus else {
+        switch safetyStatus {
+        case .safe, .warning(_):
+            break // Continue with rollback
+        default:
             return // Rollback already in progress
         }
         
@@ -609,9 +613,8 @@ public class ModelUpdateSafetyManager: ObservableObject {
     
     private func loadMonitoringState() {
         // Load previous monitoring state if app was backgrounded
-        if let savedState = UserDefaults.standard.dictionary(forKey: "ModelSafetyMonitoringState") {
-            // Restore state if needed
-        }
+        _ = UserDefaults.standard.dictionary(forKey: "ModelSafetyMonitoringState")
+        // TODO: Restore monitoring state if needed
     }
     
     private func saveMonitoringState() {

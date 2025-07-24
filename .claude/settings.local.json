@@ -9,7 +9,18 @@
       "mcp__XcodeBuildMCP__list_sims",
       "mcp__ide__getDiagnostics",
       "mcp__ide__executeCode",
-      "mcp__XcodeBuildMCP__build_sim_name_proj"
+      "mcp__XcodeBuildMCP__build_sim_name_proj",
+      "mcp__Context7__get-library-docs",
+      "mcp__XcodeBuildMCP__clean_proj",
+      "mcp__XcodeBuildMCP__build_mac_ws",
+      "mcp__XcodeBuildMCP__build_mac_proj",
+      "mcp__XcodeBuildMCP__build_run_sim_name_ws",
+      "mcp__XcodeBuildMCP__build_run_sim_name_proj",
+      "mcp__XcodeBuildMCP__open_sim",
+      "mcp__XcodeBuildMCP__get_sim_app_path_name_proj",
+      "mcp__XcodeBuildMCP__boot_sim",
+      "mcp__XcodeBuildMCP__screenshot",
+      "mcp__XcodeBuildMCP__launch_app_sim"
     ],
     "deny": []
   }

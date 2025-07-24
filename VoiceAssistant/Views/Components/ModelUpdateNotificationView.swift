@@ -26,7 +26,7 @@ struct ModelUpdateNotificationView: View {
                     .gesture(
                         DragGesture()
                             .onEnded { value in
-                                if value.translation.y < -50 {
+                                if value.translation.height < -50 {
                                     hideNotification()
                                 }
                             }

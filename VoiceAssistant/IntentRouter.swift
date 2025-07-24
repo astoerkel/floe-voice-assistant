@@ -9,6 +9,7 @@
 import Foundation
 import Combine
 import OSLog
+import UIKit
 
 // MARK: - Routing Decision
 public struct RoutingDecision {
@@ -29,8 +30,8 @@ public enum ProcessingRoute: Codable {
 
 // MARK: - Intent Routing Configuration
 public struct IntentRoutingConfig {
-    let highConfidenceThreshold: Float
-    let mediumConfidenceThreshold: Float
+    var highConfidenceThreshold: Float
+    var mediumConfidenceThreshold: Float
     let enableOfflineRouting: Bool
     let enableHybridRouting: Bool
     let preferOnDeviceWhenPossible: Bool
@@ -112,8 +113,8 @@ public class IntentRouter: ObservableObject {
         let intent: VoiceIntent
         let confidence: Float
         let routingDecision: ProcessingRoute
-        let actualProcessingTime: TimeInterval
-        let success: Bool
+        var actualProcessingTime: TimeInterval
+        var success: Bool
         let timestamp: Date
         let contextHash: String
     }
@@ -138,7 +139,7 @@ public class IntentRouter: ObservableObject {
         loadRoutingHistory()
         
         // Log initialization
-        logger.info("IntentRouter initialized with \(offlineHandlers.count) offline handlers")
+        logger.info("IntentRouter initialized with \(self.offlineHandlers.count) offline handlers")
     }
     
     // MARK: - Main Routing Interface
@@ -511,7 +512,7 @@ public class IntentRouter: ObservableObject {
         // Update routing accuracy (rolling average)
         let n = Float(statistics.totalRequests)
         let successRate = success ? 1.0 : 0.0
-        statistics.routingAccuracy = ((statistics.routingAccuracy * (n - 1)) + successRate) / n
+        statistics.routingAccuracy = ((statistics.routingAccuracy * (n - 1)) + Float(successRate)) / n
         
         // Update learning history if enabled
         if config.enableIntentLearning, let lastIndex = routingHistory.indices.last {

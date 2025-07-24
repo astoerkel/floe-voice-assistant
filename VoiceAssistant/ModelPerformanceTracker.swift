@@ -455,7 +455,7 @@ public class ModelPerformanceTracker: ObservableObject {
         lastAnalysisDate = Date()
         persistData()
         
-        logger.info("Performed performance analysis - On-device: \(currentProcessingRatio.onDevicePercentage)%, Avg response: \(responseTimeMetrics.onDeviceAverage)s")
+        logger.info("Performed performance analysis - On-device: \(self.currentProcessingRatio.onDevicePercentage)%, Avg response: \(self.responseTimeMetrics.onDeviceAverage)s")
     }
     
     private func calculateProcessingRatio() -> ProcessingRatio {
@@ -592,7 +592,7 @@ public class ModelPerformanceTracker: ObservableObject {
     }
     
     private func getCurrentMemoryUsage() -> Double {
-        let info = mach_task_basic_info()
+        var info = mach_task_basic_info()
         var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
         
         let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {

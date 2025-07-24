@@ -35,7 +35,7 @@ class PersonalizationEngine: ObservableObject {
         self.currentPreferences = PersonalizationEngine.loadPreferences(
             from: userDefaults,
             encryptionKey: encryptionKey
-        ) ?? UserPreferences.default
+        ) ?? UserPreferences()
         
         // Set up periodic learning updates
         setupPeriodicLearning()
@@ -73,7 +73,8 @@ class PersonalizationEngine: ObservableObject {
         )
         
         // Apply locale-specific adaptations
-        if let locale = preferences.preferredLocale {
+        if let localeIdentifier = preferences.preferredLocaleIdentifier {
+            let locale = Locale(identifier: localeIdentifier)
             personalizedResponse = styleAdaptationEngine.adaptForLocale(
                 personalizedResponse,
                 locale: locale
@@ -419,74 +420,9 @@ class PersonalizationEngine: ObservableObject {
 }
 
 // MARK: - Supporting Types
+// Using shared types from SharedTypes.swift
 
-struct UserPreferences: Codable {
-    var formalityLevel: Double // 0.0 = very casual, 1.0 = very formal
-    var responseLength: ResponseLength
-    var measurementSystem: MeasurementSystem
-    var timeFormat: TimeFormat
-    var personalityTraits: PersonalityTraits
-    var preferredLocale: Locale?
-    var timeBasedPreferences: TimeBasedPreferences
-    
-    static let `default` = UserPreferences(
-        formalityLevel: 0.5,
-        responseLength: .medium,
-        measurementSystem: .metric,
-        timeFormat: .twelveHour,
-        personalityTraits: PersonalityTraits.default,
-        preferredLocale: Locale.current,
-        timeBasedPreferences: TimeBasedPreferences.default
-    )
-}
 
-enum ResponseLength: String, Codable, CaseIterable {
-    case brief = "brief"
-    case medium = "medium" 
-    case detailed = "detailed"
-}
-
-enum MeasurementSystem: String, Codable, CaseIterable {
-    case metric = "metric"
-    case imperial = "imperial"
-}
-
-enum TimeFormat: String, Codable, CaseIterable {
-    case twelveHour = "12h"
-    case twentyFourHour = "24h"
-}
-
-struct PersonalityTraits: Codable {
-    var enthusiasm: Double // 0.0 = reserved, 1.0 = enthusiastic
-    var helpfulness: Double // 0.0 = direct, 1.0 = very helpful
-    var friendliness: Double // 0.0 = professional, 1.0 = friendly
-    var professionalism: Double // 0.0 = casual, 1.0 = professional
-    
-    static let `default` = PersonalityTraits(
-        enthusiasm: 0.6,
-        helpfulness: 0.8,
-        friendliness: 0.7,
-        professionalism: 0.5
-    )
-}
-
-struct TimeBasedPreferences: Codable {
-    var morningGreeting: String
-    var afternoonGreeting: String
-    var eveningGreeting: String
-    var nightGreeting: String
-    var morningFormality: Double
-    var eveningFormality: Double
-    
-    static let `default` = TimeBasedPreferences(
-        morningGreeting: "Good morning",
-        afternoonGreeting: "Good afternoon", 
-        eveningGreeting: "Good evening",
-        nightGreeting: "Good evening",
-        morningFormality: 0.4, // More casual in morning
-        eveningFormality: 0.6  // Slightly more formal in evening
-    )
-}
 
 enum UserFeedback: String, Codable {
     case positive = "positive"
@@ -512,12 +448,6 @@ struct UserInteraction: Codable {
     let context: InteractionContext
 }
 
-enum TimeOfDay: String, Codable {
-    case morning = "morning"
-    case afternoon = "afternoon"
-    case evening = "evening"
-    case night = "night"
-}
 
 struct InteractionContext: Codable {
     let timeOfDay: TimeOfDay
@@ -582,7 +512,7 @@ class PreferenceAnalyzer {
         // Analyze the interaction for personalization insights
         var suggestedFormality: Double?
         var suggestedLength: ResponseLength?
-        var suggestedPersonality: PersonalityTraits?
+        let suggestedPersonality: PersonalityTraits? = nil
         
         // Analyze feedback
         if let feedback = interaction.feedback {
@@ -606,9 +536,9 @@ class PreferenceAnalyzer {
         // Analyze response length preference from query patterns
         let queryLength = interaction.query.count
         if queryLength < 20 {
-            suggestedLength = .brief
+            suggestedLength = .short
         } else if queryLength > 100 {
-            suggestedLength = .detailed
+            suggestedLength = .long
         }
         
         return InteractionAnalysis(
@@ -665,11 +595,11 @@ class StyleAdaptationEngine {
     
     func adaptLength(_ response: String, to length: ResponseLength) -> String {
         switch length {
-        case .brief:
+        case .short, .brief:
             // Shorten response, remove extra details
             let sentences = response.components(separatedBy: ". ")
             return sentences.prefix(1).joined(separator: ". ")
-        case .detailed:
+        case .long, .detailed:
             // Could expand response with more context
             return response
         case .medium:
@@ -734,7 +664,7 @@ class StyleAdaptationEngine {
 class PrivacyProtector {
     func cleanupOldData(maxAge: TimeInterval) async {
         // Remove data older than maxAge
-        let cutoffDate = Date().addingTimeInterval(-maxAge)
+        _ = Date().addingTimeInterval(-maxAge)
         // Implementation would clean up old interactions
     }
     

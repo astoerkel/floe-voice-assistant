@@ -140,11 +140,11 @@ class ResponseTemplateManager {
         let templateLength = template.text.count
         
         switch userPrefs.responseLength {
-        case .brief:
+        case .brief, .short:
             return templateLength < 50 ? 8 : -5
         case .medium:
             return templateLength >= 50 && templateLength <= 150 ? 8 : -3
-        case .detailed:
+        case .detailed, .long:
             return templateLength > 100 ? 8 : -3
         }
     }
