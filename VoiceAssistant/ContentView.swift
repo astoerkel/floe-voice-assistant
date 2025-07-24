@@ -1,6 +1,15 @@
 import SwiftUI
 import AVFoundation
 
+// MARK: - Quick Action Model
+struct QuickAction: Identifiable {
+    let id: String
+    let title: String
+    let icon: String
+    let voiceCommand: String
+    let color: Color
+}
+
 struct ContentView: View {
     @StateObject private var audioRecorder = MinimalAudioRecorder()
     @State private var transcribedText = ""
@@ -15,6 +24,7 @@ struct ContentView: View {
             recordingButton
             recordingTimeView
             audioLevelMeter
+            quickActionsView
             transcriptionView
             Spacer()
             debugView
@@ -33,9 +43,15 @@ struct ContentView: View {
     // MARK: - View Components
     
     private var headerView: some View {
-        Text("VoiceAssistant - Phase 1")
-            .font(.largeTitle)
-            .fontWeight(.bold)
+        VStack(spacing: 8) {
+            Text("Voice Assistant")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            
+            Text("Your AI-powered assistant")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
     }
     
     private var permissionView: some View {
@@ -79,6 +95,75 @@ struct ContentView: View {
                 AudioLevelMeterView(audioLevel: audioRecorder.audioLevel)
             }
         }
+    }
+    
+    private var quickActionsView: some View {
+        VStack(spacing: 12) {
+            Text("Quick Actions")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    QuickActionButton(
+                        action: QuickAction(
+                            id: "schedule",
+                            title: "Schedule",
+                            icon: "calendar.badge.plus",
+                            voiceCommand: "What's on my calendar today?",
+                            color: .blue
+                        ),
+                        onTap: processQuickAction
+                    )
+                    
+                    QuickActionButton(
+                        action: QuickAction(
+                            id: "email",
+                            title: "Email",
+                            icon: "envelope",
+                            voiceCommand: "Check my unread emails",
+                            color: .red
+                        ),
+                        onTap: processQuickAction
+                    )
+                    
+                    QuickActionButton(
+                        action: QuickAction(
+                            id: "tasks",
+                            title: "Tasks",
+                            icon: "checkmark.circle",
+                            voiceCommand: "Show me my tasks for today",
+                            color: .green
+                        ),
+                        onTap: processQuickAction
+                    )
+                    
+                    QuickActionButton(
+                        action: QuickAction(
+                            id: "weather",
+                            title: "Weather",
+                            icon: "cloud.sun",
+                            voiceCommand: "What's the weather like today?",
+                            color: .orange
+                        ),
+                        onTap: processQuickAction
+                    )
+                    
+                    QuickActionButton(
+                        action: QuickAction(
+                            id: "time",
+                            title: "Time",
+                            icon: "clock",
+                            voiceCommand: "What time is it?",
+                            color: .purple
+                        ),
+                        onTap: processQuickAction
+                    )
+                }
+                .padding(.horizontal)
+            }
+        }
+        .padding(.vertical, 8)
     }
     
     private var transcriptionView: some View {
@@ -178,6 +263,29 @@ struct ContentView: View {
         let milliseconds = Int((timeInterval.truncatingRemainder(dividingBy: 1)) * 10)
         return String(format: "%02d:%02d.%d", minutes, seconds, milliseconds)
     }
+    
+    // Process quick action commands
+    private func processQuickAction(_ action: QuickAction) {
+        statusMessage = "Processing..."
+        transcribedText = action.voiceCommand
+        
+        Task {
+            await FeatureCircuitBreakers.apiConnection.executeFeature {
+                do {
+                    let response = try await MinimalAPIClient.shared.processText(action.voiceCommand)
+                    await MainActor.run {
+                        transcribedText = response
+                        statusMessage = "Tap to record"
+                    }
+                } catch {
+                    await MainActor.run {
+                        transcribedText = "Failed to process: \(error.localizedDescription)"
+                        statusMessage = "Tap to record"
+                    }
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Recording Button Component
@@ -190,27 +298,80 @@ struct RecordingButtonView: View {
     
     var body: some View {
         ZStack {
+            // Outer ring animation
+            if isRecording {
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 3
+                    )
+                    .frame(width: buttonSize + 20, height: buttonSize + 20)
+                    .scaleEffect(isRecording ? 1.1 : 1.0)
+                    .opacity(isRecording ? 0.8 : 0)
+                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isRecording)
+            }
+            
             // Audio level indicator
             if isRecording {
                 Circle()
-                    .fill(Color.red.opacity(0.3))
-                    .frame(width: buttonSize + (CGFloat(audioLevel) * 40),
-                           height: buttonSize + (CGFloat(audioLevel) * 40))
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.1)],
+                            center: .center,
+                            startRadius: 20,
+                            endRadius: 60
+                        )
+                    )
+                    .frame(width: buttonSize + (CGFloat(audioLevel) * 60),
+                           height: buttonSize + (CGFloat(audioLevel) * 60))
                     .animation(.easeInOut(duration: 0.1), value: audioLevel)
             }
             
             Button(action: action) {
                 ZStack {
+                    // Background gradient
                     Circle()
-                        .fill(isRecording ? Color.red : Color.blue)
+                        .fill(
+                            LinearGradient(
+                                colors: isRecording ? [Color.red, Color.orange] : [Color.blue, Color.purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: buttonSize, height: buttonSize)
+                    
+                    // Shadow
+                    Circle()
+                        .fill(Color.black.opacity(0.2))
+                        .frame(width: buttonSize, height: buttonSize)
+                        .offset(y: 2)
+                        .blur(radius: 4)
+                    
+                    // Main button
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: isRecording ? [Color.red, Color.orange] : [Color.blue, Color.purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                         .frame(width: buttonSize, height: buttonSize)
                     
                     Image(systemName: isRecording ? "stop.fill" : "mic.fill")
-                        .font(.system(size: 40))
+                        .font(.system(size: 40, weight: .medium))
                         .foregroundColor(.white)
+                        .scaleEffect(isRecording ? 0.8 : 1.0)
+                        .animation(.easeInOut(duration: 0.2), value: isRecording)
                 }
             }
             .disabled(!hasPermission)
+            .scaleEffect(hasPermission ? 1.0 : 0.9)
+            .opacity(hasPermission ? 1.0 : 0.6)
         }
     }
     
@@ -248,5 +409,32 @@ struct AudioLevelMeterView: View {
         } else {
             return .red
         }
+    }
+}
+
+// MARK: - Quick Action Button Component
+
+struct QuickActionButton: View {
+    let action: QuickAction
+    let onTap: (QuickAction) -> Void
+    
+    var body: some View {
+        Button(action: { onTap(action) }) {
+            VStack(spacing: 8) {
+                Image(systemName: action.icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(action.color)
+                    .frame(width: 50, height: 50)
+                    .background(
+                        Circle()
+                            .fill(action.color.opacity(0.2))
+                    )
+                
+                Text(action.title)
+                    .font(.caption)
+                    .foregroundColor(.primary)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }

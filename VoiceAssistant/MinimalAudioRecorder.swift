@@ -80,16 +80,18 @@ class MinimalAudioRecorder: NSObject, ObservableObject {
             
             // Create recording URL with timestamp
             let timestamp = Date().timeIntervalSince1970
-            let fileName = "recording_\(timestamp).m4a"
+            let fileName = "recording_\(timestamp).wav"
             let audioURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
             
-            // Configure recording settings
+            // Configure recording settings for WAV format
             let settings: [String: Any] = [
-                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-                AVSampleRateKey: 44100,
+                AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                AVSampleRateKey: 16000, // 16kHz for better compatibility
                 AVNumberOfChannelsKey: 1,
                 AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
-                AVEncoderBitRateKey: 128000
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsBigEndianKey: false,
+                AVLinearPCMIsFloatKey: false
             ]
             
             // Create and prepare recorder

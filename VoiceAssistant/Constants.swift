@@ -37,7 +37,7 @@ struct Constants {
         static let sampleRate: Double = 16000.0
         static let bitDepth: Int = 16
         static let channels: Int = 1
-        static let audioFormat = "m4a"
+        static let audioFormat = "wav"
         static let maxRecordingDuration: TimeInterval = 60.0
     }
     

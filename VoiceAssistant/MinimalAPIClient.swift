@@ -44,8 +44,8 @@ class MinimalAPIClient {
         
         // Add audio file
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"recording.m4a\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/mp4\r\n\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"recording.wav\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
         body.append(audioData)
         body.append("\r\n".data(using: .utf8)!)
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
@@ -92,10 +92,13 @@ class MinimalAPIClient {
             let apiResponse = try decoder.decode(APIResponse.self, from: data)
             
             // Extract the text response
-            if let text = apiResponse.response?.text {
-                return text
+            if let responseText = apiResponse.response {
+                return responseText
+            } else if let transcriptionText = apiResponse.transcription?.text {
+                // Fallback to transcription text if no response
+                return "Transcribed: \(transcriptionText)"
             } else if let transcribedText = apiResponse.transcribedText {
-                // Fallback to transcribed text if no response
+                // Legacy fallback
                 return "Transcribed: \(transcribedText)"
             } else {
                 throw APIError.noResponseText
@@ -145,8 +148,10 @@ class MinimalAPIClient {
         
         let apiResponse = try JSONDecoder().decode(APIResponse.self, from: data)
         
-        if let text = apiResponse.response?.text {
-            return text
+        if let responseText = apiResponse.response {
+            return responseText
+        } else if let transcriptionText = apiResponse.transcription?.text {
+            return "Transcribed: \(transcriptionText)"
         } else {
             throw APIError.noResponseText
         }
@@ -187,18 +192,21 @@ enum APIError: LocalizedError {
 // MARK: - Response Models
 
 struct APIResponse: Codable {
+    let success: Bool?
     let transcribedText: String?
-    let response: ResponseText?
+    let transcription: Transcription?
+    let response: String?  // Changed to String to match actual API response
     let confidence: Double?
     let sessionId: String?
     let audioResponse: AudioResponse?
     let processingTime: Int?
+    let transcriptionTime: Int?
+    let transcriptionMethod: String?
     let agentUsed: String?
     
-    struct ResponseText: Codable {
+    struct Transcription: Codable {
         let text: String
-        let suggestions: [String]?
-        let action: String?
+        let language: String?
     }
     
     struct AudioResponse: Codable {
