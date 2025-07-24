@@ -1,15 +1,6 @@
 import SwiftUI
 import AVFoundation
 
-// MARK: - Quick Action Model
-struct QuickAction: Identifiable {
-    let id: String
-    let title: String
-    let icon: String
-    let voiceCommand: String
-    let color: Color
-}
-
 struct ContentView: View {
     @StateObject private var audioRecorder = MinimalAudioRecorder()
     @State private var transcribedText = ""
@@ -108,57 +99,57 @@ struct ContentView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
-                    QuickActionButton(
+                    SimpleQuickActionButton(
                         action: QuickAction(
                             id: "schedule",
                             title: "Schedule",
                             icon: "calendar.badge.plus",
                             voiceCommand: "What's on my calendar today?",
-                            color: .blue
+                            color: "blue"
                         ),
                         onTap: processQuickAction
                     )
                     
-                    QuickActionButton(
+                    SimpleQuickActionButton(
                         action: QuickAction(
                             id: "email",
                             title: "Email",
                             icon: "envelope",
                             voiceCommand: "Check my unread emails",
-                            color: .red
+                            color: "red"
                         ),
                         onTap: processQuickAction
                     )
                     
-                    QuickActionButton(
+                    SimpleQuickActionButton(
                         action: QuickAction(
                             id: "tasks",
                             title: "Tasks",
                             icon: "checkmark.circle",
                             voiceCommand: "Show me my tasks for today",
-                            color: .green
+                            color: "green"
                         ),
                         onTap: processQuickAction
                     )
                     
-                    QuickActionButton(
+                    SimpleQuickActionButton(
                         action: QuickAction(
                             id: "weather",
                             title: "Weather",
                             icon: "cloud.sun",
                             voiceCommand: "What's the weather like today?",
-                            color: .orange
+                            color: "orange"
                         ),
                         onTap: processQuickAction
                     )
                     
-                    QuickActionButton(
+                    SimpleQuickActionButton(
                         action: QuickAction(
                             id: "time",
                             title: "Time",
                             icon: "clock",
                             voiceCommand: "What time is it?",
-                            color: .purple
+                            color: "purple"
                         ),
                         onTap: processQuickAction
                     )
@@ -463,20 +454,22 @@ struct AudioLevelMeterView: View {
 
 // MARK: - Quick Action Button Component
 
-struct QuickActionButton: View {
+struct SimpleQuickActionButton: View {
     let action: QuickAction
     let onTap: (QuickAction) -> Void
     
     var body: some View {
+        let color = colorFromString(action.color)
+        
         Button(action: { onTap(action) }) {
             VStack(spacing: 8) {
                 Image(systemName: action.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(action.color)
+                    .foregroundColor(color)
                     .frame(width: 50, height: 50)
                     .background(
                         Circle()
-                            .fill(action.color.opacity(0.2))
+                            .fill(color.opacity(0.2))
                     )
                 
                 Text(action.title)
@@ -485,5 +478,19 @@ struct QuickActionButton: View {
             }
         }
         .buttonStyle(PlainButtonStyle())
+    }
+    
+    private func colorFromString(_ colorString: String) -> Color {
+        switch colorString.lowercased() {
+        case "blue": return .blue
+        case "red": return .red
+        case "green": return .green
+        case "orange": return .orange
+        case "purple": return .purple
+        case "yellow": return .yellow
+        case "pink": return .pink
+        case "gray": return .gray
+        default: return .blue
+        }
     }
 }
