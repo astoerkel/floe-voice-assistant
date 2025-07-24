@@ -33,7 +33,7 @@ struct AuthenticationView: View {
                             .font(.system(size: 80))
                             .foregroundColor(.white.opacity(0.8))
                         
-                        Text("Sora")
+                        Text("Floe")
                             .font(.custom("Corinthia", size: 64))
                             .fontWeight(.medium)
                             .foregroundColor(.white)

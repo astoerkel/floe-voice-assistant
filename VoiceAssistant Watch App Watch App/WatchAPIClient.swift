@@ -10,7 +10,7 @@ import Foundation
 // MARK: - Watch Constants
 private struct WatchConstants {
     struct API {
-        static let baseURL = "https://voiceassistant-sora-production.up.railway.app"
+        static let baseURL = "https://voiceassistant-floe-production.up.railway.app"
         static let webhookURL = "https://0s1sa1fd.rpcld.co/webhook-test/c8609ff3-adfe-4982-804a-5792f41f4443" // Legacy - to be removed
         static let defaultVoiceId = "default"
         static let requestTimeout: TimeInterval = 30.0

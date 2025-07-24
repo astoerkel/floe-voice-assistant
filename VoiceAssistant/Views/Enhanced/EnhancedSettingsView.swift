@@ -508,7 +508,7 @@ struct SubscriptionStatusRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Sora Pro")
+                Text("Floe Pro")
                     .font(.headline)
                     .foregroundColor(.blue)
                 
@@ -538,7 +538,7 @@ struct UpgradePromptRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Upgrade to Sora Pro")
+                Text("Upgrade to Floe Pro")
                     .font(.headline)
                 
                 Text("Unlimited voice commands, advanced integrations, and more")
