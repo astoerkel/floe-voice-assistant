@@ -15,6 +15,8 @@ struct ContentView: View {
     @State private var transcribedText = ""
     @State private var statusMessage = "Tap to record"
     @State private var showError = false
+    @State private var responseText = ""
+    @State private var showResponse = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -25,6 +27,7 @@ struct ContentView: View {
             recordingTimeView
             audioLevelMeter
             quickActionsView
+            responseView
             transcriptionView
             Spacer()
             debugView
@@ -166,9 +169,50 @@ struct ContentView: View {
         .padding(.vertical, 8)
     }
     
+    private var responseView: some View {
+        Group {
+            if showResponse && !responseText.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "sparkles")
+                            .font(.headline)
+                            .foregroundColor(.blue)
+                        Text("AI Response")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Button(action: { showResponse = false }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Text(responseText)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                        )
+                }
+                .padding(.horizontal)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showResponse)
+            }
+        }
+    }
+    
     private var transcriptionView: some View {
         Group {
-            if !transcribedText.isEmpty {
+            if !transcribedText.isEmpty && !showResponse {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Transcription", systemImage: "text.bubble")
                         .font(.headline)
@@ -210,7 +254,8 @@ struct ContentView: View {
                             do {
                                 let response = try await MinimalAPIClient.shared.processAudio(url: audioURL)
                                 await MainActor.run {
-                                    transcribedText = response
+                                    responseText = response
+                                    showResponse = true
                                     statusMessage = "Tap to record"
                                 }
                             } catch {
@@ -218,20 +263,21 @@ struct ContentView: View {
                                     // Provide user-friendly error messages
                                     switch error {
                                     case APIError.httpError(let code) where code == 401:
-                                        transcribedText = "Authentication required. Please sign in."
+                                        responseText = "Authentication required. Please sign in."
                                     case APIError.httpError(let code) where code == 429:
-                                        transcribedText = "Rate limit exceeded. Please try again later."
+                                        responseText = "Rate limit exceeded. Please try again later."
                                     case APIError.httpError(let code) where code >= 500:
-                                        transcribedText = "Server error. Please try again later."
+                                        responseText = "Server error. Please try again later."
                                     case APIError.fileReadError:
-                                        transcribedText = "Failed to read audio file."
+                                        responseText = "Failed to read audio file."
                                     case APIError.noResponseText:
-                                        transcribedText = "No response from server. Please try again."
+                                        responseText = "No response from server. Please try again."
                                     case APIError.invalidAudioFormat(let message):
-                                        transcribedText = "Audio format issue: \(message)"
+                                        responseText = "Audio format issue: \(message)"
                                     default:
-                                        transcribedText = "Connection error: \(error.localizedDescription)"
+                                        responseText = "Connection error: \(error.localizedDescription)"
                                     }
+                                    showResponse = true
                                     statusMessage = "Tap to record"
                                 }
                             }
@@ -268,18 +314,21 @@ struct ContentView: View {
     private func processQuickAction(_ action: QuickAction) {
         statusMessage = "Processing..."
         transcribedText = action.voiceCommand
+        showResponse = false
         
         Task {
             await FeatureCircuitBreakers.apiConnection.executeFeature {
                 do {
                     let response = try await MinimalAPIClient.shared.processText(action.voiceCommand)
                     await MainActor.run {
-                        transcribedText = response
+                        responseText = response
+                        showResponse = true
                         statusMessage = "Tap to record"
                     }
                 } catch {
                     await MainActor.run {
-                        transcribedText = "Failed to process: \(error.localizedDescription)"
+                        responseText = "Failed to process: \(error.localizedDescription)"
+                        showResponse = true
                         statusMessage = "Tap to record"
                     }
                 }
