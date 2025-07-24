@@ -3,11 +3,14 @@ import AVFoundation
 
 struct ContentView: View {
     @StateObject private var audioRecorder = MinimalAudioRecorder()
+    @ObservedObject private var apiClient = APIClient.shared
     @State private var transcribedText = ""
     @State private var statusMessage = "Tap to record"
     @State private var showError = false
     @State private var responseText = ""
     @State private var showResponse = false
+    @State private var showSettings = false
+    @State private var conversationHistory: [ConversationMessage] = []
     
     var body: some View {
         ZStack {
@@ -45,22 +48,46 @@ struct ContentView: View {
         .onChange(of: audioRecorder.error) { error in
             showError = (error != nil)
         }
+        .sheet(isPresented: $showSettings) {
+            EnhancedSettingsViewWithActions(
+                conversationHistory: $conversationHistory,
+                onDismiss: { showSettings = false }
+            )
+        }
     }
     
     // MARK: - View Components
     
     private var headerView: some View {
-        VStack(spacing: 8) {
+        HStack {
+            // Hamburger Menu Button
+            Button(action: { showSettings.toggle() }) {
+                Image(systemName: "line.horizontal.3")
+                    .font(.title2)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+            .padding(.leading, 20)
+            .accessibilityLabel("Menu")
+            .accessibilityHint("Opens the settings menu")
+            
+            Spacer()
+            
+            // FLOE Title - Centered
             Text("Floe")
                 .font(.custom("Corinthia", size: 48))
                 .fontWeight(.medium)
                 .foregroundColor(.white)
             
-            Text("Your AI-powered assistant")
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.7))
+            Spacer()
+            
+            // Empty space for balance (same size as hamburger button)
+            Color.clear
+                .frame(width: 44, height: 44)
+                .padding(.trailing, 20)
         }
-        .padding(.top, 20)
+        .padding(.top, 60)
     }
     
     private var permissionView: some View {
