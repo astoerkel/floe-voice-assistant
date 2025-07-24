@@ -5,7 +5,7 @@
 | Phase | Date | Build Time | Launch Time | Memory (Idle) | Memory (Recording) | API Response | Notes |
 |-------|------|------------|-------------|---------------|-------------------|--------------|-------|
 | 0 | 2024-01-24 | 45s | 0.8s | 32MB | 35MB | N/A (Mock) | Minimal build achieved |
-| 1 | TBD | TBD | TBD | TBD | TBD | TBD | Basic recording |
+| 1 | 2024-01-24 | Starting... | TBD | TBD | TBD | TBD | Basic recording |
 | 2 | TBD | TBD | TBD | TBD | TBD | TBD | Real API |
 | 3 | TBD | TBD | TBD | TBD | TBD | TBD | Speech recognition |
 | 4 | TBD | TBD | TBD | TBD | TBD | TBD | Enhanced UI |
