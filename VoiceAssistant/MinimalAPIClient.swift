@@ -44,8 +44,8 @@ class MinimalAPIClient {
         
         // Add audio file
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"audio.m4a\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"recording.m4a\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/mp4\r\n\r\n".data(using: .utf8)!)
         body.append(audioData)
         body.append("\r\n".data(using: .utf8)!)
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
@@ -74,6 +74,16 @@ class MinimalAPIClient {
             }
             
             guard 200...299 ~= httpResponse.statusCode else {
+                // Try to parse error message from response
+                if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = errorResponse["message"] as? String {
+                    print("❌ Server error message: \(errorMessage)")
+                    
+                    // Check for specific error patterns
+                    if errorMessage.contains("Invalid file format") {
+                        throw APIError.invalidAudioFormat(errorMessage)
+                    }
+                }
                 throw APIError.httpError(statusCode: httpResponse.statusCode)
             }
             
@@ -152,6 +162,7 @@ enum APIError: LocalizedError {
     case httpError(statusCode: Int)
     case noResponseText
     case decodingError(Error)
+    case invalidAudioFormat(String)
     
     var errorDescription: String? {
         switch self {
@@ -167,6 +178,8 @@ enum APIError: LocalizedError {
             return "No response text from server"
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
+        case .invalidAudioFormat(let message):
+            return "Audio format error: \(message)"
         }
     }
 }

@@ -142,6 +142,8 @@ struct ContentView: View {
                                         transcribedText = "Failed to read audio file."
                                     case APIError.noResponseText:
                                         transcribedText = "No response from server. Please try again."
+                                    case APIError.invalidAudioFormat(let message):
+                                        transcribedText = "Audio format issue: \(message)"
                                     default:
                                         transcribedText = "Connection error: \(error.localizedDescription)"
                                     }

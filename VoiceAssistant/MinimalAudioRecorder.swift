@@ -137,6 +137,16 @@ class MinimalAudioRecorder: NSObject, ObservableObject {
         print("🛑 Recording stopped: \(recorder.url.lastPathComponent)")
         print("📏 Duration: \(recordingTime)s")
         
+        // Verify file exists and size
+        if FileManager.default.fileExists(atPath: recorder.url.path) {
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: recorder.url.path),
+               let fileSize = attributes[.size] as? Int64 {
+                print("📁 File size: \(fileSize) bytes")
+            }
+        } else {
+            print("❌ Recording file not found!")
+        }
+        
         return recorder.url
     }
     
