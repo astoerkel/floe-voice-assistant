@@ -6,6 +6,14 @@
 	<string>Voice Assistant needs microphone access to process voice commands</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Voice Assistant needs speech recognition to convert your voice to text</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Voice Assistant needs access to contacts to help you find and communicate with people through voice commands</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Voice Assistant needs access to your calendar to help schedule events and answer questions about your schedule</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Voice Assistant needs access to reminders to help you create and manage tasks through voice commands</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Voice Assistant uses location to provide context-aware responses and location-based services</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

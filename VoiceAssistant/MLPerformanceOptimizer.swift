@@ -145,7 +145,8 @@ public class MLPerformanceOptimizer: ObservableObject {
             config.allowLowPrecisionAccumulationOnGPU = true
         }
         
-        logger.info("Optimized configuration: \(computeUnits.description), thermal: \(self.thermalState.rawValue)")
+        // Commented out to reduce console spam
+        // logger.debug("Optimized configuration: \(computeUnits.description), thermal: \(self.thermalState.rawValue)")
         
         return config
     }
@@ -334,7 +335,8 @@ public class MLPerformanceOptimizer: ObservableObject {
         guard currentMode == .adaptive else { return }
         
         let optimalUnits = determineOptimalComputeUnits()
-        logger.info("Adaptive mode adjusted to: \(optimalUnits.description)")
+        // Removed excessive logging to prevent console spam
+        // logger.debug("Adaptive mode using: \(optimalUnits.description)")
     }
     
     private func updateMetrics(_ metrics: MLPerformanceMetrics) {

@@ -3,6 +3,8 @@ import UIKit
 
 @MainActor
 class OAuthManager: ObservableObject {
+    static let shared = OAuthManager()
+    
     @Published var isGoogleConnected = false
     @Published var isAirtableConnected = false
     @Published var isLoading = false
@@ -26,10 +28,55 @@ class OAuthManager: ObservableObject {
             let name: String?
             let picture: String?
         }
+        
+        // Custom date decoding to handle string dates from backend
+        enum CodingKeys: String, CodingKey {
+            case id, type, isActive, lastSyncAt, connectedAt, scope, expiresAt, userInfo
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            id = try container.decode(String.self, forKey: .id)
+            type = try container.decode(String.self, forKey: .type)
+            isActive = try container.decode(Bool.self, forKey: .isActive)
+            scope = try container.decode([String].self, forKey: .scope)
+            userInfo = try container.decodeIfPresent(UserInfo.self, forKey: .userInfo)
+            
+            // Handle date fields that might be strings or nil
+            let dateFormatter = ISO8601DateFormatter()
+            
+            if let lastSyncString = try container.decodeIfPresent(String.self, forKey: .lastSyncAt) {
+                lastSyncAt = dateFormatter.date(from: lastSyncString)
+            } else {
+                lastSyncAt = nil
+            }
+            
+            if let connectedAtString = try container.decodeIfPresent(String.self, forKey: .connectedAt) {
+                connectedAt = dateFormatter.date(from: connectedAtString) ?? Date()
+            } else {
+                connectedAt = Date()
+            }
+            
+            if let expiresAtString = try container.decodeIfPresent(String.self, forKey: .expiresAt) {
+                expiresAt = dateFormatter.date(from: expiresAtString)
+            } else {
+                expiresAt = nil
+            }
+        }
     }
     
-    init() {
+    private init() {
         checkIntegrationStatus()
+        
+        // Listen for OAuth status changes
+        NotificationCenter.default.addObserver(
+            forName: .oauthStatusChanged,
+            object: nil,
+            queue: .main
+        ) { _ in
+            self.checkIntegrationStatus()
+        }
     }
     
     func connectGoogleServices() {
@@ -109,21 +156,41 @@ class OAuthManager: ObservableObject {
     
     func checkIntegrationStatus() {
         Task {
-            do {
-                let response = try await apiClient.get("/api/oauth/integrations")
+            await checkIntegrationStatusAsync()
+        }
+    }
+    
+    func checkIntegrationStatusAsync() async {
+        do {
+            print("🔄 OAuthManager: Checking integration status from backend...")
+            let response = try await apiClient.get("/api/oauth/integrations")
+            
+            if let integrationsData = response["integrations"] as? [[String: Any]] {
+                print("📊 OAuthManager: Received \(integrationsData.count) integrations from backend")
                 
-                if let integrationsData = response["integrations"] as? [[String: Any]] {
-                    integrations = try integrationsData.compactMap { data in
-                        let jsonData = try JSONSerialization.data(withJSONObject: data)
-                        return try JSONDecoder().decode(Integration.self, from: jsonData)
-                    }
-                    
-                    isGoogleConnected = integrations.contains { $0.type == "google" && $0.isActive }
-                    isAirtableConnected = integrations.contains { $0.type == "airtable" && $0.isActive }
+                integrations = try integrationsData.compactMap { data in
+                    let jsonData = try JSONSerialization.data(withJSONObject: data)
+                    return try JSONDecoder().decode(Integration.self, from: jsonData)
                 }
-            } catch {
-                print("Failed to check integration status: \(error)")
+                
+                let wasGoogleConnected = isGoogleConnected
+                let wasAirtableConnected = isAirtableConnected
+                
+                isGoogleConnected = integrations.contains { $0.type == "google" && $0.isActive }
+                isAirtableConnected = integrations.contains { $0.type == "airtable" && $0.isActive }
+                
+                print("✅ OAuthManager: Google connected: \(isGoogleConnected) (was: \(wasGoogleConnected))")
+                print("✅ OAuthManager: Airtable connected: \(isAirtableConnected) (was: \(wasAirtableConnected))")
+                
+                // Debug: Print full integration details
+                for integration in integrations {
+                    print("   - \(integration.type): active=\(integration.isActive), email=\(integration.userInfo?.email ?? "N/A")")
+                }
+            } else {
+                print("⚠️ OAuthManager: No integrations data received from backend")
             }
+        } catch {
+            print("❌ OAuthManager: Failed to check integration status: \(error)")
         }
     }
     

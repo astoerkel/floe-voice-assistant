@@ -78,20 +78,18 @@ class MinimalAudioRecorder: NSObject, ObservableObject {
             try recordingSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
             try recordingSession.setActive(true)
             
-            // Create recording URL with timestamp
+            // Create recording URL with timestamp - using M4A for SFSpeechRecognizer compatibility
             let timestamp = Date().timeIntervalSince1970
-            let fileName = "recording_\(timestamp).wav"
+            let fileName = "recording_\(timestamp).m4a"
             let audioURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
             
-            // Configure recording settings for WAV format
+            // Configure recording settings for M4A format (compatible with SFSpeechRecognizer)
             let settings: [String: Any] = [
-                AVFormatIDKey: Int(kAudioFormatLinearPCM),
-                AVSampleRateKey: 16000, // 16kHz for better compatibility
+                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                AVSampleRateKey: 44100, // 44.1kHz for high quality
                 AVNumberOfChannelsKey: 1,
                 AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
-                AVLinearPCMBitDepthKey: 16,
-                AVLinearPCMIsBigEndianKey: false,
-                AVLinearPCMIsFloatKey: false
+                AVEncoderBitRateKey: 64000 // 64kbps for good quality/size balance
             ]
             
             // Create and prepare recorder

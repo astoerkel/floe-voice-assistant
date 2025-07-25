@@ -193,6 +193,16 @@ struct EnhancedSettingsView: View {
     @ObservedObject private var apiClient = APIClient.shared
     @Environment(\.dismiss) private var dismiss
     
+    // Optional actions for the settings view
+    let onClearHistory: (() -> Void)?
+    let onLogout: (() -> Void)?
+    
+    // Initializer
+    init(onClearHistory: (() -> Void)? = nil, onLogout: (() -> Void)? = nil) {
+        self.onClearHistory = onClearHistory
+        self.onLogout = onLogout
+    }
+    
     // Hidden debug menu access
     @State private var debugTapCount = 0
     @State private var showDebugMenu = false
@@ -236,15 +246,7 @@ struct EnhancedSettingsView: View {
                 }
                 
                 // Connected Services
-                Section(header: Text("Connected Services")) {
-                    NavigationLink("Service Integrations") {
-                        OAuthIntegrationsView()
-                    }
-                    
-                    NavigationLink("Legacy Setup") {
-                        IntegrationsSetupView(apiClient: apiClient, onComplete: {})
-                    }
-                }
+                ConnectedServicesSection()
                 
                 // Voice Settings
                 Section {
@@ -268,7 +270,7 @@ struct EnhancedSettingsView: View {
                 // Privacy & Security
                 Section {
                     NavigationLink("Privacy Controls") {
-                        PrivacyControlsView()
+                        BasicPrivacyControlsView()
                     }
                     
                     NavigationLink("Data Access Log") {
@@ -359,6 +361,10 @@ struct EnhancedSettingsView: View {
                     NavigationLink("Batch Processing") {
                         BatchProcessingSettingsView()
                     }
+                    
+                    NavigationLink("ML & Personalization") {
+                        PersonalizationSettingsView()
+                    }
                 } header: {
                     Text("Performance & Optimization")
                 } footer: {
@@ -391,6 +397,25 @@ struct EnhancedSettingsView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
+                }
+                
+                // Additional Actions (if provided)
+                if onClearHistory != nil || onLogout != nil {
+                    Section {
+                        if let onClearHistory = onClearHistory {
+                            Button("Clear Chat History", role: .destructive) {
+                                onClearHistory()
+                            }
+                        }
+                        
+                        if let onLogout = onLogout {
+                            Button("Logout", role: .destructive) {
+                                onLogout()
+                            }
+                        }
+                    } header: {
+                        Text("Actions")
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -793,6 +818,86 @@ struct PersonalizationSection: View {
             if showingNameAlert {
                 isTextFieldFocused = true
             }
+        }
+    }
+}
+
+// MARK: - Connected Services Section
+
+struct ConnectedServicesSection: View {
+    @ObservedObject private var oauthManager = OAuthManager.shared
+    
+    var body: some View {
+        Section {
+            NavigationLink("Service Integrations") {
+                OAuthIntegrationsView()
+            }
+            
+            // Google Services Status
+            HStack {
+                Image(systemName: "globe")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Google Services")
+                        .font(.body)
+                    
+                    Text(oauthManager.isGoogleConnected ? "Connected" : "Not connected")
+                        .font(.caption)
+                        .foregroundColor(oauthManager.isGoogleConnected ? .green : .secondary)
+                }
+                
+                Spacer()
+                
+                if oauthManager.isGoogleConnected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Navigate to OAuth integrations focused on Google
+            }
+            
+            // Airtable Status
+            HStack {
+                Image(systemName: "tablecells")
+                    .foregroundColor(.green)
+                    .font(.title3)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Airtable")
+                        .font(.body)
+                    
+                    Text(oauthManager.isAirtableConnected ? "Connected" : "Not connected")
+                        .font(.caption)
+                        .foregroundColor(oauthManager.isAirtableConnected ? .green : .secondary)
+                }
+                
+                Spacer()
+                
+                if oauthManager.isAirtableConnected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Navigate to OAuth integrations focused on Airtable
+            }
+        } header: {
+            Text("Connected Services")
+        } footer: {
+            Text("Connect Google Calendar, Gmail, and Airtable to unlock powerful voice commands for productivity.")
+                .font(.caption)
+        }
+        .onAppear {
+            oauthManager.checkIntegrationStatus()
         }
     }
 }

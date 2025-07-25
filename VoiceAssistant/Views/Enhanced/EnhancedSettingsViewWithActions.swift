@@ -15,60 +15,10 @@ struct EnhancedSettingsViewWithActions: View {
     @State private var showLogoutAlert = false
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                // Original Enhanced Settings View
-                EnhancedSettingsView()
-                
-                // Additional Actions Section
-                VStack(spacing: 16) {
-                    Divider()
-                        .background(Color.white.opacity(0.2))
-                    
-                    // Clear Chat History Button
-                    Button(action: { showClearHistoryAlert = true }) {
-                        HStack {
-                            Image(systemName: "trash")
-                                .font(.title3)
-                            Text("Clear Chat History")
-                                .font(.headline)
-                            Spacer()
-                        }
-                        .foregroundColor(.red)
-                        .padding()
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    
-                    // Logout Button
-                    Button(action: { showLogoutAlert = true }) {
-                        HStack {
-                            Image(systemName: "arrow.right.square")
-                                .font(.title3)
-                            Text("Logout")
-                                .font(.headline)
-                            Spacer()
-                        }
-                        .foregroundColor(.red)
-                        .padding()
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        onDismiss()
-                    }
-                    .foregroundColor(.white)
-                }
-            }
-        }
+        EnhancedSettingsView(
+            onClearHistory: { showClearHistoryAlert = true },
+            onLogout: { showLogoutAlert = true }
+        )
         .preferredColorScheme(.dark)
         .alert("Clear Chat History", isPresented: $showClearHistoryAlert) {
             Button("Cancel", role: .cancel) { }

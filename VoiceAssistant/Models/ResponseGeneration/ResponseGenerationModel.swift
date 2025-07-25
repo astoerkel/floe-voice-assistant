@@ -204,7 +204,12 @@ class ResponseGenerationModel: MLModelProtocol {
     
     // MARK: - Memory Management
     func getMemoryUsage() -> Int64 {
-        return isLoaded ? 30_000_000 : 0 // 30MB when loaded
+        // Mock memory usage calculation - much smaller for development fallbacks
+        if coreMLModel != nil {
+            return isLoaded ? 30_000_000 : 0 // 30MB for actual Core ML model
+        } else {
+            return isLoaded ? 500_000 : 0 // 0.5MB for development fallback
+        }
     }
     
     // MARK: - Private Helper Methods

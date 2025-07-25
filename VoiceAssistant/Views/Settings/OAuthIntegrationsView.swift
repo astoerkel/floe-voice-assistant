@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct OAuthIntegrationsView: View {
-    @StateObject private var oauthManager = OAuthManager()
+    @ObservedObject private var oauthManager = OAuthManager.shared
     @State private var showingDisconnectAlert = false
     @State private var integrationToDisconnect: OAuthManager.Integration?
     

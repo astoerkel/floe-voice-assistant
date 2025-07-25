@@ -250,7 +250,12 @@ class SpeechEnhancementModel: MLModelProtocol {
     
     // MARK: - Memory Management
     func getMemoryUsage() -> Int64 {
-        return isLoaded ? 75_000_000 : 0 // 75MB when loaded (audio processing is memory-intensive)
+        // Mock memory usage calculation - much smaller for development fallbacks
+        if coreMLModel != nil {
+            return isLoaded ? 75_000_000 : 0 // 75MB for actual Core ML model (audio processing is memory-intensive)
+        } else {
+            return isLoaded ? 2_000_000 : 0 // 2MB for development fallback
+        }
     }
     
     // MARK: - Public Enhancement Methods

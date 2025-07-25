@@ -154,6 +154,61 @@ struct VoiceRequest: Codable {
     }
 }
 
+struct EnhancedVoiceRequest: Codable {
+    let text: String
+    let context: VoiceContext
+    let platform: String
+    let integrations: OAuthIntegrationsStatus
+    
+    init(text: String, context: VoiceContext, platform: String, integrations: [String: Any]) {
+        self.text = text
+        self.context = context
+        self.platform = platform
+        self.integrations = OAuthIntegrationsStatus(from: integrations)
+    }
+}
+
+struct OAuthIntegrationsStatus: Codable {
+    let google: OAuthServiceStatus
+    let airtable: OAuthServiceStatus
+    
+    init(from integrations: [String: Any]) {
+        if let googleDict = integrations["google"] as? [String: Any] {
+            self.google = OAuthServiceStatus(from: googleDict)
+        } else {
+            self.google = OAuthServiceStatus.disconnected()
+        }
+        
+        if let airtableDict = integrations["airtable"] as? [String: Any] {
+            self.airtable = OAuthServiceStatus(from: airtableDict)
+        } else {
+            self.airtable = OAuthServiceStatus.disconnected()
+        }
+    }
+}
+
+struct OAuthServiceStatus: Codable {
+    let connected: Bool
+    let scopes: [String]
+    let lastUpdated: Double
+    
+    init(connected: Bool, scopes: [String], lastUpdated: Double) {
+        self.connected = connected
+        self.scopes = scopes
+        self.lastUpdated = lastUpdated
+    }
+    
+    init(from dict: [String: Any]) {
+        self.connected = dict["connected"] as? Bool ?? false
+        self.scopes = dict["scopes"] as? [String] ?? []
+        self.lastUpdated = dict["lastUpdated"] as? Double ?? 0.0
+    }
+    
+    static func disconnected() -> OAuthServiceStatus {
+        return OAuthServiceStatus(connected: false, scopes: [], lastUpdated: 0.0)
+    }
+}
+
 struct VoiceContext: Codable {
     let sessionId: String
     let languageCode: String

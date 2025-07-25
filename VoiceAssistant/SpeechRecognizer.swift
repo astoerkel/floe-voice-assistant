@@ -58,7 +58,7 @@ public class SpeechRecognizer: ObservableObject {
     // MARK: - Hybrid Transcription (Enhanced + Fallback)
     
     func transcribe(_ audioData: Data, completion: @escaping (Result<String, Error>) -> Void) {
-        print("🎤 SpeechRecognizer: Starting hybrid transcription of \(audioData.count) bytes")
+        print("🎤 SpeechRecognizer: Starting simple Apple Speech Recognition transcription of \(audioData.count) bytes")
         
         guard isAuthorized else {
             print("❌ SpeechRecognizer: Not authorized")
@@ -66,11 +66,70 @@ public class SpeechRecognizer: ObservableObject {
             return
         }
         
-        // Use enhanced transcription if available and enabled
-        if useHybridMode && isEnhanced {
-            enhancedTranscribe(audioData, completion: completion)
-        } else {
-            standardTranscribe(audioData, completion: completion)
+        // Use simple standard transcription for better accuracy
+        // Skip enhanced/hybrid mode to avoid complex processing that may cause errors
+        simpleTranscribe(audioData, completion: completion)
+    }
+    
+    // MARK: - Simple Apple Speech Recognition (High Accuracy)
+    
+    private func simpleTranscribe(_ audioData: Data, completion: @escaping (Result<String, Error>) -> Void) {
+        print("📱 SpeechRecognizer: Using simple Apple Speech Recognition (no enhancements)")
+        
+        guard let speechRecognizer = speechRecognizer, speechRecognizer.isAvailable else {
+            print("❌ SpeechRecognizer: Apple Speech Recognition not available")
+            completion(.failure(SpeechRecognitionError.notAvailable))
+            return
+        }
+        
+        do {
+            // Create temporary M4A file for the audio data (now compatible with SFSpeechRecognizer)
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("speech_recognition.m4a")
+            try audioData.write(to: tempURL)
+            print("📱 SpeechRecognizer: Created M4A file at \(tempURL)")
+            
+            // Create recognition request with minimal configuration
+            let request = SFSpeechURLRecognitionRequest(url: tempURL)
+            request.shouldReportPartialResults = false
+            request.taskHint = .dictation  // Use dictation for general speech
+            
+            // Optional: Add context for better accuracy (but keep it simple)
+            if #available(iOS 16.0, *) {
+                request.addsPunctuation = true
+            }
+            
+            print("📱 SpeechRecognizer: Starting simple recognition task")
+            speechRecognizer.recognitionTask(with: request) { result, error in
+                defer {
+                    // Clean up temp file
+                    try? FileManager.default.removeItem(at: tempURL)
+                }
+                
+                if let error = error {
+                    print("❌ Simple transcription failed: \(error.localizedDescription)")
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let result = result else {
+                    print("❌ Simple transcription: No result")
+                    completion(.failure(SpeechRecognitionError.noResult))
+                    return
+                }
+                
+                if result.isFinal {
+                    let transcribedText = result.bestTranscription.formattedString
+                    let confidence = result.bestTranscription.segments.isEmpty ? 0.0 : 
+                        result.bestTranscription.segments.map { $0.confidence }.reduce(0, +) / Float(result.bestTranscription.segments.count)
+                    
+                    print("✅ Simple transcription complete: '\(transcribedText)' (confidence: \(confidence))")
+                    completion(.success(transcribedText))
+                }
+            }
+            
+        } catch {
+            print("❌ Failed to setup simple transcription: \(error.localizedDescription)")
+            completion(.failure(error))
         }
     }
     

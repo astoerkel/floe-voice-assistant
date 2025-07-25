@@ -418,6 +418,17 @@ public class OfflineProcessor: ObservableObject {
                 metadata: ["intent": "device_control"]
             )
             
+        case .email:
+            let emailResponse = await OfflineIntentHandlers.handleEmailQuery(text, dataManager: dataManager)
+            return (
+                text: emailResponse,
+                confidence: 0.8,
+                source: .template,
+                capabilities: [.basicConversation],
+                requiresSync: false,
+                metadata: ["intent": "email", "offline_mode": true]
+            )
+            
         default:
             let generalResponse = await generateGeneralResponse(text)
             return (
@@ -553,7 +564,7 @@ struct IntentClassification {
     }
     
     enum Intent {
-        case timeQuery, dateQuery, calculation, reminder, calendar, deviceControl, general
+        case timeQuery, dateQuery, calculation, reminder, calendar, deviceControl, email, general
     }
 }
 

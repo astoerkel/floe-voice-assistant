@@ -759,12 +759,15 @@ class SpeechPatternLearning: ObservableObject {
     }
     
     private func extractPhrases(from text: String) -> [String] {
-        let words = text.components(separatedBy: .whitespacesAndNewlines)
+        let words = text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
         var phrases: [String] = []
         
         // Extract 2-4 word phrases
         for length in 2...min(4, words.count) {
-            for start in 0...(words.count - length) {
+            // Ensure we don't create invalid ranges
+            guard words.count >= length else { continue }
+            let maxStart = words.count - length
+            for start in 0...maxStart {
                 let phrase = words[start..<start+length].joined(separator: " ")
                 if phrase.count > 5 { // Minimum phrase length
                     phrases.append(phrase)

@@ -315,7 +315,8 @@ public class IntentClassifier: ObservableObject {
             if config.enableLogging {
                 logger.warning("Core ML classification failed: \(error.localizedDescription)")
             }
-            throw error
+            // For now, since we don't have Core ML models, immediately fall back to rules-based
+            throw IntentClassificationError.modelNotAvailable
         }
     }
     

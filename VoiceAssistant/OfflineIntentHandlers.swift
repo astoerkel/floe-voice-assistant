@@ -673,6 +673,54 @@ struct CachedCalendarEvent: Codable {
     let location: String?
 }
 
+// MARK: - Email Handling
+extension OfflineIntentHandlers {
+    internal static func handleEmailQuery(_ text: String, dataManager: OfflineDataManager) async -> String {
+        let normalized = text.lowercased()
+        
+        // For offline mode, we can't access actual emails but can provide helpful responses
+        if normalized.contains("unread") || normalized.contains("new") {
+            return "I can't check your actual emails while offline, but when you're back online, I can help you check unread emails. For now, you can open your Mail app directly."
+        } else if normalized.contains("send") || normalized.contains("compose") {
+            return "I can't send emails while offline, but you can compose one in the Mail app and it will send when you're back online."
+        } else if normalized.contains("latest") || normalized.contains("recent") {
+            return "I can't access your latest emails offline. When you're back online, I can help you check your recent messages."
+        } else {
+            return "I can help with emails when you're connected to the internet. For offline access, try opening your Mail app directly."
+        }
+    }
+}
+
+// MARK: - Email Intent Handler
+class EmailIntentHandler: OfflineIntentHandler {
+    var supportedIntents: [VoiceIntent] = [.email]
+    var confidence: Float = 0.8
+    var estimatedProcessingTime: TimeInterval = 0.5
+    
+    func canHandle(intent: VoiceIntent) async -> Bool {
+        return intent == .email
+    }
+    
+    func canHandle(text: String) async -> Bool {
+        let normalized = text.lowercased()
+        return normalized.contains("email") || normalized.contains("mail") || 
+               normalized.contains("inbox") || normalized.contains("unread")
+    }
+    
+    func process(text: String, context: [String: Any]?) async throws -> VoiceResponse {
+        let responseText = await OfflineIntentHandlers.handleEmailQuery(text, dataManager: OfflineDataManager.shared)
+        return VoiceResponse(
+            text: responseText,
+            success: true,
+            audioBase64: nil
+        )
+    }
+    
+    func estimatedProcessingTime(text: String) async -> TimeInterval {
+        return 0.3
+    }
+}
+
 // MARK: - Offline Handler Factory
 public class OfflineHandlerFactory {
     
@@ -681,6 +729,7 @@ public class OfflineHandlerFactory {
             .time: EnhancedTimeIntentHandler(),
             .calculation: EnhancedCalculationIntentHandler(),
             .deviceControl: EnhancedDeviceControlIntentHandler(),
+            .email: EmailIntentHandler(),
             .general: GeneralInfoIntentHandler()
         ]
     }
@@ -704,6 +753,12 @@ public class OfflineHandlerFactory {
                 "Device information",
                 "Storage info",
                 "Screen brightness"
+            ],
+            .email: [
+                "Check my emails",
+                "Check my unread emails", 
+                "New emails",
+                "Latest emails"
             ],
             .general: [
                 "What can you do?",

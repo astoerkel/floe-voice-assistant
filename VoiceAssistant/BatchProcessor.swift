@@ -3,6 +3,51 @@ import CoreML
 import os.log
 import Combine
 
+/// Mock MLModel for simulation and testing
+class MockMLModel: MLModel {
+    private let modelType: String
+    
+    init(type: String) {
+        self.modelType = type
+        super.init()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override var modelDescription: MLModelDescription {
+        // Create a simple mock model description
+        // For mock purposes, we'll return a basic description
+        let bundle = Bundle.main
+        if let url = bundle.url(forResource: "MockModel", withExtension: "mlmodelc") {
+            // If we had a real model, we'd load it here
+        }
+        
+        // Create minimal mock description
+        return super.modelDescription
+    }
+    
+    override func prediction(from input: MLFeatureProvider) throws -> MLFeatureProvider {
+        // Return a mock prediction
+        return MockMLFeatureProvider()
+    }
+}
+
+/// Mock MLFeatureProvider for simulation
+class MockMLFeatureProvider: NSObject, MLFeatureProvider {
+    var featureNames: Set<String> {
+        return ["output"]
+    }
+    
+    func featureValue(for featureName: String) -> MLFeatureValue? {
+        if featureName == "output" {
+            return MLFeatureValue(string: "mock_output")
+        }
+        return nil
+    }
+}
+
 /// Request priority levels for batch processing
 public enum RequestPriority: Int, CaseIterable, Comparable {
     case low = 1
@@ -356,7 +401,9 @@ public class BatchProcessor: ObservableObject {
         
         // Start new timer
         let timer = Timer.scheduledTimer(withTimeInterval: configuration.maxWaitTime, repeats: false) { [weak self] _ in
-            self?.processBatch(for: modelType)
+            Task { @MainActor in
+                self?.processBatch(for: modelType)
+            }
         }
         
         processingTimers[modelType] = timer
@@ -436,7 +483,7 @@ public class BatchProcessor: ObservableObject {
             
             recordMetrics(metrics)
             
-            let result = BatchResult(
+            let _ = BatchResult(
                 batchId: batchId,
                 processedCount: batch.count,
                 totalTime: totalTime,
@@ -473,15 +520,15 @@ public class BatchProcessor: ObservableObject {
         let loadStartTime = Date()
         
         // Get optimized configuration
-        let config = quantization.getQuantizedConfiguration(for: modelType)
+        let _ = quantization.getQuantizedConfiguration(for: modelType)
         
         // Simulate model loading - in real implementation, this would load the actual model
         try await Task.sleep(nanoseconds: UInt64(0.1 * 1_000_000_000)) // 100ms simulation
         
-        // Create placeholder model for simulation
-        let model = try MLModel(contentsOf: Bundle.main.url(forResource: "placeholder", withExtension: "mlmodel")!)
+        // Create mock model for simulation (avoiding file system dependencies)
+        let mockModel = MockMLModel(type: modelType)
         
-        modelCache[modelType] = model
+        modelCache[modelType] = mockModel
         lastModelLoad[modelType] = Date()
         
         let loadTime = Date().timeIntervalSince(loadStartTime)
@@ -494,13 +541,49 @@ public class BatchProcessor: ObservableObject {
         
         logger.debug("Model loaded: \(modelType), time=\(loadTime)s")
         
-        return model
+        return mockModel
     }
     
     private func processRequest(_ request: BatchRequest, model: MLModel) async throws -> Any {
+        // Handle different input types
+        if let voiceInput = request.inputData as? VoiceBatchInput {
+            return try await processVoiceRequest(voiceInput, requestId: request.id)
+        }
+        
         // Simulate request processing - in real implementation, this would be actual inference
         try await Task.sleep(nanoseconds: UInt64(0.05 * 1_000_000_000)) // 50ms simulation
         return "Processed result for \(request.id)"
+    }
+    
+    private func processVoiceRequest(_ input: VoiceBatchInput, requestId: UUID) async throws -> EnhancedVoiceProcessingResult {
+        // This would integrate with the actual voice processing pipeline
+        // For now, create a mock result that demonstrates batch processing
+        
+        let startTime = Date()
+        
+        // Simulate processing time based on batch efficiency
+        let simulatedProcessingTime = 0.5 + Double.random(in: -0.2...0.2)
+        try await Task.sleep(nanoseconds: UInt64(simulatedProcessingTime * 1_000_000_000))
+        
+        let processingTime = Date().timeIntervalSince(startTime)
+        
+        // Create mock response
+        let response = VoiceResponse(
+            text: "Batch processed response for request \(requestId.uuidString.prefix(8))",
+            success: true,
+            audioBase64: nil
+        )
+        
+        return EnhancedVoiceProcessingResult(
+            response: response,
+            intent: .general,
+            confidence: 0.85,
+            processingMethod: .fullyOnDevice,
+            processingTime: processingTime,
+            routingExplanation: "Processed via batch optimization",
+            wasProcessedOffline: false,
+            followUpSuggestions: ["Try another command", "Check batch statistics"]
+        )
     }
     
     private func getModelMemoryUsage(_ model: MLModel) -> Double {

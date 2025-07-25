@@ -240,7 +240,18 @@ public class IntentRouter: ObservableObject {
         let intent = classificationResult.intent
         let confidence = classificationResult.confidence
         
-        // Check for offline processing first (highest priority)
+        // CRITICAL: Check for OAuth-connected integrations first - if user has connected services, use them!
+        if await shouldUseOAuthIntegration(for: intent, context: context) {
+            return RoutingDecision(
+                route: .server,
+                confidence: confidence,
+                explanation: "OAuth integration detected for \(intent.displayName) - routing to server for full functionality",
+                estimatedProcessingTime: 1.5,
+                fallbackRoute: intent.supportsOfflineProcessing ? .offline(cached: true) : nil
+            )
+        }
+        
+        // Check for offline processing only if no OAuth integration available
         if intent.supportsOfflineProcessing && config.enableOfflineRouting {
             if let offlineDecision = await checkOfflineRouting(intent: intent, confidence: confidence, text: text) {
                 return offlineDecision
@@ -386,6 +397,23 @@ public class IntentRouter: ObservableObject {
             estimatedProcessingTime: 2.5,
             fallbackRoute: .onDevice(handler: "general_fallback")
         )
+    }
+    
+    // MARK: - OAuth Integration Checking
+    private func shouldUseOAuthIntegration(for intent: VoiceIntent, context: [String: Any]?) async -> Bool {
+        // Get current OAuth status
+        let oauthManager = OAuthManager.shared
+        
+        switch intent {
+        case .email:
+            return oauthManager.isGoogleConnected
+        case .calendar:
+            return oauthManager.isGoogleConnected
+        case .task:
+            return oauthManager.isGoogleConnected || oauthManager.isAirtableConnected
+        default:
+            return false
+        }
     }
     
     // MARK: - Helper Methods

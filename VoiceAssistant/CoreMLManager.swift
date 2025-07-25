@@ -97,10 +97,13 @@ class CoreMLManager: ObservableObject {
     private let serialQueue = DispatchQueue(label: "coreml-manager", qos: .userInitiated)
     private var cancellables = Set<AnyCancellable>()
     
+    // MARK: - Model Factory
+    private let modelFactory = CoreMLModelFactory.shared
+    
     // MARK: - Model Instances (Lazy Loading)
-    private lazy var intentClassificationModel = IntentClassificationModel()
-    private lazy var responseGenerationModel = ResponseGenerationModel()
-    private lazy var speechEnhancementModel = SpeechEnhancementModel()
+    private var intentClassificationModel: IntentClassificationModel?
+    private var responseGenerationModel: ResponseGenerationModel?
+    private var speechEnhancementModel: SpeechEnhancementModel?
     
     // MARK: - Initialization
     private init(config: CoreMLManagerConfig = .default) {
@@ -114,24 +117,50 @@ class CoreMLManager: ObservableObject {
     private func initialize() async {
         logger.info("Initializing CoreML Manager")
         
+        // Create models using factory
+        intentClassificationModel = await modelFactory.createIntentClassificationModel()
+        responseGenerationModel = await modelFactory.createResponseGenerationModel()
+        speechEnhancementModel = await modelFactory.createSpeechEnhancementModel()
+        
         // Register available models
-        registerModel(
-            model: intentClassificationModel,
-            identifier: "intent_classification",
-            priority: .high
-        )
+        if let intentModel = intentClassificationModel {
+            registerModel(
+                model: intentModel,
+                identifier: "intent_classification",
+                priority: .high
+            )
+        }
         
-        registerModel(
-            model: responseGenerationModel,
-            identifier: "response_generation",
-            priority: .medium
-        )
+        if let responseModel = responseGenerationModel {
+            registerModel(
+                model: responseModel,
+                identifier: "response_generation",
+                priority: .medium
+            )
+        }
         
-        registerModel(
-            model: speechEnhancementModel,
-            identifier: "speech_enhancement",
-            priority: .low
-        )
+        if let speechModel = speechEnhancementModel {
+            registerModel(
+                model: speechModel,
+                identifier: "speech_enhancement",
+                priority: .low
+            )
+        }
+        
+        // Validate all models
+        let validationReport = await modelFactory.validateAllModels()
+        logger.info("Model validation complete:")
+        logger.info("  Intent Classification: \(validationReport.intentClassification.displayString)")
+        logger.info("  Speech Enhancement: \(validationReport.speechEnhancement.displayString)")
+        logger.info("  Response Generation: \(validationReport.responseGeneration.displayString)")
+        logger.info("  Overall Health: \(validationReport.overallHealth ? "✅ Healthy" : "⚠️ Issues Detected")")
+        
+        // Get environment info
+        let envInfo = modelFactory.getEnvironmentInfo()
+        logger.info("Core ML Environment:")
+        logger.info("  Operating Mode: \(envInfo.operatingMode.description)")
+        logger.info("  Neural Engine Support: \(envInfo.deviceSupportsNeuralEngine ? "✅ Available" : "❌ Not Available")")
+        logger.info("  Available Models: \(envInfo.availableModelFiles.isEmpty ? "None (using fallbacks)" : envInfo.availableModelFiles.joined(separator: ", "))")
         
         // Set up automatic updates if enabled
         if config.enableAutomaticUpdates {
@@ -294,7 +323,10 @@ class CoreMLManager: ObservableObject {
         await updateMemoryUsage()
         
         // Estimate model memory usage (mock estimation)
-        let estimatedUsage = entry.model?.getMemoryUsage() ?? 50_000_000
+        let modelMemory = entry.model?.getMemoryUsage()
+        let estimatedUsage = modelMemory ?? 1_000_000 // Default to 1MB for development fallbacks
+        
+        logger.debug("Memory estimation for \(entry.identifier): model returned \(modelMemory ?? -1), using \(estimatedUsage)")
         
         if totalMemoryUsage + estimatedUsage > config.memoryLimit {
             try await freeMemory(needed: estimatedUsage)

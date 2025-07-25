@@ -70,6 +70,29 @@ public class APIClient: ObservableObject {
         }
     }
     
+    private func addCommonHeadersAsync(to request: inout URLRequest) async {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
+        
+        // Try JWT token from OAuth service first (it's more specific for integrations)
+        do {
+            let jwtToken = try await KeychainService.shared.retrieve(key: "jwt_token")
+            print("🔑 Using JWT token from keychain: \(jwtToken.prefix(20))...")
+            request.setValue("Bearer \(jwtToken)", forHTTPHeaderField: "Authorization")
+            return
+        } catch {
+            print("🔍 No JWT token available, trying main access token...")
+        }
+        
+        // Fallback to main access token
+        if let accessToken = accessToken {
+            print("🔑 Using main access token as fallback")
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            print("❌ No authentication tokens available")
+        }
+    }
+    
     private func clearTokens() {
         UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.accessToken)
         UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.refreshToken)
@@ -123,6 +146,42 @@ public class APIClient: ObservableObject {
         }
         
         webSocketManager.connect(accessToken: accessToken)
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Update OAuth integration status from backend before making voice requests
+    private func updateOAuthIntegrationStatus() async {
+        print("🔄 APIClient: Updating OAuth integration status from backend...")
+        await OAuthManager.shared.checkIntegrationStatusAsync()
+        print("✅ APIClient: OAuth integration status updated")
+    }
+    
+    /// Get current integration status for including in voice requests
+    private func getCurrentIntegrationStatus() async -> [String: Any] {
+        return await MainActor.run {
+            // Get integration status from shared OAuthManager
+            let oauthManager = OAuthManager.shared
+            
+            // Debug current OAuth status
+            print("🔍 APIClient: Getting OAuth status from OAuthManager.shared")
+            print("🔍 APIClient: Google connected = \(oauthManager.isGoogleConnected)")
+            print("🔍 APIClient: Airtable connected = \(oauthManager.isAirtableConnected)")
+            print("🔍 APIClient: Total integrations = \(oauthManager.integrations.count)")
+            
+            return [
+                "google": [
+                    "connected": oauthManager.isGoogleConnected,
+                    "scopes": ["gmail.readonly", "calendar.readonly"],
+                    "lastUpdated": Date().timeIntervalSince1970
+                ],
+                "airtable": [
+                    "connected": oauthManager.isAirtableConnected,
+                    "scopes": ["read", "write"],
+                    "lastUpdated": Date().timeIntervalSince1970
+                ]
+            ]
+        }
     }
     
     // MARK: - Authentication Methods
@@ -293,13 +352,26 @@ public class APIClient: ObservableObject {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
         
+        // Get current integration status
+        let integrationStatus = await getCurrentIntegrationStatus()
+        print("🔍 Sending integration status to backend: \(integrationStatus)")
+        
+        // Debug OAuth status specifically
+        if let googleStatus = integrationStatus["google"] as? [String: Any],
+           let isConnected = googleStatus["connected"] as? Bool {
+            print("🔍 Google OAuth connected status being sent: \(isConnected)")
+        } else {
+            print("❌ Failed to extract Google OAuth status from integration data")
+        }
+        
         let requestBody: [String: Any] = [
             "text": text,
             "context": [
                 "sessionId": context.sessionId,
                 "platform": context.platform,
                 "deviceModel": context.deviceModel,
-                "timestamp": ISO8601DateFormatter().string(from: Date())
+                "timestamp": ISO8601DateFormatter().string(from: Date()),
+                "connectedServices": integrationStatus
             ],
             "processingFlags": [
                 "onDeviceCapable": processingFlags.onDeviceCapable,
@@ -501,13 +573,56 @@ public class APIClient: ObservableObject {
             return
         }
         
-        // Use HTTP API for enhanced responses
-        performAuthenticatedRequest(endpoint: "/api/voice/process-text", method: "POST", body: request) { result in
-            switch result {
-            case .success(let data):
-                self.parseVoiceResponse(data, completion: completion)
-            case .failure(let error):
-                completion(.failure(error))
+        print("🔍 APIClient.sendVoiceCommandEnhanced: Starting enhanced voice command processing")
+        
+        Task {
+            // CRITICAL: First check and update OAuth integration status from backend
+            await updateOAuthIntegrationStatus()
+            
+            // Now get the updated OAuth integration status
+            let integrationStatus = await getCurrentIntegrationStatus()
+            print("🔍 APIClient.sendVoiceCommandEnhanced: OAuth integration status: \(integrationStatus)")
+            
+            // Create enhanced request with OAuth status using Codable struct
+            let enhancedRequest = EnhancedVoiceRequest(
+                text: request.text,
+                context: request.context,
+                platform: request.platform,
+                integrations: integrationStatus
+            )
+            
+            print("🔍 APIClient.sendVoiceCommandEnhanced: Sending enhanced request with OAuth status")
+            
+            await MainActor.run {
+                // Debug: Log the actual request being sent
+                do {
+                    let requestData = try JSONEncoder().encode(enhancedRequest)
+                    if let requestJSON = String(data: requestData, encoding: .utf8) {
+                        print("📤 APIClient.sendVoiceCommandEnhanced: Sending request JSON:")
+                        print(requestJSON)
+                    }
+                } catch {
+                    print("❌ APIClient.sendVoiceCommandEnhanced: Failed to encode request for logging: \(error)")
+                }
+                
+                // Use HTTP API for enhanced responses with OAuth integration status
+                self.performAuthenticatedRequest(endpoint: "/api/voice/process-text", method: "POST", body: enhancedRequest) { result in
+                    switch result {
+                    case .success(let data):
+                        print("🔍 APIClient.sendVoiceCommandEnhanced: Received response, parsing...")
+                        
+                        // Debug: Log raw response
+                        if let responseJSON = String(data: data, encoding: .utf8) {
+                            print("📥 APIClient.sendVoiceCommandEnhanced: Raw response:")
+                            print(responseJSON.prefix(500))
+                        }
+                        
+                        self.parseVoiceResponse(data, completion: completion)
+                    case .failure(let error):
+                        print("❌ APIClient.sendVoiceCommandEnhanced: Request failed: \(error.localizedDescription)")
+                        completion(.failure(error))
+                    }
+                }
             }
         }
     }
@@ -786,16 +901,28 @@ public class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        addCommonHeaders(to: &request)
+        await addCommonHeadersAsync(to: &request)
         
-        if let accessToken = accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        // Debug: Log the request headers
+        print("🌐 GET Request to \(endpoint)")
+        if let authHeader = request.value(forHTTPHeaderField: "Authorization") {
+            print("🔑 Authorization header present: \(authHeader.prefix(20))...")
+        } else {
+            print("❌ No Authorization header found")
         }
         
         let (data, response) = try await session.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              200...299 ~= httpResponse.statusCode else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        print("📡 Response status: \(httpResponse.statusCode)")
+        
+        guard 200...299 ~= httpResponse.statusCode else {
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("📡 Error response body: \(responseString)")
+            }
             throw VoiceAssistantError.networkError
         }
         
@@ -809,11 +936,7 @@ public class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        addCommonHeaders(to: &request)
-        
-        if let accessToken = accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        }
+        await addCommonHeadersAsync(to: &request)
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
@@ -859,11 +982,7 @@ public class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        addCommonHeaders(to: &request)
-        
-        if let accessToken = accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        }
+        await addCommonHeadersAsync(to: &request)
         
         let (data, response) = try await session.data(for: request)
         
