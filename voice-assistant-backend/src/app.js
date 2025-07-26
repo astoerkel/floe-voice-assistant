@@ -19,7 +19,8 @@ const rateLimit = require('express-rate-limit');
 const logger = require('./utils/logger');
 const errorHandler = require('./middleware/errorHandler');
 const authenticateApiKey = require('./middleware/apiKeyAuth');
-const sessionAuth = require('./middleware/sessionAuth');
+const jwtAuth = require('./middleware/sessionAuth'); // Renamed to jwtAuth
+const { checkUsageLimit } = require('./middleware/usageLimiter');
 const { connectRedis } = require('./config/redis');
 const { connectDatabase } = require('./config/database');
 
@@ -118,7 +119,7 @@ app.get('/public/health', (req, res) => {
 
 // API routes (with authentication)
 app.use('/api/auth', authRoutes); // Auth routes handle their own authentication
-app.use('/api/voice', authenticateApiKey, sessionAuth, voiceRoutes);
+app.use('/api/voice', authenticateApiKey, jwtAuth, checkUsageLimit, voiceRoutes);
 app.use('/api/calendar', authenticateApiKey, calendarRoutes);
 app.use('/api/email', authenticateApiKey, emailRoutes);
 app.use('/api/tasks', authenticateApiKey, tasksRoutes);

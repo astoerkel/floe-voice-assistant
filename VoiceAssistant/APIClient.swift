@@ -45,7 +45,29 @@ public class APIClient: ObservableObject {
     private func loadTokens() {
         self.accessToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.accessToken)
         self.refreshToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.refreshToken)
-        self.isAuthenticated = (accessToken != nil)
+        
+        // Check both main access token and JWT token from OAuth flow
+        let hasMainToken = (accessToken != nil)
+        
+        // Check JWT token synchronously using Task.init for async work in sync context
+        var hasJWTToken = false
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        Task {
+            do {
+                _ = try await KeychainService.shared.retrieve(key: "jwt_token")
+                hasJWTToken = true
+            } catch {
+                hasJWTToken = false
+            }
+            semaphore.signal()
+        }
+        
+        semaphore.wait()
+        
+        self.isAuthenticated = hasMainToken || hasJWTToken
+        
+        print("🔍 APIClient: Authentication status - mainToken: \(hasMainToken), jwtToken: \(hasJWTToken), isAuthenticated: \(self.isAuthenticated)")
     }
     
     private func saveTokens(accessToken: String, refreshToken: String) {
@@ -59,6 +81,14 @@ public class APIClient: ObservableObject {
         
         // Connect to WebSocket after authentication
         connectWebSocket()
+    }
+    
+    // Public method to refresh authentication status after OAuth completion
+    public func refreshAuthenticationStatus() {
+        loadTokens()
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
     }
     
     private func addCommonHeaders(to request: inout URLRequest) {

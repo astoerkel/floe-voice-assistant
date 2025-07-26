@@ -82,9 +82,29 @@ class EmailAgent {
 
   async processCommand(userId, input, context = {}) {
     try {
-      logger.info(`Email agent processing command for user ${userId}:`, {
-        input: input.substring(0, 100)
+      logger.info(`🔧 Legacy EmailAgent processing command for user ${userId}:`, {
+        input: input.substring(0, 100),
+        integrations: context?.integrations
       });
+
+      // Check if Gmail integration is active from iOS app context first
+      const isActiveFromContext = context?.integrations?.google?.connected === true;
+      
+      // Only check database if context doesn't provide integration status
+      let isActive = isActiveFromContext;
+      if (!context?.integrations) {
+        isActive = await this.gmailService.isIntegrationActive(userId);
+      }
+      
+      logger.info(`🔧 Legacy EmailAgent OAuth check - context: ${JSON.stringify(context?.integrations)}, isActive: ${isActive}`);
+      
+      if (!isActive) {
+        return {
+          text: "I'd be happy to help with your emails, but you'll need to connect your Gmail account first. Would you like me to guide you through setting that up?",
+          actions: [],
+          suggestions: ['Connect Gmail account', 'Check integration status', 'Try again later']
+        };
+      }
 
       // Parse the intent and extract relevant information
       const intent = await this.parseEmailIntent(input);

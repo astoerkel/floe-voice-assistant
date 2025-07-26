@@ -430,6 +430,10 @@ class OAuthService: NSObject, ObservableObject {
             NotificationCenter.default.post(name: .oauthStatusChanged, object: nil)
             print("✅ OAuth success processed for \(service)")
             
+            // Refresh APIClient authentication status since we now have JWT token
+            APIClient.shared.refreshAuthenticationStatus()
+            print("🔍 Refreshed APIClient authentication status after OAuth completion")
+            
             // Complete any pending OAuth flows
             if let completionHandler = self.currentCompletionHandler {
                 completionHandler(.success("connected"))
