@@ -198,8 +198,12 @@ class OfflineTransitionManager: ObservableObject {
         setupNetworkMonitoring()
         startQualityAssessment()
         
-        // Initial connection assessment
+        // Start in online mode by default, let network monitoring handle transitions
+        currentMode = .online
+        
+        // Delayed initial connection assessment to avoid premature offline transitions
         Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000) // Wait 5 seconds
             await assessConnectionAndTransition()
         }
     }
@@ -244,9 +248,9 @@ class OfflineTransitionManager: ObservableObject {
         case .excellent, .good:
             return .online
         case .fair:
-            return .hybrid
+            return .online  // Changed: Use online for fair connections
         case .poor:
-            return .offline
+            return .hybrid  // Changed: Use hybrid instead of offline for poor connections
         case .unknown:
             return .degraded
         }
@@ -379,14 +383,17 @@ class OfflineTransitionManager: ObservableObject {
     }
     
     private func shouldTransition(from currentMode: ProcessingMode, to recommendedMode: ProcessingMode, quality: ConnectionStatus.ConnectionQuality) -> Bool {
-        // Avoid frequent mode switching
+        // Be very conservative about transitions - stay online if we have any connectivity
         switch (currentMode, recommendedMode) {
         case (.online, .hybrid), (.hybrid, .online):
-            // Only switch if quality is stable for a period
-            return quality == .excellent || quality == .poor
-        case (.offline, .online), (.online, .offline):
-            // Always switch for major transitions
+            // Don't switch between online/hybrid unless quality is excellent
+            return quality == .excellent
+        case (.offline, .online), (.offline, .hybrid):
+            // Always switch from offline to online when connection is restored
             return true
+        case (.online, .offline), (.hybrid, .offline):
+            // Only go offline if truly disconnected (not just poor quality)
+            return !connectionStatus.isConnected
         case (.degraded, _):
             // Always try to recover from degraded mode
             return true
@@ -400,14 +407,24 @@ class OfflineTransitionManager: ObservableObject {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         do {
-            // Ping a reliable server (in real implementation, use your backend)
-            let url = URL(string: "https://www.google.com")!
+            // Test actual backend health endpoint first
+            let url = URL(string: "https://floe.cognetica.de/health")!
             let request = URLRequest(url: url, timeoutInterval: 5.0)
             _ = try await URLSession.shared.data(for: request)
             
             return CFAbsoluteTimeGetCurrent() - startTime
         } catch {
-            return 10.0 // High latency for failed requests
+            // Fallback to Google if backend fails
+            do {
+                let fallbackUrl = URL(string: "https://www.google.com")!
+                let fallbackRequest = URLRequest(url: fallbackUrl, timeoutInterval: 5.0)
+                _ = try await URLSession.shared.data(for: fallbackRequest)
+                
+                return CFAbsoluteTimeGetCurrent() - startTime
+            } catch {
+                // More reasonable fallback latency (3s instead of 10s)
+                return 3.0
+            }
         }
     }
     

@@ -46,28 +46,18 @@ public class APIClient: ObservableObject {
         self.accessToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.accessToken)
         self.refreshToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.refreshToken)
         
-        // Check both main access token and JWT token from OAuth flow
+        // Check both main access token and development mode
         let hasMainToken = (accessToken != nil)
+        let isDevelopmentMode = UserDefaults.standard.bool(forKey: "development_mode")
         
-        // Check JWT token synchronously using Task.init for async work in sync context
-        var hasJWTToken = false
-        let semaphore = DispatchSemaphore(value: 0)
+        // Allow authentication in development mode with mock tokens
+        self.isAuthenticated = hasMainToken || (isDevelopmentMode && accessToken != nil)
         
-        Task {
-            do {
-                _ = try await KeychainService.shared.retrieve(key: "jwt_token")
-                hasJWTToken = true
-            } catch {
-                hasJWTToken = false
-            }
-            semaphore.signal()
+        print("🔍 APIClient: Authentication status - mainToken: \(hasMainToken), isDevelopmentMode: \(isDevelopmentMode), isAuthenticated: \(self.isAuthenticated)")
+        
+        if isDevelopmentMode {
+            print("🔧 Running in development mode with mock authentication")
         }
-        
-        semaphore.wait()
-        
-        self.isAuthenticated = hasMainToken || hasJWTToken
-        
-        print("🔍 APIClient: Authentication status - mainToken: \(hasMainToken), jwtToken: \(hasJWTToken), isAuthenticated: \(self.isAuthenticated)")
     }
     
     private func saveTokens(accessToken: String, refreshToken: String) {
@@ -104,22 +94,12 @@ public class APIClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
         
-        // Try JWT token from OAuth service first (it's more specific for integrations)
-        do {
-            let jwtToken = try await KeychainService.shared.retrieve(key: "jwt_token")
-            print("🔑 Using JWT token from keychain: \(jwtToken.prefix(20))...")
-            request.setValue("Bearer \(jwtToken)", forHTTPHeaderField: "Authorization")
-            return
-        } catch {
-            print("🔍 No JWT token available, trying main access token...")
-        }
-        
-        // Fallback to main access token
+        // Use main access token for authentication
         if let accessToken = accessToken {
-            print("🔑 Using main access token as fallback")
+            print("🔑 Using main access token")
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         } else {
-            print("❌ No authentication tokens available")
+            print("❌ No authentication token available")
         }
     }
     
@@ -217,14 +197,14 @@ public class APIClient: ObservableObject {
     // MARK: - Authentication Methods
     
     func authenticateWithApple(idToken: String, user: [String: Any]?, completion: @escaping (Result<Bool, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/api/auth/apple-signin") else {
+        guard let url = URL(string: Constants.API.appleSignInURL) else {
             completion(.failure(VoiceAssistantError.networkError))
             return
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        addCommonHeaders(to: &request)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let body: [String: Any] = [
             "idToken": idToken,
@@ -256,10 +236,20 @@ public class APIClient: ObservableObject {
             }
             
             do {
-                let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-                self?.saveTokens(accessToken: authResponse.accessToken, refreshToken: authResponse.refreshToken)
-                DispatchQueue.main.async {
-                    completion(.success(true))
+                // Parse simple backend response format
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let success = jsonResponse["success"] as? Bool,
+                   success,
+                   let token = jsonResponse["token"] as? String {
+                    // Store the JWT token from simple backend
+                    self?.setAuthToken(token)
+                    DispatchQueue.main.async {
+                        completion(.success(true))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(VoiceAssistantError.authenticationFailed))
+                    }
                 }
             } catch {
                 DispatchQueue.main.async {
@@ -342,6 +332,84 @@ public class APIClient: ObservableObject {
     }
     
     // MARK: - Voice Command Methods
+    
+    /// Simple text processing for the simple backend
+    func processTextSimple(text: String, completion: @escaping (Result<VoiceResponse, Error>) -> Void) {
+        guard isAuthenticated else {
+            completion(.failure(VoiceAssistantError.authenticationRequired))
+            return
+        }
+        
+        guard let url = URL(string: Constants.API.chatProcessURL) else {
+            completion(.failure(VoiceAssistantError.networkError))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let body: [String: Any] = ["text": text]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        session.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  200...299 ~= httpResponse.statusCode,
+                  let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.networkError))
+                }
+                return
+            }
+            
+            do {
+                // Parse simple backend response format
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let success = jsonResponse["success"] as? Bool,
+                   success,
+                   let text = jsonResponse["text"] as? String {
+                    
+                    let audioBase64 = jsonResponse["audioBase64"] as? String
+                    
+                    // Create VoiceResponse compatible with existing code
+                    let voiceResponse = VoiceResponse(
+                        text: text,
+                        success: true,
+                        audioBase64: audioBase64
+                    )
+                    
+                    DispatchQueue.main.async {
+                        completion(.success(voiceResponse))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(VoiceAssistantError.invalidResponse))
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
     
     /// Process voice command with processing flags for hybrid decision making
     func processVoiceCommandWithFlags(
@@ -1234,3 +1302,4 @@ public enum OnDeviceCapability: String, CaseIterable {
     case deviceControl = "device_control"
     case conversationHistory = "conversation_history"
 }
+

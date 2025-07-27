@@ -10,13 +10,19 @@ import Foundation
 struct Constants {
     struct API {
         static let baseURL = "https://floe.cognetica.de"
+        // Simple backend endpoints
+        static let chatProcessURL = "https://floe.cognetica.de/api/chat/process"
+        static let appleSignInURL = "https://floe.cognetica.de/api/auth/apple-signin"
+        static let verifyTokenURL = "https://floe.cognetica.de/api/auth/verify"
+        static let healthURL = "https://floe.cognetica.de/health"
+        // Legacy endpoints (kept for backward compatibility)
         static let webhookURL = "https://floe.cognetica.de/api/voice/process-audio"
         static let textProcessURL = "https://floe.cognetica.de/api/voice/process-text"
         static let devWebhookURL = "https://floe.cognetica.de/api/voice/dev/process-audio"
         static let apiBaseURL = "https://floe.cognetica.de/api"
-        static let websocketURL = "wss://floe.cognetica.de"
+        static let websocketURL = "wss://floe.cognetica.de/socket.io/"
         static let defaultVoiceId = "default"
-        static let requestTimeout: TimeInterval = 30.0
+        static let requestTimeout: TimeInterval = 90.0
         // SECURITY FIX: API key should be loaded from secure keychain or environment
         static let apiKey: String = {
             // Try to load from build configuration first

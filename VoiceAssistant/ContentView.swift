@@ -416,24 +416,27 @@ struct ContentView: View {
             FeatureCircuitBreakers.audioRecording.executeFeature {
                 statusMessage = "Processing..."
                 
-                // Add user message if we have transcription
-                if !transcribedText.isEmpty {
-                    let userMessage = ConversationMessage(
-                        text: transcribedText,
-                        isUser: true,
-                        isTranscribed: true
-                    )
-                    conversationHistoryManager.addMessage(userMessage)
-                }
-                
                 if let audioURL = audioRecorder.stopRecording() {
                     Task {
                         // First transcribe the audio using our fixed speech recognition
                         await transcribeAudio(audioURL)
                         
+                        // Add user message after we have transcription
+                        await MainActor.run {
+                            if !transcribedText.isEmpty {
+                                let userMessage = ConversationMessage(
+                                    text: transcribedText,
+                                    isUser: true,
+                                    isTranscribed: true
+                                )
+                                conversationHistoryManager.addMessage(userMessage)
+                            }
+                        }
+                        
                         // Check if we should use offline processing
-                        if transitionManager.currentMode == .offline || 
-                           transitionManager.connectionStatus.quality == .poor {
+                        // Only use offline if truly disconnected or explicitly in offline mode
+                        if !transitionManager.connectionStatus.isConnected || 
+                           (transitionManager.currentMode == .offline && !transitionManager.connectionStatus.isConnected) {
                             // Use enhanced offline processor
                             let audioData = try? Data(contentsOf: audioURL)
                             let context = createProcessingContext()
@@ -489,52 +492,15 @@ struct ContentView: View {
                                 }
                             }
                         } else {
-                            // Use direct enhanced voice processing (not batch processing)
+                            // SIMPLE BACKEND PROCESSING - Use simple text processing
                             do {
-                                let audioData = try Data(contentsOf: audioURL)
-                                let context = createProcessingContext()
-                                
-                                // Process directly through enhanced voice processor
-                                let directResult = try await enhancedVoiceProcessor.processVoiceCommand(
-                                    audioData: audioData,
-                                    context: context
-                                )
-                                
-                                // First, classify intent and personalize the processing
-                                let intentResult = await classifyIntentWithML(transcribedText)
-                                
-                                // Personalize the response based on user preferences
-                                let personalizedResponse = await personalizationEngine.personalizeResponse(
-                                    directResult.response.text,
-                                    for: personalizationEngine.currentPreferences
-                                )
-                                
-                                // Learn from this interaction
-                                await personalizationEngine.recordInteraction(
-                                    userQuery: transcribedText,
-                                    response: personalizedResponse,
-                                    userFeedback: nil
-                                )
-                                
-                                // Add AI response with enhanced metadata including ML insights
-                                let aiMessage = ConversationMessage(
-                                    text: personalizedResponse,
-                                    isUser: false,
-                                    audioBase64: directResult.response.audioBase64,
-                                    isTranscribed: true,
-                                    intent: intentResult.intent.rawValue,
-                                    confidence: Double(max(directResult.confidence, intentResult.confidence)),
-                                    agentUsed: "\(directResult.processingMethod) + ML",
-                                    executionTime: directResult.processingTime + intentResult.processingTime
-                                )
-                                conversationHistoryManager.addMessage(aiMessage)
-                                
-                                // Play audio if available
-                                if let audioBase64 = directResult.response.audioBase64, !audioBase64.isEmpty {
-                                    playAudioResponse(audioBase64: audioBase64)
+                                // Instead of complex processing, use simple backend
+                                await MainActor.run {
+                                    statusMessage = "Processing with simple backend..."
                                 }
                                 
-                                statusMessage = "Tap to record"
+                                // Use simple backend text processing
+                                try await processWithSimpleBackend(transcribedText)
                             } catch {
                                 await MainActor.run {
                                     // Provide user-friendly error messages
@@ -618,8 +584,8 @@ struct ContentView: View {
         
         Task {
             // Check if we should use offline processing
-            if transitionManager.currentMode == .offline || 
-               transitionManager.connectionStatus.quality == .poor {
+            // Only use offline if truly disconnected
+            if !transitionManager.connectionStatus.isConnected {
                 // Use offline processor for text
                 let result = await offlineProcessor.processCommand(
                     action.voiceCommand,
@@ -968,6 +934,66 @@ struct ContentView: View {
         audioPlayer?.stop()
         audioPlayer = nil
         isAudioPlaying = false
+    }
+    
+    // MARK: - Simple Backend Processing
+    
+    private func processWithSimpleBackend(_ text: String) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            apiClient.processTextSimple(text: text) { result in
+                Task { @MainActor in
+                    switch result {
+                    case .success(let voiceResponse):
+                        // Add AI response to conversation
+                        let aiMessage = ConversationMessage(
+                            text: voiceResponse.text,
+                            isUser: false,
+                            audioBase64: voiceResponse.audioBase64,
+                            isTranscribed: false,
+                            confidence: 1.0
+                        )
+                        conversationHistoryManager.addMessage(aiMessage)
+                        
+                        // Play audio if available
+                        if let audioBase64 = voiceResponse.audioBase64, !audioBase64.isEmpty {
+                            playAudioResponse(audioBase64: audioBase64)
+                        }
+                        
+                        statusMessage = "Tap to record"
+                        continuation.resume()
+                        
+                    case .failure(let error):
+                        let errorMessage: String
+                        if let voiceError = error as? VoiceAssistantError {
+                            switch voiceError {
+                            case .authenticationRequired:
+                                errorMessage = "Please sign in to use voice features"
+                            case .networkError:
+                                errorMessage = "Network connection error"
+                            case .authenticationFailed:
+                                errorMessage = "Authentication failed"
+                            case .invalidResponse:
+                                errorMessage = "Invalid response from server"
+                            default:
+                                errorMessage = "Error: \(error.localizedDescription)"
+                            }
+                        } else {
+                            errorMessage = "Error: \(error.localizedDescription)"
+                        }
+                        
+                        // Add error as AI message
+                        let errorAIMessage = ConversationMessage(
+                            text: errorMessage,
+                            isUser: false,
+                            isTranscribed: false
+                        )
+                        conversationHistoryManager.addMessage(errorAIMessage)
+                        statusMessage = "Tap to record"
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
     }
 }
 

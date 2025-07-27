@@ -676,18 +676,9 @@ struct CachedCalendarEvent: Codable {
 // MARK: - Email Handling
 extension OfflineIntentHandlers {
     internal static func handleEmailQuery(_ text: String, dataManager: OfflineDataManager) async -> String {
-        let normalized = text.lowercased()
-        
-        // For offline mode, we can't access actual emails but can provide helpful responses
-        if normalized.contains("unread") || normalized.contains("new") {
-            return "I can't check your actual emails while offline, but when you're back online, I can help you check unread emails. For now, you can open your Mail app directly."
-        } else if normalized.contains("send") || normalized.contains("compose") {
-            return "I can't send emails while offline, but you can compose one in the Mail app and it will send when you're back online."
-        } else if normalized.contains("latest") || normalized.contains("recent") {
-            return "I can't access your latest emails offline. When you're back online, I can help you check your recent messages."
-        } else {
-            return "I can help with emails when you're connected to the internet. For offline access, try opening your Mail app directly."
-        }
+        // Email queries should NEVER be handled offline if user has integrations
+        // This should trigger a sync request instead
+        return "I need an internet connection to check your emails. Please check your connection and try again."
     }
 }
 

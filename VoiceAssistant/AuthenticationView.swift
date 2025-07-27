@@ -70,13 +70,13 @@ struct AuthenticationView: View {
                             let mockRefreshToken = "mock_refresh_token_for_development"
                             
                             // Save mock tokens to simulate authentication
-                            UserDefaults.standard.set(mockAccessToken, forKey: "voice_assistant_access_token")
-                            UserDefaults.standard.set(mockRefreshToken, forKey: "voice_assistant_refresh_token")
+                            UserDefaults.standard.set(mockAccessToken, forKey: Constants.StorageKeys.accessToken)
+                            UserDefaults.standard.set(mockRefreshToken, forKey: Constants.StorageKeys.refreshToken)
                             
                             // Update API client authentication state
-                            DispatchQueue.main.async {
-                                apiClient.isAuthenticated = true
-                            }
+                            apiClient.refreshAuthenticationStatus()
+                            
+                            print("✅ Development authentication bypass enabled")
                         }
                         .font(.body)
                         .foregroundColor(.yellow)
@@ -196,7 +196,23 @@ struct AuthenticationView: View {
             }
             
         case .failure(let error):
-            showError("Sign in failed: \(error.localizedDescription)")
+            // Log specific Apple Sign In error details
+            if let nsError = error as NSError? {
+                print("❌ Apple Sign In Error Domain: \(nsError.domain)")
+                print("❌ Apple Sign In Error Code: \(nsError.code)")
+                print("❌ Apple Sign In Error: \(nsError.localizedDescription)")
+                
+                // Check for specific Apple Sign In error codes
+                if nsError.domain == "com.apple.AuthenticationServices.AuthorizationError" && nsError.code == 1000 {
+                    showError("Apple Sign In was cancelled or failed. Please try again.")
+                } else if nsError.domain == "AKAuthenticationError" && nsError.code == -7026 {
+                    showError("Apple ID authentication failed. Please check your Apple ID settings and try again.")
+                } else {
+                    showError("Sign in failed: \(error.localizedDescription)")
+                }
+            } else {
+                showError("Sign in failed: \(error.localizedDescription)")
+            }
         }
     }
     

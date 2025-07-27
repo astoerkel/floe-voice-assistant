@@ -55,29 +55,43 @@ struct EnhancedSettingsViewWithActions: View {
     }
     
     private func logout() {
-        // Clear authentication tokens
-        UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.accessToken)
-        UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.refreshToken)
-        UserDefaults.standard.removeObject(forKey: "development_mode")
-        
-        // Clear user data
-        UserDefaults.standard.removeObject(forKey: "onboarding_completed")
-        UserDefaults.standard.removeObject(forKey: "user_preferences")
-        
-        // Clear conversation history
-        conversationHistory.removeAll()
-        
-        // Reset API client - logout will be handled by the APIClient observer
-        // The APIClient will automatically update its isAuthenticated state when tokens are removed
-        
-        // Haptic feedback
-        HapticManager.shared.commandWarning()
-        
-        // Dismiss settings
-        onDismiss()
-        
-        // Note: The app should handle the logout state change and show appropriate UI
-        // This is typically handled by the main app view observing apiClient.isAuthenticated
+        // Use the APIClient's logout method which properly handles all cleanup
+        APIClient.shared.logout { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Logout successful")
+                case .failure(let error):
+                    print("⚠️ Logout error (continuing anyway): \(error)")
+                }
+                
+                // Clear additional local data
+                UserDefaults.standard.removeObject(forKey: "development_mode")
+                UserDefaults.standard.removeObject(forKey: "onboarding_completed")
+                UserDefaults.standard.removeObject(forKey: "user_preferences")
+                UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.sessionId)
+                UserDefaults.standard.removeObject(forKey: "user_id")
+                UserDefaults.standard.removeObject(forKey: "user_email")
+                UserDefaults.standard.removeObject(forKey: "user_name")
+                
+                // Clear conversation history
+                conversationHistory.removeAll()
+                
+                // Clear OAuth tokens from keychain
+                Task {
+                    try? await KeychainService.shared.delete(key: "jwt_token")
+                    try? await KeychainService.shared.delete(key: "refresh_token")
+                }
+                
+                // Haptic feedback
+                HapticManager.shared.commandWarning()
+                
+                // Dismiss settings
+                onDismiss()
+                
+                print("🔓 User logged out successfully")
+            }
+        }
     }
 }
 

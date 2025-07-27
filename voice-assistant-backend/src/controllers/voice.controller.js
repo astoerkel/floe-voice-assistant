@@ -24,6 +24,18 @@ class VoiceController {
       }
 
       const { text, context = {}, platform = 'ios', integrations = {} } = req.body;
+      
+      // Check if user is authenticated (JWT token valid)
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({
+          success: false,
+          text: "Authentication required. Please sign in to use voice commands.",
+          audioBase64: null,
+          error: 'Authentication required',
+          message: 'Please re-authenticate to continue using voice commands'
+        });
+      }
+      
       const userId = req.user.id;
       
       // Validate input
@@ -106,7 +118,7 @@ class VoiceController {
       // regardless of minor coordinator issues. This ensures the client gets a proper response
       // even when there are internal processing warnings or fallbacks.
       const hasValidResponse = result.response && result.response.trim().length > 0;
-      const hasValidAudio = audioResponse?.audioBase64;
+      const hasValidAudio = !!audioResponse?.audioBase64;
       const overallSuccess = hasValidAudio || hasValidResponse;
 
       // Log success determination for debugging
@@ -120,16 +132,8 @@ class VoiceController {
         audioDataSize: audioResponse?.audioBase64?.length || 0
       });
 
-      // Log the exact response format being sent to iOS for debugging
-      logger.info('Sending response to iOS:', {
-        success: overallSuccess,
-        textLength: result.response?.length || 0,
-        hasAudioBase64: !!audioResponse?.audioBase64,
-        audioBase64Length: audioResponse?.audioBase64?.length || 0
-      });
-
-      // Return format expected by iOS app: { success: boolean, text: string, audioBase64: string }
-      res.json({
+      // Construct response object carefully to prevent field corruption
+      const responseObject = {
         success: overallSuccess,
         text: result.response, // The actual response text (not nested)
         audioBase64: audioResponse?.audioBase64 || null, // Direct audio data (not nested)
@@ -154,7 +158,22 @@ class VoiceController {
           hapticPattern: this.getHapticPattern(result.intent || result.action?.type)
         },
         audioResponse
+      };
+
+      // Log the exact response format being sent to iOS for debugging
+      logger.info('Sending response to iOS:', {
+        success: responseObject.success,
+        successType: typeof responseObject.success,
+        textLength: responseObject.text?.length || 0,
+        textType: typeof responseObject.text,
+        hasAudioBase64: !!responseObject.audioBase64,
+        audioBase64Length: responseObject.audioBase64?.length || 0,
+        audioBase64Type: typeof responseObject.audioBase64,
+        responseObjectKeys: Object.keys(responseObject)
       });
+
+      // Return format expected by iOS app: { success: boolean, text: string, audioBase64: string }
+      res.json(responseObject);
       
     } catch (error) {
       logger.error('Text processing error:', error);
@@ -253,7 +272,7 @@ class VoiceController {
       // regardless of minor coordinator issues. This ensures the client gets a proper response
       // even when there are internal processing warnings or fallbacks.
       const hasValidResponse = result.response && result.response.trim().length > 0;
-      const hasValidAudio = audioResponse?.audioBase64;
+      const hasValidAudio = !!audioResponse?.audioBase64;
       const overallSuccess = hasValidAudio || hasValidResponse;
 
       // Return format expected by iOS app: { success: boolean, text: string, audioBase64: string }
@@ -340,7 +359,7 @@ class VoiceController {
       // regardless of minor coordinator issues. This ensures the client gets a proper response
       // even when there are internal processing warnings or fallbacks.
       const hasValidResponse = result.response && result.response.trim().length > 0;
-      const hasValidAudio = audioResponse?.audioBase64;
+      const hasValidAudio = !!audioResponse?.audioBase64;
       const overallSuccess = hasValidAudio || hasValidResponse;
 
       // Return format expected by iOS app: { success: boolean, text: string, audioBase64: string }
@@ -836,7 +855,7 @@ class VoiceController {
 
         // Determine overall success: if we have audio response OR valid text response, consider it successful
         const hasValidResponse = result.response && result.response.trim().length > 0;
-        const hasValidAudio = audioResponse?.audioBase64;
+        const hasValidAudio = !!audioResponse?.audioBase64;
         const overallSuccess = hasValidAudio || (hasValidResponse && result.success !== false);
 
         // Return format expected by iOS app: { success: boolean, text: string, audioBase64: string }

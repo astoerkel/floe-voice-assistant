@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 // MARK: - Supporting Models
 
@@ -69,31 +70,118 @@ class SettingsViewModel: ObservableObject {
     }
     
     private func loadUserData() {
-        // Mock user data
-        currentUser = AppUser(
-            id: "user123",
-            name: "John Doe",
-            email: "john@example.com",
-            profilePictureURL: nil,
-            createdAt: Date().addingTimeInterval(-2592000) // 30 days ago
-        )
-        
         // Load preferred name from UserDefaults first
         preferredName = UserDefaults.standard.string(forKey: "preferred_name") ?? ""
         
-        // Try to load preferences from server if authenticated
-        if APIClient.shared.isAuthenticated {
-            Task {
-                do {
-                    let serverPreferences = try await APIClient.shared.getUserPreferences()
+        // Get authentication status and tokens for debugging
+        let isAuth = APIClient.shared.isAuthenticated
+        let mainToken = UserDefaults.standard.string(forKey: "voice_assistant_access_token")
+        let refreshToken = UserDefaults.standard.string(forKey: "voice_assistant_refresh_token")
+        
+        print("🔍 Settings loadUserData - isAuthenticated: \(isAuth), mainToken: \(mainToken != nil), refreshToken: \(refreshToken != nil)")
+        
+        // For now, if authenticated, show a basic authenticated user instead of guest
+        if isAuth {
+            // Try to decode information from the access token if available
+            if let token = mainToken, let decoded = try? decodeJWT(token) {
+                print("✅ Decoded token data: \(decoded)")
+                
+                currentUser = AppUser(
+                    id: decoded["sub"] as? String ?? "unknown",
+                    name: decoded["name"] as? String ?? (decoded["email"] as? String)?.components(separatedBy: "@").first?.capitalized ?? "Authenticated User",
+                    email: decoded["email"] as? String ?? "user@example.com",
+                    profilePictureURL: nil,
+                    createdAt: Date().addingTimeInterval(-2592000)
+                )
+            } else {
+                // Fallback to basic authenticated user using available token data
+                if let token = mainToken, token.contains("eyJ") {
+                    // This looks like a JWT, extract email if possible
+                    let email = extractEmailFromToken(token) ?? "user@example.com"
+                    let name = email.components(separatedBy: "@").first?.capitalized ?? "Authenticated User"
                     
-                    // Note: Server preferences loaded but preferredName is handled separately
-                } catch {
-                    // Silently fail - we'll use local preferences
-                    print("❌ Failed to load user preferences from server: \(error)")
+                    currentUser = AppUser(
+                        id: "authenticated",
+                        name: name,
+                        email: email,
+                        profilePictureURL: nil,
+                        createdAt: Date().addingTimeInterval(-2592000)
+                    )
+                } else {
+                    currentUser = AppUser(
+                        id: "authenticated",
+                        name: "Authenticated User", 
+                        email: "user@example.com",
+                        profilePictureURL: nil,
+                        createdAt: Date().addingTimeInterval(-2592000)
+                    )
                 }
             }
+            
+            // Always try to load user profile from server (prioritized)
+            Task {
+                do {
+                    print("🔍 Attempting to fetch user profile from SimpleUserManager...")
+                    print("🔍 API Base URL: \(Constants.API.baseURL)")
+                    await SimpleUserManager.shared.fetchUserProfile()
+                    
+                    if let profile = SimpleUserManager.shared.userProfile {
+                        print("✅ Got user profile from server: \(profile.name ?? "No name") - \(profile.email)")
+                        
+                        // Update with server data (this should override the JWT fallback data)
+                        await MainActor.run {
+                            currentUser = AppUser(
+                                id: profile.id,
+                                name: profile.name ?? "Test User",
+                                email: profile.email,
+                                profilePictureURL: nil,
+                                createdAt: Date().addingTimeInterval(-2592000)
+                            )
+                        }
+                    } else {
+                        print("❌ No user profile returned from SimpleUserManager")
+                        if let error = SimpleUserManager.shared.error {
+                            print("❌ SimpleUserManager error: \(error)")
+                        }
+                    }
+                } catch {
+                    print("❌ Failed to load user profile from server: \(error)")
+                }
+            }
+        } else {
+            print("❌ Not authenticated - showing guest user")
+            // Not authenticated - show guest user
+            currentUser = AppUser(
+                id: "guest",
+                name: "Guest User",
+                email: "Not signed in",
+                profilePictureURL: nil,
+                createdAt: Date()
+            )
         }
+    }
+    
+    private func decodeJWT(_ token: String) throws -> [String: Any] {
+        let parts = token.components(separatedBy: ".")
+        guard parts.count >= 2 else { throw NSError(domain: "JWT", code: 0) }
+        
+        var base64 = parts[1]
+        // Add padding if needed
+        while base64.count % 4 != 0 {
+            base64 += "="
+        }
+        
+        guard let data = Data(base64Encoded: base64),
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NSError(domain: "JWT", code: 1)
+        }
+        
+        return json
+    }
+    
+    private func extractEmailFromToken(_ token: String) -> String? {
+        guard let decoded = try? decodeJWT(token) else { return nil }
+        return decoded["email"] as? String
     }
     
     private func loadUsageData() {
@@ -213,7 +301,11 @@ struct EnhancedSettingsView: View {
             List {
                 // Account Section
                 Section {
-                    AccountSummaryRow(user: settingsViewModel.currentUser)
+                    NavigationLink {
+                        SimpleUserProfileView()
+                    } label: {
+                        AccountSummaryRow(user: settingsViewModel.currentUser)
+                    }
                     
                     if let subscription = subscriptionManager.currentSubscription {
                         SubscriptionStatusRow(subscription: subscription)

@@ -202,12 +202,26 @@ class GmailIntegration {
         searchQuery += ' -in:spam -in:trash';
       }
 
-      const response = await this.gmail.users.messages.list({
+      // Build request parameters, only include labelIds if it's not null/undefined
+      const requestParams = {
         userId: 'me',
         q: searchQuery.trim(),
-        maxResults: limit,
-        labelIds: labelIds
+        maxResults: limit
+      };
+      
+      if (labelIds && labelIds.length > 0) {
+        requestParams.labelIds = labelIds;
+      }
+
+      logger.info(`🔍 Gmail API Query for user ${userId}:`, {
+        originalQuery: query,
+        searchQuery: searchQuery.trim(),
+        limit,
+        includeSpamTrash,
+        requestParams
       });
+
+      const response = await this.gmail.users.messages.list(requestParams);
 
       if (!response.data.messages || response.data.messages.length === 0) {
         logger.info(`No emails found for user ${userId} with query: ${searchQuery.trim()}`);
@@ -233,7 +247,18 @@ class GmailIntegration {
         }
       }
 
-      logger.info(`Retrieved ${emails.length} emails for user ${userId}`);
+      logger.info(`📧 Retrieved ${emails.length} emails for user ${userId}:`, {
+        query: searchQuery.trim(),
+        emailSummary: emails.map(email => ({
+          id: email.id,
+          subject: email.subject,
+          sender: email.sender,
+          isRead: email.isRead,
+          isImportant: email.isImportant,
+          timestamp: email.timestamp,
+          labels: email.labels
+        }))
+      });
       return emails;
     } catch (error) {
       logger.error('Failed to get emails:', error);

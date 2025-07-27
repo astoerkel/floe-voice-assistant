@@ -42,8 +42,8 @@ npm run migrate
 # Start background worker
 npm run worker
 
-# Deploy to Railway (✅ WORKING - Apple Speech Framework Integration Deployed)
-railway up --service "VoiceAssistant Floe"
+# Deploy to Hetzner (✅ WORKING - Apple Speech Framework Integration Deployed)
+ssh hetzner 'cd /app && git pull && npm restart'
 ```
 
 ### Testing
@@ -76,7 +76,7 @@ railway up --service "VoiceAssistant Floe"
 - **AI Integration**: LangChain agents with OpenAI GPT-4 and Anthropic Claude
 - **Real-time**: Socket.IO for WebSocket connections
 - **Authentication**: JWT with Apple Sign In and Google OAuth
-- **Deployment**: Railway platform
+- **Deployment**: Hetzner Cloud via SSH
 
 ## Key Cross-Platform Communication
 
@@ -96,7 +96,7 @@ The app uses WatchConnectivity framework for iPhone-Watch communication:
 6. **Playback**: Audio decoded and played on originating device
 7. **Analytics**: Transcription method and performance metrics tracked
 
-**✅ DEPLOYMENT STATUS**: Apple Speech Framework integration with Whisper fallback successfully deployed to Railway production environment. Watch app HTTP 500 errors resolved through comprehensive database schema migrations.
+**✅ DEPLOYMENT STATUS**: Apple Speech Framework integration with Whisper fallback successfully deployed to Hetzner production environment. Watch app HTTP 500 errors resolved through comprehensive database schema migrations.
 
 ## Important File Locations
 
@@ -116,7 +116,7 @@ The app uses WatchConnectivity framework for iPhone-Watch communication:
 ### Configuration Files
 - Xcode project: `VoiceAssistant.xcodeproj/project.pbxproj`
 - Backend package: `voice-assistant-backend/package.json`
-- Railway config: `voice-assistant-backend/railway.json`
+- Hetzner deployment: SSH-based deployment via `ssh hetzner`
 
 ## Development Workflow
 
@@ -132,7 +132,7 @@ The app uses WatchConnectivity framework for iPhone-Watch communication:
 2. Make changes to JavaScript files
 3. Test locally with `npm run dev`
 4. Run tests with `npm test`
-5. Deploy to Railway for production testing
+5. Deploy to Hetzner for production testing
 
 ### Adding New Features
 1. Update shared models in `SharedModels.swift` if needed
@@ -205,7 +205,7 @@ The app uses WatchConnectivity framework for iPhone-Watch communication:
 - Ensure both iPhone and Watch apps are properly configured
 
 ### Backend Deployment
-- Deploy to Railway platform
+- Deploy to Hetzner Cloud platform
 - Configure environment variables
 - Set up database migrations
 - Monitor logs and performance metrics

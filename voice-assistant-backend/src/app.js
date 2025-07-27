@@ -26,6 +26,10 @@ const { connectDatabase } = require('./config/database');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/user');
+const adminRoutes = require('./routes/admin');
+const analyticsRoutes = require('./routes/analytics');
+const subscriptionsRoutes = require('./routes/subscriptions');
 const voiceRoutes = require('./routes/voice');
 const calendarRoutes = require('./routes/calendar');
 const emailRoutes = require('./routes/email');
@@ -41,7 +45,7 @@ const initializeWebSocket = require('./websocket');
 
 const app = express();
 
-// Trust proxy for Railway deployment
+// Trust proxy for Hetzner deployment
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
@@ -49,9 +53,12 @@ if (process.env.NODE_ENV === 'production') {
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' ? false : ["http://localhost:3000"],
+    origin: true, // Allow all origins for mobile app connections
     credentials: true
-  }
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  allowEIO4: true
 });
 
 // Initialize connections asynchronously to not block server startup
@@ -119,6 +126,10 @@ app.get('/public/health', (req, res) => {
 
 // API routes (with authentication)
 app.use('/api/auth', authRoutes); // Auth routes handle their own authentication
+app.use('/api/user', userRoutes); // User routes include JWT auth internally
+app.use('/api/admin', authenticateApiKey, adminRoutes); // Admin routes include JWT auth and role check internally
+app.use('/api/analytics', authenticateApiKey, analyticsRoutes); // Analytics routes include JWT auth internally
+app.use('/api/subscriptions', authenticateApiKey, subscriptionsRoutes); // Subscriptions routes include JWT auth internally
 app.use('/api/voice', authenticateApiKey, jwtAuth, checkUsageLimit, voiceRoutes);
 app.use('/api/calendar', authenticateApiKey, calendarRoutes);
 app.use('/api/email', authenticateApiKey, emailRoutes);
@@ -130,7 +141,7 @@ app.use('/api/oauth', oauthRoutes); // OAuth routes handle their own authenticat
 app.use('/api/diagnostics', diagnosticsRoutes); // Diagnostics routes (no auth for debugging)
 
 // Static file serving for audio files (only if directory exists)
-const audioPath = process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data/audio';
+const audioPath = process.env.AUDIO_PATH || '/app/data/audio';
 const fs = require('fs');
 if (fs.existsSync(audioPath)) {
   app.use('/audio', express.static(audioPath));
