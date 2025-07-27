@@ -7,7 +7,7 @@ class AudioLevelDetector: NSObject, ObservableObject {
     
     private var audioRecorder: AVAudioRecorder?
     private var levelTimer: Timer?
-    private let updateInterval: TimeInterval = 0.05
+    private let updateInterval: TimeInterval = 0.03 // Update ~33 times per second for smoother animation
     
     override init() {
         super.init()
@@ -77,8 +77,8 @@ class AudioLevelDetector: NSObject, ObservableObject {
         let normalizedPower = (averagePower - minDb) / (maxDb - minDb)
         let clampedPower = max(0.0, min(1.0, normalizedPower))
         
-        // Smooth the value to reduce jitter
-        let smoothingFactor: CGFloat = 0.3
+        // Smooth the value to reduce jitter - more responsive
+        let smoothingFactor: CGFloat = 0.6
         let newLevel = CGFloat(clampedPower)
         audioLevel = audioLevel * (1 - smoothingFactor) + newLevel * smoothingFactor
     }

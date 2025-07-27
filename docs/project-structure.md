@@ -14,8 +14,8 @@ VoiceAssistant/
 │   ├── Simple Components/          # Simplified MVP Components
 │   │   ├── SimpleAPIClient.swift           # Streamlined API client with Apple Sign In
 │   │   ├── SimpleSpeechRecognizer.swift    # Direct Apple Speech Recognition
-│   │   ├── SimpleContentView.swift         # Clean voice interface
-│   │   ├── SimpleSettingsView.swift        # User profile and chat management
+│   │   ├── SimpleContentView.swift         # Clean voice interface with particle animation
+│   │   ├── SimpleSettingsView.swift        # User profile and chat management with theme picker
 │   │   ├── SimpleAuthenticationView.swift  # Apple Sign In UI
 │   │   └── SimpleConversationManager.swift # Conversation history management
 │   ├── Core Files/                 # Essential app files
@@ -49,7 +49,9 @@ voice-assistant-backend/            # Simplified Backend (Hetzner)
 VoiceAssistant/
 ├── VoiceAssistant/                 # iOS App Target
 │   ├── VoiceAssistantApp.swift     # Main iOS app entry point with enhanced onboarding flow
-│   ├── ContentView.swift           # Main iOS voice chat interface with enhanced UI integration
+│   ├── ContentView.swift           # Main iOS voice chat interface with enhanced UI integration (LEGACY)
+│   ├── SimpleContentView.swift     # Active MVP voice interface with particle animation
+│   ├── SimpleSettingsView.swift    # Active MVP settings with integrations and theme management
 │   ├── AuthenticationView.swift    # Apple Sign In authentication
 │   ├── Models/                     # Shared data models
 │   │   ├── AudioMessage.swift      # Audio message data structure
@@ -77,7 +79,11 @@ VoiceAssistant/
 │   │   │   └── EnhancedSettingsView.swift     # Advanced settings with usage tracking (INTEGRATED)
 │   │   ├── Components/             # Reusable UI components (NEW - INTEGRATED)
 │   │   │   ├── ResultBottomSheet.swift        # Bottom sheet for voice command results (INTEGRATED)
-│   │   │   └── WaveformVisualizationView.swift # Audio waveform visualization (INTEGRATED)
+│   │   │   ├── WaveformVisualizationView.swift # Audio waveform visualization (INTEGRATED)
+│   │   │   ├── LoadingView.swift              # Circular progress loading screen (NEW - 2025-01)
+│   │   │   ├── CompactLoadingIndicator.swift  # Inline 3-dot loading animation (NEW - 2025-01)
+│   │   │   ├── NavigationDrawer.swift         # Original overlay navigation drawer
+│   │   │   └── SlidingNavigationDrawer.swift  # ChatGPT-style push navigation drawer (NEW - 2025-01)
 │   │   ├── ConversationView.swift  # Chat interface
 │   │   ├── RecordingView.swift     # Voice recording interface
 │   │   ├── SettingsView.swift      # Settings configuration
@@ -162,8 +168,14 @@ VoiceAssistant/
 │   │           ├── ModelOptimizationView.swift      # Model quantization and compression settings
 │   │           ├── BatteryOptimizationView.swift    # Battery optimization settings and monitoring
 │   │           └── BatchProcessingSettingsView.swift # Batch processing configuration and queue management
-│   ├── ParticleBackgroundView.swift # Animated particle background
+│   ├── ParticleBackgroundView.swift # Animated particle background with voice responsiveness (NEW - 2025-01)
+│   ├── AudioLevelDetector.swift    # Real-time audio level monitoring (NEW - 2025-01)
+│   ├── ThemeManager.swift          # Centralized theme management system (NEW - 2025-01)
+│   ├── MinimalAudioRecorder.swift  # Simplified audio recording
+│   ├── SimpleUserManager.swift     # User profile data management (NEW - 2025-01)
 │   └── Assets.xcassets            # iOS app icons and images
+│       ├── AdaptiveBackground.colorset    # Dynamic light/dark backgrounds (NEW - 2025-01)
+│       └── AdaptiveCardBackground.colorset # Card surface colors (NEW - 2025-01)
 ├── VoiceAssistant Watch App/       # watchOS App Target
 │   ├── VoiceAssistant_Watch_AppApp.swift # Main watchOS app entry point
 │   ├── ContentView.swift           # Main watchOS view
@@ -1736,6 +1748,37 @@ The VoiceAssistant application is now production-ready with all critical issues 
 - **Real-time**: Socket.IO WebSocket implementation for live communication
 - **Security**: JWT authentication, API key validation, secure credential management
 
+## Recent UI/UX Enhancements (January 2025)
+
+### Particle Animation System
+- **ParticleBackgroundView.swift**: Sophisticated particle system with 150 animated particles
+- **AudioLevelDetector.swift**: Real-time audio monitoring at 33fps
+- **Voice Responsiveness**: Particles vibrate, expand, and change color based on voice input
+- **Touch Interaction**: Particles repel from touch points with ripple effects
+
+### Theme System Implementation
+- **ThemeManager.swift**: Centralized theme management with System, Light, and Dark modes
+- **@AppStorage Integration**: Persistent theme preferences
+- **Adaptive Colors**: All UI components properly themed with dynamic color assets
+- **Real-time Switching**: Instant theme changes without app restart
+
+### Navigation Drawer Redesign
+- **SlidingNavigationDrawer.swift**: ChatGPT-style drawer that pushes main content
+- **Smooth Animations**: 0.3s easeInOut transitions with scale effects
+- **Gesture Support**: Swipe to open/close with smart edge detection
+- **Theme Awareness**: Proper background colors for light/dark modes
+
+### Loading Experience
+- **LoadingView.swift**: Beautiful circular progress with gradient stroke
+- **CompactLoadingIndicator.swift**: Inline 3-dot animation for processing states
+- **Smooth Transitions**: Fade animations between loading and main app
+
+### Settings UI Improvements
+- **SimpleUserManager.swift**: Fresh user profile data fetching
+- **User Profile Display**: Smart fallbacks and real-time updates
+- **Theme Picker**: Native iOS menu picker with instant preview
+- **Google Services Integration**: Beautiful service cards with connection status
+
 ## Notes
 - **Current Status**: Production-ready application with all critical issues resolved, comprehensive offline capabilities, and complete Core ML model update infrastructure
 - **Architecture**: Clean MVVM pattern with service layer, comprehensive enhancements, complete offline processing system, and sophisticated model update management
@@ -1746,3 +1789,4 @@ The VoiceAssistant application is now production-ready with all critical issues 
 - **Offline Capabilities**: Complete offline processing system with Core ML integration, intelligent caching, and seamless transitions
 - **Model Update System**: Comprehensive Core ML model update infrastructure with background processing, safety measures, and user-friendly management interface
 - **Production Deployment**: Successfully deployed on Hetzner Cloud with all services operational
+- **UI/UX Polish**: Modern particle animations, comprehensive theme support, elegant navigation drawer, and polished loading experience

@@ -224,19 +224,6 @@ struct SimpleSettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isPresented = false
-                        }
-                    }) {
-                        Image(systemName: "xmark")
-                            .font(.body)
-                            .foregroundColor(themeManager.themeMode == .light ? .black : .white)
-                    }
-                }
-            }
         }
         .navigationViewStyle(.stack)
         .onAppear {

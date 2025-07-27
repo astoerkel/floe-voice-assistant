@@ -16,14 +16,14 @@ struct ParticleBackgroundView: View {
     @Environment(\.colorScheme) var colorScheme
     
     // Configuration
-    private let particleCount = 120
-    private let minSize: CGFloat = 1.0
-    private let maxSize: CGFloat = 3.5
-    private let baseSpeed: CGFloat = 0.3
-    private let voiceActiveMultiplier: CGFloat = 3.0
-    private let audioPlayingMultiplier: CGFloat = 2.0
-    private let centerRadius: CGFloat = 180.0
-    private let touchEffectRadius: CGFloat = 120.0
+    private let particleCount = 150
+    private let minSize: CGFloat = 3.0
+    private let maxSize: CGFloat = 8.0
+    private let baseSpeed: CGFloat = 0.5
+    private let voiceActiveMultiplier: CGFloat = 5.0
+    private let audioPlayingMultiplier: CGFloat = 3.0
+    private let centerRadius: CGFloat = 250.0
+    private let touchEffectRadius: CGFloat = 150.0
     
     var body: some View {
         Canvas { context, size in
@@ -36,21 +36,22 @@ struct ParticleBackgroundView: View {
                 
                 // Enhance opacity based on state
                 if isVoiceActive {
-                    opacity *= (0.8 + audioLevel * 0.4)
+                    opacity = min(1.0, opacity * (1.0 + audioLevel * 1.5))
                 } else if isAudioPlaying {
-                    opacity *= (0.7 + sin(globalPhase + particle.phase) * 0.3)
+                    opacity = min(0.9, opacity * (0.8 + sin(globalPhase + particle.phase) * 0.4))
                 } else {
-                    opacity *= 0.5
+                    opacity *= 0.7
                 }
                 
-                // Apply size variations based on audio level
-                let sizeMultiplier: CGFloat = isVoiceActive ? (1.0 + audioLevel * 0.5) : 1.0
+                // Apply size variations based on audio level - much more responsive
+                let sizeMultiplier: CGFloat = isVoiceActive ? (1.0 + audioLevel * 2.0) : 1.0
                 let currentSize = particle.size * sizeMultiplier
                 
-                // Create gradient for each particle
+                // Create gradient for each particle - more vibrant
                 let gradient = Gradient(colors: [
                     particleColor.opacity(opacity),
-                    particleColor.opacity(opacity * 0.3)
+                    particleColor.opacity(opacity * 0.5),
+                    particleColor.opacity(opacity * 0.1)
                 ])
                 
                 context.fill(
@@ -64,22 +65,24 @@ struct ParticleBackgroundView: View {
                 )
             }
             
-            // Add subtle glow effect during voice activity
-            if isVoiceActive && audioLevel > 0.3 {
-                let glowIntensity = audioLevel * 0.15
+            // Add prominent glow effect during voice activity
+            if isVoiceActive && audioLevel > 0.1 {
+                let glowIntensity = audioLevel * 0.3
+                let glowSize = 300 + audioLevel * 200
                 let glowGradient = Gradient(colors: [
                     particleColor.opacity(glowIntensity),
+                    particleColor.opacity(glowIntensity * 0.5),
                     particleColor.opacity(0)
                 ])
                 
                 context.fill(
                     Path(ellipseIn: CGRect(
-                        x: size.width / 2 - 200,
-                        y: size.height / 2 - 200,
-                        width: 400,
-                        height: 400
+                        x: size.width / 2 - glowSize / 2,
+                        y: size.height / 2 - glowSize / 2,
+                        width: glowSize,
+                        height: glowSize
                     )),
-                    with: .radialGradient(glowGradient, center: CGPoint(x: size.width / 2, y: size.height / 2), startRadius: 50, endRadius: 200)
+                    with: .radialGradient(glowGradient, center: CGPoint(x: size.width / 2, y: size.height / 2), startRadius: 50, endRadius: glowSize / 2)
                 )
             }
         }
@@ -111,20 +114,20 @@ struct ParticleBackgroundView: View {
         if colorScheme == .dark {
             // Beautiful colors for dark mode
             if isVoiceActive {
-                return Color(red: 0.4, green: 0.8, blue: 1.0) // Bright blue
+                return Color(red: 0.3 + audioLevel * 0.4, green: 0.7 + audioLevel * 0.3, blue: 1.0) // Dynamic bright blue
             } else if isAudioPlaying {
-                return Color(red: 0.6, green: 0.4, blue: 1.0) // Purple
+                return Color(red: 0.7, green: 0.4, blue: 1.0) // Bright purple
             } else {
-                return Color(red: 0.8, green: 0.8, blue: 0.9) // Light gray-blue
+                return Color(red: 0.6, green: 0.6, blue: 0.8) // Visible blue-gray
             }
         } else {
             // Beautiful colors for light mode
             if isVoiceActive {
-                return Color(red: 0.2, green: 0.5, blue: 0.9) // Deep blue
+                return Color(red: 0.1, green: 0.4 + audioLevel * 0.3, blue: 0.8 + audioLevel * 0.2) // Dynamic deep blue
             } else if isAudioPlaying {
-                return Color(red: 0.5, green: 0.3, blue: 0.8) // Deep purple
+                return Color(red: 0.5, green: 0.2, blue: 0.8) // Vibrant purple
             } else {
-                return Color(red: 0.3, green: 0.3, blue: 0.4) // Dark gray
+                return Color(red: 0.2, green: 0.2, blue: 0.5) // Visible dark blue
             }
         }
     }
@@ -206,12 +209,12 @@ struct ParticleBackgroundView: View {
             
             // Apply different effects based on state
             if isVoiceActive {
-                // Create reactive movement based on audio level
-                let vibrateIntensity = 2.0 + audioLevel * 8.0
+                // Create reactive movement based on audio level - MUCH more responsive
+                let vibrateIntensity = 5.0 + audioLevel * 20.0
                 let angle = CGFloat.random(in: 0...(2 * .pi))
                 
-                // Radial expansion based on audio
-                let expansionForce = audioLevel * 3.0
+                // Radial expansion based on audio - stronger effect
+                let expansionForce = audioLevel * 10.0
                 let directionFromCenter = atan2(
                     particle.position.y - particle.originalCenter.y,
                     particle.position.x - particle.originalCenter.x
@@ -220,9 +223,9 @@ struct ParticleBackgroundView: View {
                 particle.position.x += cos(directionFromCenter) * expansionForce
                 particle.position.y += sin(directionFromCenter) * expansionForce
                 
-                // Add vibration
-                particle.position.x += cos(angle) * vibrateIntensity * CGFloat.random(in: 0.3...1.0)
-                particle.position.y += sin(angle) * vibrateIntensity * CGFloat.random(in: 0.3...1.0)
+                // Add vibration - more intense
+                particle.position.x += cos(angle) * vibrateIntensity * CGFloat.random(in: 0.5...1.0)
+                particle.position.y += sin(angle) * vibrateIntensity * CGFloat.random(in: 0.5...1.0)
                 
                 // Velocity boost with damping
                 let velocityBoost = 1.0 + (audioLevel * (voiceActiveMultiplier - 1.0))

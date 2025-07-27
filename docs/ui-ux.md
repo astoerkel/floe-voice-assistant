@@ -650,9 +650,137 @@ The Privacy Dashboard provides complete transparency and control over user analy
 - **Platform Updates**: Adaptation to platform changes
 - **Performance**: Optimization for performance
 
+## Recent UI/UX Enhancements (January 2025)
+
+### Particle Animation System (NEW - COMPLETED ✅)
+A sophisticated particle background animation system that responds to voice input:
+
+#### Design Features
+- **Particle Count**: 150 animated particles distributed across the screen
+- **Size Range**: 3-8px particles (increased from 1-3.5px for better visibility)
+- **Animation Radius**: 250px center radius for wider coverage
+- **Multi-layer Depth**: 3 layers of particles for visual depth
+- **Touch Interaction**: Particles repel from touch points
+
+#### Voice Responsiveness
+- **Audio Level Detection**: Real-time monitoring at 33fps (up from 20fps)
+- **Dynamic Movement**: Particles vibrate and expand based on voice input
+  - Vibration intensity: 5-25 units based on audio level
+  - Expansion force: 10x audio level multiplier
+  - Size multiplier: Up to 3x when speaking
+- **Color Changes**: Dynamic color shifts based on audio level
+  - Dark mode: Blue shifts from 0.3 to 0.7 red channel based on audio
+  - Light mode: Deep blue with dynamic intensity
+- **Glow Effects**: Prominent central glow that scales with audio level
+
+#### Visual States
+- **Idle**: Gentle organic movement with visible blue-gray particles
+- **Recording**: Intense vibration and radial expansion
+- **AI Response**: Smooth wave-like motion with purple hue
+- **Touch**: Ripple effects pushing particles away
+
+### Theme System Implementation (NEW - COMPLETED ✅)
+Comprehensive light/dark theme support with automatic system following:
+
+#### ThemeManager Architecture
+- **Theme Modes**: System (default), Light, Dark
+- **Persistent Storage**: @AppStorage for user preference
+- **System Integration**: Automatic adaptation to iOS appearance settings
+- **Real-time Updates**: Instant theme switching without app restart
+
+#### Adaptive Color System
+- **Dynamic Backgrounds**: 
+  - Light: RGB(0.98, 0.98, 0.98) - subtle off-white
+  - Dark: Pure black for OLED optimization
+- **Text Colors**: Proper primary/secondary color adaptation
+- **UI Elements**: All components properly themed
+- **Particle Colors**: Theme-aware particle and glow effects
+
+#### Theme Assets
+- **AdaptiveBackground.colorset**: Dynamic background colors
+- **AdaptiveCardBackground.colorset**: Card and surface colors
+- **System Colors**: Extensive use of UIColor.label, UIColor.systemBackground
+
+### Navigation Drawer Redesign (NEW - COMPLETED ✅)
+ChatGPT-style sliding navigation drawer that pushes main content:
+
+#### SlidingNavigationDrawer Features
+- **Push Effect**: Main content slides left and scales to 0.9x
+- **Drawer Width**: 75% of screen width
+- **Animation**: Smooth 0.3s easeInOut transitions
+- **Shadow Effects**: Subtle shadow on drawer edge
+
+#### Interaction Methods
+- **Toggle Button**: Gear icon rotates 45° when active
+- **Overlay Tap**: Tap darkened main content to close
+- **Swipe Gestures**: 
+  - Swipe right to close drawer
+  - Swipe left from right edge to open
+- **No X Button**: Cleaner design with gear toggle only
+
+#### Visual Design
+- **Dark Overlay**: 30% opacity on main content
+- **Theme Aware**: Proper background colors for light/dark modes
+- **Depth Effect**: Scale transform on main content
+
+### Loading Experience (NEW - COMPLETED ✅)
+Beautiful circular progress loading screen:
+
+#### LoadingView Components
+- **Circular Progress**: Gradient stroke (blue to purple) with animation
+- **Rotating Dots**: 3 accent dots rotating around the circle
+- **Pulsing Icon**: Microphone icon with scale animation
+- **Animated Text**: "Loading..." with sequential dot animation
+
+#### Visual Details
+- **Progress Animation**: 2-second loop with 80% completion
+- **Glow Effects**: Dynamic glow size based on progress
+- **Theme Support**: Adapts to light/dark modes
+- **Smooth Transitions**: Fade transition to main app
+
+#### CompactLoadingIndicator
+- **Inline Usage**: 3 animated dots for processing states
+- **Scale Animation**: Sequential scaling with delays
+- **Integration**: Used in status messages during voice processing
+
+### Settings UI Improvements (NEW - COMPLETED ✅)
+
+#### User Profile Display
+- **Top Placement**: User info moved to top of settings
+- **Smart Fallbacks**: UserManager → Cached info → Email extraction
+- **Real-time Updates**: Fetches latest profile on view appearance
+- **Visual Hierarchy**: Prominent placement with proper spacing
+
+#### Theme Picker Integration
+- **Appearance Section**: Dedicated section for theme selection
+- **Menu Picker**: Native iOS menu picker style
+- **Icons**: System icons for each theme mode
+- **Instant Preview**: Real-time theme switching
+
+### Google Services Integration UI (NEW - COMPLETED ✅)
+
+#### IntegrationsMenuView
+- **Service Cards**: Beautiful cards for each integration
+- **Connection Status**: Visual indicators and email display
+- **Theme Aware**: All colors properly adapt to theme
+- **Coming Soon**: Grayed out cards for future services
+
+#### GoogleServicesDetailView
+- **Detailed Status**: Connection info with scopes
+- **Test Connection**: Real-time connection testing
+- **Visual Feedback**: Loading states and success indicators
+- **OAuth Flow**: Seamless authentication experience
+
+### Enhanced SimpleContentView
+- **Integrated Particles**: Background animation always visible
+- **Theme Support**: Complete light/dark mode adaptation
+- **Loading States**: Inline loading indicators
+- **Navigation Drawer**: Sliding settings from the right
+
 ## Notes
-- **Current Status**: Well-implemented design system
-- **Consistency**: Strong consistency across platforms
-- **Accessibility**: Good accessibility foundation
-- **Performance**: Optimized for smooth interactions
-- **Maintainability**: Clean, extensible design patterns
+- **Current Status**: Significantly enhanced with modern UI patterns
+- **Visual Polish**: Professional animations and transitions
+- **Theme System**: Complete light/dark mode support
+- **Accessibility**: Maintained strong accessibility foundation
+- **Performance**: Optimized particle system and smooth animations
+- **User Experience**: Intuitive navigation and visual feedback

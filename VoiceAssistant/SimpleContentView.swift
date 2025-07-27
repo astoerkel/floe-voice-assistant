@@ -27,7 +27,7 @@ struct SimpleContentView: View {
                 Group {
                     if themeManager.themeMode == .dark || 
                        (themeManager.themeMode == .system && UITraitCollection.current.userInterfaceStyle == .dark) {
-                        Color.black
+                        Color(white: 0.1)  // Dark gray instead of pure black
                     } else {
                         Color(red: 0.98, green: 0.98, blue: 0.98)
                     }
@@ -133,11 +133,13 @@ struct SimpleContentView: View {
             .navigationBarItems(trailing: 
                 Button(action: { 
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        showSettings = true 
+                        showSettings.toggle() 
                     }
                 }) {
                     Image(systemName: "gearshape.fill")
                         .foregroundColor(themeManager.themeMode == .light ? .black : .white)
+                        .rotationEffect(.degrees(showSettings ? 45 : 0))
+                        .animation(.easeInOut(duration: 0.3), value: showSettings)
                 }
             )
             .alert("Error", isPresented: $showError) {
@@ -149,7 +151,7 @@ struct SimpleContentView: View {
         .fullScreenCover(isPresented: .constant(!apiClient.isAuthenticated)) {
             SimpleAuthenticationView(apiClient: apiClient)
         }
-        .navigationDrawer(isPresented: $showSettings) {
+        .slidingNavigationDrawer(isOpen: $showSettings) {
             SimpleSettingsView(conversationManager: conversationManager, isPresented: $showSettings)
         }
     }
