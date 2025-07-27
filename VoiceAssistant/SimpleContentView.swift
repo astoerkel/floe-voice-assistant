@@ -7,6 +7,8 @@ struct SimpleContentView: View {
     @StateObject private var speechRecognizer = SimpleSpeechRecognizer()
     @StateObject private var conversationManager = SimpleConversationManager()
     @StateObject private var audioRecorder = MinimalAudioRecorder()
+    @StateObject private var audioLevelDetector = AudioLevelDetector()
+    @StateObject private var themeManager = ThemeManager.shared
     
     @State private var isRecording = false
     @State private var statusMessage = "Tap to record"
@@ -21,9 +23,25 @@ struct SimpleContentView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Dark background
-                Color.black
-                    .ignoresSafeArea()
+                // Adaptive background
+                Group {
+                    if themeManager.themeMode == .dark || 
+                       (themeManager.themeMode == .system && UITraitCollection.current.userInterfaceStyle == .dark) {
+                        Color.black
+                    } else {
+                        Color(red: 0.98, green: 0.98, blue: 0.98)
+                    }
+                }
+                .ignoresSafeArea()
+                
+                // Particle animation background
+                ParticleBackgroundView(
+                    isVoiceActive: isRecording,
+                    isAudioPlaying: isAudioPlaying,
+                    audioLevel: audioLevelDetector.audioLevel
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
                 
                 VStack(spacing: 30) {
                     // Header
@@ -31,11 +49,11 @@ struct SimpleContentView: View {
                         Text("Floe")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(themeManager.themeMode == .light ? .black : .white)
                         
                         Text("Simple Voice Assistant")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                     }
                     .padding(.top, 20)
                     
@@ -54,12 +72,18 @@ struct SimpleContentView: View {
                     
                     Spacer()
                     
-                    // Status Message
-                    Text(statusMessage)
-                        .font(.body)
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                    // Status Message with Loading Indicator
+                    VStack(spacing: 12) {
+                        if isProcessing {
+                            CompactLoadingIndicator()
+                        }
+                        
+                        Text(statusMessage)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
                     
                     // Recording Button
                     Button(action: {
@@ -106,14 +130,16 @@ struct SimpleContentView: View {
             }
             .navigationBarHidden(false)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showSettings = true }) {
-                        Image(systemName: "gearshape.fill")
-                            .foregroundColor(.white)
+            .navigationBarItems(trailing: 
+                Button(action: { 
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showSettings = true 
                     }
+                }) {
+                    Image(systemName: "gearshape.fill")
+                        .foregroundColor(themeManager.themeMode == .light ? .black : .white)
                 }
-            }
+            )
             .alert("Error", isPresented: $showError) {
                 Button("OK") { }
             } message: {
@@ -123,8 +149,8 @@ struct SimpleContentView: View {
         .fullScreenCover(isPresented: .constant(!apiClient.isAuthenticated)) {
             SimpleAuthenticationView(apiClient: apiClient)
         }
-        .sheet(isPresented: $showSettings) {
-            SimpleSettingsView(conversationManager: conversationManager)
+        .navigationDrawer(isPresented: $showSettings) {
+            SimpleSettingsView(conversationManager: conversationManager, isPresented: $showSettings)
         }
     }
     
@@ -143,9 +169,12 @@ struct SimpleContentView: View {
         isRecording = true
         statusMessage = "Listening..."
         audioRecorder.startRecording()
+        audioLevelDetector.startMonitoring()
     }
     
     private func stopRecording() {
+        audioLevelDetector.stopMonitoring()
+        
         guard let audioURL = audioRecorder.stopRecording() else {
             showError(message: "Failed to stop recording")
             resetState()
@@ -269,6 +298,23 @@ struct SimpleContentView: View {
 
 struct MessageBubble: View {
     let message: ConversationMessage
+    @Environment(\.colorScheme) var colorScheme
+    
+    private var userBubbleColor: Color {
+        colorScheme == .dark ? Color(white: 0.9) : Color(white: 0.95)
+    }
+    
+    private var aiBubbleColor: Color {
+        colorScheme == .dark ? Color.blue : Color.blue.opacity(0.9)
+    }
+    
+    private var userTextColor: Color {
+        colorScheme == .dark ? .black : .black
+    }
+    
+    private var aiTextColor: Color {
+        .white
+    }
     
     var body: some View {
         HStack {
@@ -279,17 +325,17 @@ struct MessageBubble: View {
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
                 Text(message.text)
                     .font(.body)
-                    .foregroundColor(message.isUser ? .black : .white)
+                    .foregroundColor(message.isUser ? userTextColor : aiTextColor)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 18)
-                            .fill(message.isUser ? Color.white : Color.blue)
+                            .fill(message.isUser ? userBubbleColor : aiBubbleColor)
                     )
                 
                 Text(message.timestamp.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .padding(.horizontal, 8)
             }
             

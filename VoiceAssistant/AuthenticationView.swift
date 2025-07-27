@@ -22,7 +22,7 @@ struct AuthenticationView: View {
                     .ignoresSafeArea()
                 
                 // Particle effect background
-                ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false)
+                ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false, audioLevel: 0.0)
                 
                 VStack(spacing: 40) {
                     Spacer()

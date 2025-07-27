@@ -311,7 +311,7 @@ struct IntegrationCard: View {
 #Preview {
     ZStack {
         Color.black.ignoresSafeArea()
-        ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false)
+        ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false, audioLevel: 0.0)
         IntegrationsSetupView(apiClient: APIClient(), onComplete: {})
     }
 }

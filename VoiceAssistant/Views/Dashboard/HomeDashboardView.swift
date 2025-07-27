@@ -25,7 +25,8 @@ struct HomeDashboardView: View {
                     // Particle effect background
                     ParticleBackgroundView(
                         isVoiceActive: showingVoiceInterface,
-                        isAudioPlaying: false
+                        isAudioPlaying: false,
+                        audioLevel: 0.0
                     )
                     
                     ScrollView {

@@ -279,6 +279,7 @@ struct EnhancedSettingsView: View {
     @ObservedObject private var hapticManager = HapticManager.shared
     @ObservedObject private var soundManager = SoundManager.shared
     @ObservedObject private var apiClient = APIClient.shared
+    @ObservedObject private var oauthManager = OAuthManager.shared
     @Environment(\.dismiss) private var dismiss
     
     // Optional actions for the settings view
@@ -297,8 +298,36 @@ struct EnhancedSettingsView: View {
     @State private var lastDebugTapTime = Date()
     
     var body: some View {
-        NavigationStack {
+        NavigationView {
             List {
+                // Test Section to see if new sections appear
+                Section {
+                    HStack {
+                        Image(systemName: "link.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                            .frame(width: 36)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Service Integrations")
+                                .font(.headline)
+                            
+                            Text("Connect Google, Airtable, and more")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        print("Integrations tapped!")
+                    }
+                } header: {
+                    Text("INTEGRATIONS")
+                }
+                
                 // Account Section
                 Section {
                     NavigationLink {
@@ -337,8 +366,6 @@ struct EnhancedSettingsView: View {
                     Text("Usage")
                 }
                 
-                // Connected Services
-                ConnectedServicesSection()
                 
                 // Voice Settings
                 Section {
@@ -523,6 +550,7 @@ struct EnhancedSettingsView: View {
         .onAppear {
             settingsViewModel.loadSettings()
             subscriptionManager.loadSubscription()
+            oauthManager.checkIntegrationStatus()
         }
         .alert("Delete Account", isPresented: $settingsViewModel.showDeleteAccountConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -914,85 +942,6 @@ struct PersonalizationSection: View {
     }
 }
 
-// MARK: - Connected Services Section
-
-struct ConnectedServicesSection: View {
-    @ObservedObject private var oauthManager = OAuthManager.shared
-    
-    var body: some View {
-        Section {
-            NavigationLink("Service Integrations") {
-                OAuthIntegrationsView()
-            }
-            
-            // Google Services Status
-            HStack {
-                Image(systemName: "globe")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-                    .frame(width: 24)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Google Services")
-                        .font(.body)
-                    
-                    Text(oauthManager.isGoogleConnected ? "Connected" : "Not connected")
-                        .font(.caption)
-                        .foregroundColor(oauthManager.isGoogleConnected ? .green : .secondary)
-                }
-                
-                Spacer()
-                
-                if oauthManager.isGoogleConnected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.title3)
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                // Navigate to OAuth integrations focused on Google
-            }
-            
-            // Airtable Status
-            HStack {
-                Image(systemName: "tablecells")
-                    .foregroundColor(.green)
-                    .font(.title3)
-                    .frame(width: 24)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Airtable")
-                        .font(.body)
-                    
-                    Text(oauthManager.isAirtableConnected ? "Connected" : "Not connected")
-                        .font(.caption)
-                        .foregroundColor(oauthManager.isAirtableConnected ? .green : .secondary)
-                }
-                
-                Spacer()
-                
-                if oauthManager.isAirtableConnected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.title3)
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                // Navigate to OAuth integrations focused on Airtable
-            }
-        } header: {
-            Text("Connected Services")
-        } footer: {
-            Text("Connect Google Calendar, Gmail, and Airtable to unlock powerful voice commands for productivity.")
-                .font(.caption)
-        }
-        .onAppear {
-            oauthManager.checkIntegrationStatus()
-        }
-    }
-}
 
 // MARK: - Supporting Views are in EnhancedSettingsPlaceholderViews.swift
 

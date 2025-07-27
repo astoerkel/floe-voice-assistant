@@ -24,7 +24,7 @@ struct OnboardingCoordinator: View {
             ZStack {
                 // Dark background with particles
                 Color.black.ignoresSafeArea()
-                ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false)
+                ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false, audioLevel: 0.0)
                 
                 switch currentStep {
                 case .welcome:

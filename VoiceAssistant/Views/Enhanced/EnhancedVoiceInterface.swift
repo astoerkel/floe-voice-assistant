@@ -22,7 +22,8 @@ struct EnhancedVoiceInterface: View {
                 // Particle effect background
                 ParticleBackgroundView(
                     isVoiceActive: voiceViewModel.isRecording,
-                    isAudioPlaying: voiceViewModel.isPlaying
+                    isAudioPlaying: voiceViewModel.isPlaying,
+                    audioLevel: 0.0
                 )
                 
                 VStack(spacing: 30) {

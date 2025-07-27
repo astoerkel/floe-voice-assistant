@@ -4,6 +4,7 @@ import AVFoundation
 struct ContentView: View {
     @StateObject private var audioRecorder = MinimalAudioRecorder()
     @ObservedObject private var apiClient = APIClient.shared
+    @ObservedObject private var oauthManager = OAuthManager.shared
     @StateObject private var speechRecognizer = SpeechRecognizer()
     @StateObject private var enhancedVoiceProcessor: EnhancedVoiceProcessor
     @StateObject private var offlineProcessor = OfflineProcessor()
@@ -56,7 +57,8 @@ struct ContentView: View {
             // Particle effect background
             ParticleBackgroundView(
                 isVoiceActive: audioRecorder.isRecording,
-                isAudioPlaying: isAudioPlaying
+                isAudioPlaying: isAudioPlaying,
+                audioLevel: 0.0
             )
             
             // Main content
@@ -89,23 +91,19 @@ struct ContentView: View {
                 onDismiss: { showSettings = false }
             )
         }
+        .onAppear {
+            oauthManager.checkIntegrationStatus()
+        }
     }
     
     // MARK: - View Components
     
     private var headerView: some View {
         HStack {
-            // Hamburger Menu Button
-            Button(action: { showSettings.toggle() }) {
-                Image(systemName: "line.horizontal.3")
-                    .font(.title2)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
-            .padding(.leading, 20)
-            .accessibilityLabel("Menu")
-            .accessibilityHint("Opens the settings menu")
+            // Empty space for balance
+            Color.clear
+                .frame(width: 44, height: 44)
+                .padding(.leading, 20)
             
             Spacer()
             
@@ -117,10 +115,27 @@ struct ContentView: View {
             
             Spacer()
             
-            // Empty space for balance (same size as hamburger button)
-            Color.clear
-                .frame(width: 44, height: 44)
-                .padding(.trailing, 20)
+            // Settings Button
+            Button(action: { showSettings.toggle() }) {
+                ZStack {
+                    // Show a badge if Google is connected
+                    if oauthManager.isGoogleConnected {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 12, y: -12)
+                    }
+                    
+                    Image(systemName: "person.circle")
+                        .font(.title2)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+            .padding(.trailing, 20)
+            .accessibilityLabel("Settings")
+            .accessibilityHint("Opens the settings menu")
         }
         .padding(.top, 60)
     }
@@ -204,6 +219,22 @@ struct ContentView: View {
             Text(statusMessage)
                 .foregroundColor(.white.opacity(0.6))
                 .font(.subheadline)
+            
+            // Google Services Connection Status
+            if oauthManager.isGoogleConnected {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.green)
+                    Text("Google Services Connected")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(10)
+            }
             
             // Processing status indicator
             if enhancedVoiceProcessor.isProcessing {
