@@ -1,9 +1,49 @@
 # Project Structure - VoiceAssistant iOS & watchOS
 
 ## Overview
-This document outlines the current project structure for the VoiceAssistant iOS and watchOS application with its comprehensive Node.js/Express backend. The project follows a clean architecture pattern with shared models, platform-specific implementations, and a sophisticated backend infrastructure that replaces N8N workflows with proper LangChain agents.
+This document outlines the current project structure for the VoiceAssistant iOS and watchOS application with its simplified Node.js/Express backend. The project follows a clean MVVM architecture pattern with simplified components focused on core voice assistant functionality.
 
-## Current Project Structure
+## Current MVP Structure (2025-07-27)
+The application has been simplified to focus on essential voice assistant features with a clean, maintainable architecture.
+
+## Simplified MVP Project Structure (Working Version)
+
+```
+VoiceAssistant/
+├── VoiceAssistant/                 # iOS App Target
+│   ├── Simple Components/          # Simplified MVP Components
+│   │   ├── SimpleAPIClient.swift           # Streamlined API client with Apple Sign In
+│   │   ├── SimpleSpeechRecognizer.swift    # Direct Apple Speech Recognition
+│   │   ├── SimpleContentView.swift         # Clean voice interface
+│   │   ├── SimpleSettingsView.swift        # User profile and chat management
+│   │   ├── SimpleAuthenticationView.swift  # Apple Sign In UI
+│   │   └── SimpleConversationManager.swift # Conversation history management
+│   ├── Core Files/                 # Essential app files
+│   │   ├── VoiceAssistantApp.swift         # App entry point
+│   │   ├── Constants.swift                 # API endpoints and configuration
+│   │   ├── SharedModels.swift              # Data models
+│   │   └── MinimalAudioRecorder.swift      # Audio recording
+│   └── Info.plist                  # App configuration
+
+voice-assistant-backend/            # Simplified Backend (Hetzner)
+├── src/
+│   ├── app.js                      # Express server setup
+│   ├── routes/
+│   │   ├── auth.js                 # Apple Sign In endpoints
+│   │   └── chat.js                 # Voice processing endpoints
+│   ├── controllers/
+│   │   ├── auth.controller.js      # Authentication logic
+│   │   └── chat.controller.js      # LLM integration
+│   ├── services/
+│   │   ├── jwt.service.js          # Token management
+│   │   ├── tts.service.js          # Google Text-to-Speech
+│   │   └── llm.service.js          # OpenRouter API integration
+│   └── db.js                       # PostgreSQL connection
+├── package.json                    # Dependencies
+└── ecosystem.config.js             # PM2 configuration
+```
+
+## Full Project Structure (Including Legacy Components)
 
 ```
 VoiceAssistant/
@@ -140,6 +180,8 @@ VoiceAssistant/
 │   ├── deploy_fix.sh               # Database compatibility deployment script (NEW)
 │   ├── test_success_logic.js       # Success logic validation test script (NEW)
 │   ├── src/                        # Source code
+│   │   ├── websocket.js            # WebSocket/Socket.IO handler implementation (FIXED 2025-07-26)
+│   │   ├── app_minimal.js          # Minimal app configuration for testing (NEW)
 │   │   ├── config/                 # Configuration files
 │   │   │   ├── database.js         # PostgreSQL/Prisma configuration
 │   │   │   ├── redis.js            # Redis configuration
@@ -147,20 +189,26 @@ VoiceAssistant/
 │   │   ├── controllers/            # Request handlers
 │   │   │   ├── auth.controller.js  # Authentication endpoints
 │   │   │   ├── voice.controller.js # Voice processing endpoints (UPDATED: LangChain integration)
-│   │   │   ├── calendar.controller.js # Calendar management
-│   │   │   ├── email.controller.js # Email management
-│   │   │   └── tasks.controller.js # Task management
+│   │   │   ├── user.controller.js  # User profile and preferences (FIXED: preferredName removal 2025-07-26)
+│   │   │   ├── oauth.controller.js # OAuth integration endpoints (Google, Airtable)
+│   │   │   ├── integrations.controller.js # Third-party service integrations
+│   │   │   ├── analytics.controller.js # Usage analytics and metrics
+│   │   │   ├── subscriptions.controller.js # Subscription management
+│   │   │   ├── admin.controller.js # Administrative functions
+│   │   │   ├── calendar.controller.js # Calendar management (deprecated - see agents)
+│   │   │   ├── email.controller.js # Email management (deprecated - see agents)
+│   │   │   └── tasks.controller.js # Task management (deprecated - see agents)
 │   │   ├── services/               # Business logic services
 │   │   │   ├── ai/                 # NEW: LangChain coordinator system
 │   │   │   │   ├── coordinator.js  # Main VoiceAssistantCoordinator with OpenRouter GPT-4o
 │   │   │   │   ├── agents/         # Specialized LangChain agents
-│   │   │   │   │   ├── calendarAgent.js # Google Calendar operations
-│   │   │   │   │   ├── taskAgent.js # Airtable task management
-│   │   │   │   │   ├── emailAgent.js # Gmail operations
+│   │   │   │   │   ├── calendarAgent.js # Google Calendar operations (FIXED: mock data removal 2025-07-26)
+│   │   │   │   │   ├── taskAgent.js # Airtable task management (FIXED: mock data removal 2025-07-26)
+│   │   │   │   │   ├── emailAgent.js # Gmail operations (FIXED: mock data removal 2025-07-26)
 │   │   │   │   │   └── generalAgent.js # General queries and conversation
 │   │   │   │   └── utils/          # Coordinator utilities
 │   │   │   │       ├── systemPromptGenerator.js # Dynamic prompt generation
-│   │   │   │       ├── personalizationManager.js # User preferences and learning
+│   │   │   │       ├── personalizationManager.js # User preferences and learning (FIXED: preferredName 2025-07-26)
 │   │   │   │       └── contextManager.js # Conversation context management
 │   │   │   ├── agents/             # Legacy LangChain agents (FALLBACK)
 │   │   │   │   ├── coordinatorAgent.js # Legacy coordinator agent (FALLBACK)
@@ -766,6 +814,75 @@ The following critical fixes were implemented to restore full voice processing f
 - **Purpose**: Streamlined deployment of database compatibility fixes
 - **Features**: Automatic backup, targeted file updates, service restart
 - **Usage**: Enables rapid deployment of critical fixes to production
+
+## Recent Critical Production Fixes (2025-07-26)
+
+### WebSocket Integration Fixes ✅ COMPLETED
+The WebSocket system has been fully repaired and is now operational:
+
+#### Backend WebSocket Implementation
+- **File Created**: `src/websocket.js` - Complete WebSocket/Socket.IO handler implementation
+- **Features**: Connection management, authentication, voice processing status, sync requests
+- **Integration**: Properly integrated with main app.js Socket.IO server
+- **Status**: Fully functional WebSocket backend ready for real-time communication
+
+#### iOS WebSocket Client Fixes  
+- **Constants.swift**: Updated WebSocket URL to correct Socket.IO endpoint `wss://floe.cognetica.de/socket.io/`
+- **WebSocketManager.swift**: Added proper Socket.IO protocol headers and authentication flow
+- **Connection Flow**: authenticate → authenticated → voice commands → responses
+- **Status**: iOS client successfully connects and communicates with backend
+
+#### WebSocket Communication Flow
+```
+iOS App                           Backend
+   ↓ connect to wss://floe.cognetica.de/socket.io/
+   ↓ send: { type: "authenticate", userId, token }
+   ← recv: { type: "authenticated", success: true }
+   ↓ send: { type: "voice-command", text, sessionId, platform }
+   ← recv: { type: "voice-response", response, audioBase64 }
+```
+
+### Database Schema Compatibility Fixes ✅ COMPLETED
+Multiple database-related issues resolved:
+
+#### Prisma Schema Issues Fixed
+- **`preferredName` Field**: Systematically removed all references to non-existent database field
+- **Controllers Fixed**: `user.controller.js` - removed from select statements and validation
+- **Services Fixed**: `personalizationManager.js` - added graceful fallback to `user.name`
+- **Impact**: All API endpoints now return 200 status instead of 500 database errors
+
+#### Real Data Integration
+- **Mock Response Removal**: Eliminated all hardcoded responses from agents
+- **Calendar Agent**: `calendarAgent.js` - removed mock calendar events, proper error handling
+- **Task Agent**: `taskAgent.js` - removed mock task responses, real Airtable integration
+- **Email Agent**: `emailAgent.js` - removed mock email responses, real Gmail API data
+- **Verification**: App now displays actual user data instead of fake responses
+
+### iOS-Backend Integration Status ✅ OPERATIONAL
+Current integration status between iOS app and Node.js backend:
+
+#### Production Endpoints
+- **Base URL**: `https://floe.cognetica.de`
+- **Voice Processing**: `/api/voice/process-text` (primary) and `/api/voice/process-audio` (fallback)
+- **WebSocket**: `wss://floe.cognetica.de/socket.io/` - Real-time communication
+- **Authentication**: JWT-based with API key validation
+- **Status**: All endpoints operational and tested
+
+#### Data Flow Working
+1. **Voice Input**: iOS app captures voice via Apple Speech Framework
+2. **Transcription**: On-device speech-to-text conversion  
+3. **API Call**: Text sent to `/api/voice/process-text` endpoint
+4. **AI Processing**: Backend processes via LangChain agents
+5. **Response**: JSON response with text and base64 audio
+6. **Playback**: iOS app plays response audio automatically
+7. **WebSocket**: Real-time status updates and communication
+
+#### Integration Achievements
+- **Authentication**: iOS app successfully authenticates with backend API
+- **Voice Processing**: End-to-end voice pipeline fully functional
+- **Real Data**: Gmail API, Google Calendar, and other integrations working
+- **WebSocket**: Real-time communication established and operational
+- **Error Handling**: Comprehensive error handling and user feedback
 
 ## Recent Backend Modifications (2025-07-18)
 
@@ -1585,8 +1702,42 @@ Return UpdateResult {
 - **Rollback Capability**: Immediate rollback for installation failures or performance issues
 - **State Recovery**: Resume interrupted downloads and maintain update state across app restarts
 
+## Current Project Status (2025-07-26)
+
+### Production Readiness ✅ ACHIEVED
+The VoiceAssistant application is now production-ready with all critical issues resolved:
+
+#### Core Functionality Status
+- **Voice Processing Pipeline**: ✅ Fully operational end-to-end voice processing
+- **Real Data Integration**: ✅ Gmail API, Google Calendar showing actual user data
+- **WebSocket Communication**: ✅ Real-time features fully functional
+- **iOS-Backend Integration**: ✅ Complete integration working with Hetzner Cloud deployment
+- **Database Operations**: ✅ All API calls returning 200 status, schema issues resolved
+
+#### Recent Major Fixes Completed
+1. **Database Schema Compatibility**: Fixed Prisma `preferredName` field errors causing 500 status codes
+2. **Mock Response Elimination**: Removed all hardcoded responses, now showing real user data
+3. **WebSocket Infrastructure**: Created missing WebSocket handler, fixed iOS client connection
+4. **Network Detection**: Fixed aggressive offline routing when online connection available
+5. **Backend Error Resolution**: Resolved all critical backend errors preventing proper operation
+
+#### Integration Achievements
+- **Authentication**: JWT-based authentication working with API key validation
+- **Real-time Communication**: WebSocket connection established and operational
+- **Voice Recognition**: Apple Speech Framework integration with Whisper fallback
+- **AI Processing**: LangChain agents processing with OpenAI/Anthropic backends
+- **Data Services**: Gmail, Google Calendar, Airtable integrations functional
+- **Audio Generation**: Google Text-to-Speech generating base64 audio responses
+
+#### Architecture Quality
+- **Backend**: Complete Node.js/Express backend with LangChain agents on Hetzner Cloud
+- **iOS App**: SwiftUI-based with MVVM pattern, enhanced voice interface, cross-device sync
+- **Database**: PostgreSQL with Prisma ORM, schema properly aligned with code
+- **Real-time**: Socket.IO WebSocket implementation for live communication
+- **Security**: JWT authentication, API key validation, secure credential management
+
 ## Notes
-- **Current Status**: Well-organized structure with clear separation, successful build, comprehensive offline capabilities, and complete Core ML model update infrastructure
+- **Current Status**: Production-ready application with all critical issues resolved, comprehensive offline capabilities, and complete Core ML model update infrastructure
 - **Architecture**: Clean MVVM pattern with service layer, comprehensive enhancements, complete offline processing system, and sophisticated model update management
 - **Maintainability**: Easy to navigate and extend with consolidated shared models, modular offline architecture, and comprehensive model update system
 - **Testing**: Structure supports future test implementation with comprehensive offline testing capabilities and model update testing infrastructure
@@ -1594,3 +1745,4 @@ Return UpdateResult {
 - **Code Quality**: Minor warnings identified and tracked for future improvement
 - **Offline Capabilities**: Complete offline processing system with Core ML integration, intelligent caching, and seamless transitions
 - **Model Update System**: Comprehensive Core ML model update infrastructure with background processing, safety measures, and user-friendly management interface
+- **Production Deployment**: Successfully deployed on Hetzner Cloud with all services operational

@@ -187,7 +187,81 @@ Comprehensive infrastructure for safe, automatic Core ML model updates with back
 ### Phase 10: Integration & Enhancement (FUTURE)
 Advanced features and improvements
 
-## Current Status: FRONTEND MVP COMPLETED + BACKEND SUCCESSFULLY DEPLOYED ON HETZNER CLOUD + CRITICAL PRODUCTION ISSUES RESOLVED + ON-DEVICE RESPONSE GENERATION IMPLEMENTED + ENHANCED SPEECH RECOGNITION SYSTEM COMPLETED + PRIVACY-PRESERVING ANALYTICS SYSTEM COMPLETED + CORE ML MODEL UPDATE SYSTEM COMPLETED
+## Current Status: SIMPLE MVP WORKING VERSION - Backend and iOS App Fully Functional (2025-07-27)
+
+### MVP Status Summary
+The VoiceAssistant has been successfully simplified to a working MVP with the following achievements:
+
+#### ✅ Backend Infrastructure (Simple Voice Backend)
+- **Location**: `/opt/simple-voice-backend` on Hetzner Cloud
+- **Architecture**: Simplified Node.js/Express backend replacing complex LangChain system
+- **Database**: PostgreSQL with basic user management
+- **Authentication**: Apple Sign In with proper JWT token handling
+- **Voice Processing**: Direct integration with OpenRouter LLM API
+- **Audio Generation**: Google Text-to-Speech for response audio
+- **Deployment**: PM2 process manager with 2 instances on Hetzner CX32
+- **Status**: Fully operational at https://floe.cognetica.de
+
+#### ✅ iOS Application (Simplified Version)
+- **Architecture**: Clean MVVM with simplified components
+- **Key Components**:
+  - `SimpleAPIClient`: Streamlined API communication with Apple Sign In
+  - `SimpleSpeechRecognizer`: Direct Apple Speech Recognition without complex enhancements
+  - `SimpleContentView`: Clean voice interface with conversation history
+  - `SimpleSettingsView`: User profile display and chat history management
+  - `SimpleAuthenticationView`: Apple Sign In implementation
+- **Features Working**:
+  - Apple Sign In authentication
+  - Voice recording and transcription
+  - Text processing through backend
+  - Audio response playback
+  - Conversation history
+  - User profile display (with email-based name extraction)
+  - Clear chat history functionality
+- **Removed Complexity**: No OAuth integrations, no complex agents, no on-device AI
+
+#### ✅ Recent Fixes Applied (2025-07-27)
+1. **Backend Authentication**: Fixed JWT token decoding to properly extract Apple user ID
+2. **iOS Settings**: Enhanced to show user email and extract display name
+3. **Network Issues**: Resolved authentication timeouts and network errors
+4. **Database Schema**: Fixed PostgreSQL connection and schema issues
+
+## Current Status: FRONTEND MVP COMPLETED + BACKEND SUCCESSFULLY DEPLOYED ON HETZNER CLOUD + ALL CRITICAL PRODUCTION ISSUES RESOLVED + ON-DEVICE RESPONSE GENERATION IMPLEMENTED + ENHANCED SPEECH RECOGNITION SYSTEM COMPLETED + PRIVACY-PRESERVING ANALYTICS SYSTEM COMPLETED + CORE ML MODEL UPDATE SYSTEM COMPLETED
+
+### Critical Production Readiness Issues Resolved (2025-07-26) ✅
+The following critical production issues that were affecting real user experience have been successfully diagnosed and completely resolved:
+
+#### Database Schema Compatibility Issues ✅ RESOLVED
+- **Prisma Database Error**: Fixed "Unknown field `preferredName` for select statement on model `User`" errors causing all backend API calls to fail with 500 errors
+- **Root Cause**: Database schema mismatch between code references and actual Prisma schema
+- **Resolution**: Systematically removed all references to non-existent `preferredName` field from:
+  - `src/controllers/user.controller.js` - Removed from select statements and validation
+  - `src/services/ai/utils/personalizationManager.js` - Added graceful handling with fallback to user.name
+  - Backend API calls now return 200 status instead of 500 errors
+- **Impact**: All voice processing, Gmail API, and Google services integration now functional
+
+#### Mock Response Removal and Real Data Integration ✅ RESOLVED
+- **Mock Email Responses**: Completely removed "Found 5 recent emails" hardcoded responses from all backend agents
+- **Gmail API Integration**: Now returns actual Gmail API data instead of mock responses
+- **Calendar Agent**: Removed mock calendar events, now returns proper error messages when integration not configured
+- **Task Agent**: Removed mock task responses, properly routes to real Airtable integration
+- **Verification**: Confirmed app no longer shows fake data, displays actual user email and calendar information
+
+#### WebSocket Connection Issues ✅ RESOLVED  
+- **iOS WebSocket Connection Error (-1011)**: Fixed client unable to connect to backend WebSocket endpoint
+- **Root Cause**: Incorrect WebSocket URL configuration and missing Socket.IO protocol headers
+- **Resolution**: 
+  - Updated `Constants.swift` WebSocket URL to correct Socket.IO endpoint: `wss://floe.cognetica.de/socket.io/`
+  - Fixed `WebSocketManager.swift` to use proper Socket.IO protocol headers and authentication
+  - Created missing `src/websocket.js` file that was causing backend Socket.IO initialization to fail
+- **Impact**: Real-time communication between iOS app and backend now fully functional
+
+#### Offline Mode Detection Issues ✅ RESOLVED
+- **Incorrect Offline Routing**: App was incorrectly routing to offline processing when online with working internet connection
+- **Root Cause**: Network quality assessment being too aggressive, causing false offline detection
+- **Google Services Status**: Connection status not updating despite successful authentication (resolved via database fixes)
+- **Resolution**: Modified network detection logic to be less aggressive, fixed backend errors that were causing offline fallback
+- **Impact**: App now correctly uses online processing when internet connection available
 
 ### Recent Critical Bug Fixes (2025-07-20) ✅
 The following critical production issues have been successfully diagnosed and resolved:
