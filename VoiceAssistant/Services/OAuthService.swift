@@ -329,6 +329,19 @@ class OAuthService: NSObject, ObservableObject {
     
     // MARK: - Token Management
     
+    private func storeJWTToken(_ token: String, for deviceId: String) async {
+        let keychain = KeychainService.shared
+        
+        do {
+            // Store JWT token for API authentication
+            try await keychain.store(token, key: "jwt_token")
+            try await keychain.store(deviceId, key: "device_id")
+            print("✅ JWT token stored successfully")
+        } catch {
+            print("❌ Failed to store JWT token: \(error)")
+        }
+    }
+    
     private func saveTokens(_ tokens: TokenResponse, for service: String) async {
         let keychain = KeychainService.shared
         
@@ -388,6 +401,134 @@ class OAuthService: NSObject, ObservableObject {
         }
         
         connectedServices = services
+    }
+    
+    // MARK: - URL Callback Handling
+    
+    func handleSuccessCallback(success: String, params: [String: String]) async {
+        print("✅ OAuth success callback: \(success)")
+        
+        // Determine the service from the success message
+        let service: String
+        if success.contains("google") {
+            service = "google"
+        } else if success.contains("airtable") {
+            service = "airtable"
+        } else {
+            service = "unknown"
+        }
+        
+        // Extract JWT token and deviceId from params
+        if let jwtToken = params["token"], let deviceId = params["deviceId"] {
+            // Store the JWT token for backend communication
+            await storeJWTToken(jwtToken, for: deviceId)
+        }
+        
+        await MainActor.run {
+            self.updateConnectedService(service: service)
+            // Refresh integration status in OAuth manager
+            NotificationCenter.default.post(name: .oauthStatusChanged, object: nil)
+            print("✅ OAuth success processed for \(service)")
+            
+            // Refresh APIClient authentication status since we now have JWT token
+            APIClient.shared.refreshAuthenticationStatus()
+            print("🔍 Refreshed APIClient authentication status after OAuth completion")
+            
+            // Complete any pending OAuth flows
+            if let completionHandler = self.currentCompletionHandler {
+                completionHandler(.success("connected"))
+                self.currentCompletionHandler = nil
+            }
+            
+            self.isLoading = false
+        }
+    }
+    
+    func handleErrorCallback(error: String) async {
+        print("❌ OAuth error callback: \(error)")
+        
+        await MainActor.run {
+            // Complete any pending OAuth flows with error
+            if let completionHandler = self.currentCompletionHandler {
+                completionHandler(.failure(OAuthError.tokenExchangeFailed))
+                self.currentCompletionHandler = nil
+            }
+            
+            self.isLoading = false
+        }
+    }
+    
+    func handleCallback(params: [String: String]) async {
+        print("🔄 Processing OAuth callback with params: \(params)")
+        
+        // Extract parameters
+        guard let code = params["code"],
+              let state = params["state"] else {
+            print("❌ Missing required OAuth parameters")
+            await MainActor.run {
+                self.handleOAuthError(OAuthError.noAuthorizationCode)
+            }
+            return
+        }
+        
+        // Determine service from callback (could be enhanced with state parsing)
+        let service = params["service"] ?? "google" // Default to google for now
+        
+        print("🔄 Exchanging code for token for service: \(service)")
+        
+        // Exchange code for token via backend
+        do {
+            let success = try await exchangeCodeViaBackend(code: code, state: state, service: service)
+            if success {
+                await MainActor.run {
+                    self.updateConnectedService(service: service)
+                    // Refresh integration status in OAuth manager
+                    NotificationCenter.default.post(name: .oauthStatusChanged, object: nil)
+                    print("✅ OAuth callback processed successfully for \(service)")
+                }
+            } else {
+                await MainActor.run {
+                    self.handleOAuthError(OAuthError.tokenExchangeFailed)
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.handleOAuthError(error)
+            }
+        }
+    }
+    
+    private func exchangeCodeViaBackend(code: String, state: String, service: String) async throws -> Bool {
+        let deviceId = extractDeviceId(from: state)
+        let endpoint = "\(Constants.API.baseURL)/api/oauth/public/\(service)/callback"
+        
+        var request = URLRequest(url: URL(string: endpoint)!)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = [
+            "code": code,
+            "state": state,
+            "deviceId": deviceId
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📡 Backend OAuth response status: \(httpResponse.statusCode)")
+            
+            if httpResponse.statusCode == 200 {
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("📡 Backend OAuth response: \(json)")
+                    return json["success"] as? Bool ?? false
+                }
+                return true
+            }
+        }
+        
+        return false
     }
     
     // MARK: - Token Refresh
@@ -537,4 +678,10 @@ class KeychainService {
             throw OAuthError.keychainError
         }
     }
+}
+
+// MARK: - Notification Extensions
+
+extension Notification.Name {
+    static let oauthStatusChanged = Notification.Name("OAuthStatusChanged")
 }

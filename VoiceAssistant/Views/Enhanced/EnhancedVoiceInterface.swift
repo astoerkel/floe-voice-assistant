@@ -354,7 +354,7 @@ class EnhancedVoiceViewModel: ObservableObject {
     @Published var currentStatus: VoiceStatus = .idle
     @Published var suggestedFollowUps: [String] = []
     @Published var audioLevels: [Float] = Array(repeating: 0.1, count: 30)
-    @Published var conversationContext: ConversationContext?
+    @Published var conversationContext: VoiceConversationContext?
     
     private var lastCommand: ProcessedCommand?
     private var audioLevelTimer: Timer?
@@ -495,7 +495,7 @@ class EnhancedVoiceViewModel: ObservableObject {
 
 // CalendarEvent is now defined in SharedModels.swift
 
-struct ConversationContext {
+struct VoiceConversationContext {
     let lastCommand: ProcessedCommand?
     let activeCalendarEvent: CalendarEvent?
     let currentTask: QuickTaskItem?

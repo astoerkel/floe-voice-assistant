@@ -44,7 +44,7 @@ struct UsageAnalyticsView: View {
     }
 }
 
-struct PrivacyControlsView: View {
+struct BasicPrivacyControlsView: View {
     var body: some View {
         List {
             Text("Privacy Controls")

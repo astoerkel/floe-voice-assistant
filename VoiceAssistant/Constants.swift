@@ -9,21 +9,41 @@ import Foundation
 
 struct Constants {
     struct API {
-        static let baseURL = "https://voice-assistant-backend-899362685715.us-central1.run.app"
-        static let webhookURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api/voice/process-audio"
-        static let devWebhookURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api/voice/dev/process-audio"
-        static let apiBaseURL = "https://voice-assistant-backend-899362685715.us-central1.run.app/api"
-        static let websocketURL = "wss://voice-assistant-backend-899362685715.us-central1.run.app"
+        static let baseURL = "https://floe.cognetica.de"
+        // Simple backend endpoints
+        static let chatProcessURL = "https://floe.cognetica.de/api/chat/process"
+        static let appleSignInURL = "https://floe.cognetica.de/api/auth/apple-signin"
+        static let verifyTokenURL = "https://floe.cognetica.de/api/auth/verify"
+        static let healthURL = "https://floe.cognetica.de/health"
+        // Legacy endpoints (kept for backward compatibility)
+        static let webhookURL = "https://floe.cognetica.de/api/voice/process-audio"
+        static let textProcessURL = "https://floe.cognetica.de/api/voice/process-text"
+        static let devWebhookURL = "https://floe.cognetica.de/api/voice/dev/process-audio"
+        static let apiBaseURL = "https://floe.cognetica.de/api"
+        static let websocketURL = "wss://floe.cognetica.de/socket.io/"
         static let defaultVoiceId = "default"
-        static let requestTimeout: TimeInterval = 30.0
-        static let apiKey = "voice-assistant-api-key-2024"
+        static let requestTimeout: TimeInterval = 90.0
+        // SECURITY FIX: API key should be loaded from secure keychain or environment
+        static let apiKey: String = {
+            // Try to load from build configuration first
+            if let key = Bundle.main.object(forInfoDictionaryKey: "API_KEY") as? String, !key.isEmpty {
+                return key
+            }
+            // TEMPORARY FIX: Use a valid API key for development
+            // TODO: Replace with proper API key management
+            #if DEBUG
+            return "voice-assistant-api-key-2024"  // Must match production API_KEY_ENV
+            #else
+            return "voice-assistant-api-key-2024"  // Must match production API_KEY_ENV
+            #endif
+        }()
     }
     
     struct Audio {
         static let sampleRate: Double = 16000.0
         static let bitDepth: Int = 16
         static let channels: Int = 1
-        static let audioFormat = "m4a"
+        static let audioFormat = "wav"
         static let maxRecordingDuration: TimeInterval = 60.0
     }
     

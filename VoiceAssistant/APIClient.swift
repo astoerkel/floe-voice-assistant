@@ -5,9 +5,10 @@
 //  Created by Amit Störkel on 16.07.25.
 //
 import Foundation
+import UIKit
 
-class APIClient: ObservableObject {
-    static let shared = APIClient()
+public class APIClient: ObservableObject {
+    public static let shared = APIClient()
     
     private let baseURL: String
     private let session: URLSession
@@ -19,6 +20,7 @@ class APIClient: ObservableObject {
     @Published var lastError: Error?
     @Published var isAuthenticated = false
     @Published var isWebSocketConnected = false
+    @Published var isReachable = false
     
     init(baseURL: String = Constants.API.baseURL) {
         self.baseURL = baseURL
@@ -43,7 +45,19 @@ class APIClient: ObservableObject {
     private func loadTokens() {
         self.accessToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.accessToken)
         self.refreshToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.refreshToken)
-        self.isAuthenticated = (accessToken != nil)
+        
+        // Check both main access token and development mode
+        let hasMainToken = (accessToken != nil)
+        let isDevelopmentMode = UserDefaults.standard.bool(forKey: "development_mode")
+        
+        // Allow authentication in development mode with mock tokens
+        self.isAuthenticated = hasMainToken || (isDevelopmentMode && accessToken != nil)
+        
+        print("🔍 APIClient: Authentication status - mainToken: \(hasMainToken), isDevelopmentMode: \(isDevelopmentMode), isAuthenticated: \(self.isAuthenticated)")
+        
+        if isDevelopmentMode {
+            print("🔧 Running in development mode with mock authentication")
+        }
     }
     
     private func saveTokens(accessToken: String, refreshToken: String) {
@@ -59,12 +73,33 @@ class APIClient: ObservableObject {
         connectWebSocket()
     }
     
+    // Public method to refresh authentication status after OAuth completion
+    public func refreshAuthenticationStatus() {
+        loadTokens()
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
     private func addCommonHeaders(to request: inout URLRequest) {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
         
         if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+    }
+    
+    private func addCommonHeadersAsync(to request: inout URLRequest) async {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
+        
+        // Use main access token for authentication
+        if let accessToken = accessToken {
+            print("🔑 Using main access token")
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            print("❌ No authentication token available")
         }
     }
     
@@ -123,17 +158,53 @@ class APIClient: ObservableObject {
         webSocketManager.connect(accessToken: accessToken)
     }
     
+    // MARK: - Helper Methods
+    
+    /// Update OAuth integration status from backend before making voice requests
+    private func updateOAuthIntegrationStatus() async {
+        print("🔄 APIClient: Updating OAuth integration status from backend...")
+        await OAuthManager.shared.checkIntegrationStatusAsync()
+        print("✅ APIClient: OAuth integration status updated")
+    }
+    
+    /// Get current integration status for including in voice requests
+    private func getCurrentIntegrationStatus() async -> [String: Any] {
+        return await MainActor.run {
+            // Get integration status from shared OAuthManager
+            let oauthManager = OAuthManager.shared
+            
+            // Debug current OAuth status
+            print("🔍 APIClient: Getting OAuth status from OAuthManager.shared")
+            print("🔍 APIClient: Google connected = \(oauthManager.isGoogleConnected)")
+            print("🔍 APIClient: Airtable connected = \(oauthManager.isAirtableConnected)")
+            print("🔍 APIClient: Total integrations = \(oauthManager.integrations.count)")
+            
+            return [
+                "google": [
+                    "connected": oauthManager.isGoogleConnected,
+                    "scopes": ["gmail.readonly", "calendar.readonly"],
+                    "lastUpdated": Date().timeIntervalSince1970
+                ],
+                "airtable": [
+                    "connected": oauthManager.isAirtableConnected,
+                    "scopes": ["read", "write"],
+                    "lastUpdated": Date().timeIntervalSince1970
+                ]
+            ]
+        }
+    }
+    
     // MARK: - Authentication Methods
     
     func authenticateWithApple(idToken: String, user: [String: Any]?, completion: @escaping (Result<Bool, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/api/auth/apple-signin") else {
+        guard let url = URL(string: Constants.API.appleSignInURL) else {
             completion(.failure(VoiceAssistantError.networkError))
             return
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        addCommonHeaders(to: &request)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let body: [String: Any] = [
             "idToken": idToken,
@@ -165,10 +236,20 @@ class APIClient: ObservableObject {
             }
             
             do {
-                let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-                self?.saveTokens(accessToken: authResponse.accessToken, refreshToken: authResponse.refreshToken)
-                DispatchQueue.main.async {
-                    completion(.success(true))
+                // Parse simple backend response format
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let success = jsonResponse["success"] as? Bool,
+                   success,
+                   let token = jsonResponse["token"] as? String {
+                    // Store the JWT token from simple backend
+                    self?.setAuthToken(token)
+                    DispatchQueue.main.async {
+                        completion(.success(true))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(VoiceAssistantError.authenticationFailed))
+                    }
                 }
             } catch {
                 DispatchQueue.main.async {
@@ -252,6 +333,298 @@ class APIClient: ObservableObject {
     
     // MARK: - Voice Command Methods
     
+    /// Simple text processing for the simple backend
+    func processTextSimple(text: String, completion: @escaping (Result<VoiceResponse, Error>) -> Void) {
+        guard isAuthenticated else {
+            completion(.failure(VoiceAssistantError.authenticationRequired))
+            return
+        }
+        
+        guard let url = URL(string: Constants.API.chatProcessURL) else {
+            completion(.failure(VoiceAssistantError.networkError))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let body: [String: Any] = ["text": text]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        session.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  200...299 ~= httpResponse.statusCode,
+                  let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.networkError))
+                }
+                return
+            }
+            
+            do {
+                // Parse simple backend response format
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let success = jsonResponse["success"] as? Bool,
+                   success,
+                   let text = jsonResponse["text"] as? String {
+                    
+                    let audioBase64 = jsonResponse["audioBase64"] as? String
+                    
+                    // Create VoiceResponse compatible with existing code
+                    let voiceResponse = VoiceResponse(
+                        text: text,
+                        success: true,
+                        audioBase64: audioBase64
+                    )
+                    
+                    DispatchQueue.main.async {
+                        completion(.success(voiceResponse))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(VoiceAssistantError.invalidResponse))
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+    
+    /// Process voice command with processing flags for hybrid decision making
+    func processVoiceCommandWithFlags(
+        text: String,
+        audioData: Data? = nil,
+        processingFlags: ProcessingFlags,
+        context: APIVoiceContext
+    ) async throws -> ServerVoiceResponse {
+        guard isAuthenticated else {
+            throw VoiceAssistantError.authenticationRequired
+        }
+        
+        let endpoint = audioData != nil ? "/api/voice/process-audio" : "/api/voice/process-text"
+        
+        if let audioData = audioData {
+            // Use multipart request for audio
+            return try await processAudioWithFlags(audioData: audioData, processingFlags: processingFlags, context: context)
+        } else {
+            // Use JSON request for text
+            return try await processTextWithFlags(text: text, processingFlags: processingFlags, context: context)
+        }
+    }
+    
+    private func processTextWithFlags(
+        text: String,
+        processingFlags: ProcessingFlags,
+        context: APIVoiceContext
+    ) async throws -> ServerVoiceResponse {
+        guard let url = URL(string: "\(baseURL)/api/voice/process-text") else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        addCommonHeaders(to: &request)
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        // Get current integration status
+        let integrationStatus = await getCurrentIntegrationStatus()
+        print("🔍 Sending integration status to backend: \(integrationStatus)")
+        
+        // Debug OAuth status specifically
+        if let googleStatus = integrationStatus["google"] as? [String: Any],
+           let isConnected = googleStatus["connected"] as? Bool {
+            print("🔍 Google OAuth connected status being sent: \(isConnected)")
+        } else {
+            print("❌ Failed to extract Google OAuth status from integration data")
+        }
+        
+        let requestBody: [String: Any] = [
+            "text": text,
+            "context": [
+                "sessionId": context.sessionId,
+                "platform": context.platform,
+                "deviceModel": context.deviceModel,
+                "timestamp": ISO8601DateFormatter().string(from: Date()),
+                "connectedServices": integrationStatus
+            ],
+            "processingFlags": [
+                "onDeviceCapable": processingFlags.onDeviceCapable,
+                "complexityScore": processingFlags.complexityScore,
+                "privacyRequired": processingFlags.privacyRequired,
+                "resourceConstraints": [
+                    "batteryLevel": processingFlags.resourceConstraints.batteryLevel,
+                    "networkQuality": processingFlags.resourceConstraints.networkQuality.rawValue,
+                    "memoryPressure": processingFlags.resourceConstraints.memoryPressure,
+                    "thermalState": processingFlags.resourceConstraints.thermalState
+                ]
+            ]
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              200...299 ~= httpResponse.statusCode else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        let backendResponse = try JSONDecoder().decode(BackendVoiceResponse.self, from: data)
+        return ServerVoiceResponse(from: backendResponse)
+    }
+    
+    private func processAudioWithFlags(
+        audioData: Data,
+        processingFlags: ProcessingFlags,
+        context: APIVoiceContext
+    ) async throws -> ServerVoiceResponse {
+        guard let url = URL(string: "\(baseURL)/api/voice/process-audio") else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        var body = Data()
+        
+        // Add sessionId field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"sessionId\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(context.sessionId)\r\n".data(using: .utf8)!)
+        
+        // Add processing flags
+        let processingFlagsData = try JSONSerialization.data(withJSONObject: [
+            "onDeviceCapable": processingFlags.onDeviceCapable,
+            "complexityScore": processingFlags.complexityScore,
+            "privacyRequired": processingFlags.privacyRequired,
+            "resourceConstraints": [
+                "batteryLevel": processingFlags.resourceConstraints.batteryLevel,
+                "networkQuality": processingFlags.resourceConstraints.networkQuality.rawValue,
+                "memoryPressure": processingFlags.resourceConstraints.memoryPressure,
+                "thermalState": processingFlags.resourceConstraints.thermalState
+            ]
+        ])
+        
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"processingFlags\"\r\n\r\n".data(using: .utf8)!)
+        body.append(processingFlagsData)
+        body.append("\r\n".data(using: .utf8)!)
+        
+        // Add audio file
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"audio.m4a\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
+        body.append(audioData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              200...299 ~= httpResponse.statusCode else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        let backendResponse = try JSONDecoder().decode(BackendVoiceResponse.self, from: data)
+        return ServerVoiceResponse(from: backendResponse)
+    }
+    
+    /// Check if on-device processing is available for the given text
+    func checkOnDeviceCapability(for text: String) -> OnDeviceCapabilityResult {
+        // Basic heuristics for on-device capability
+        let wordCount = text.split(separator: " ").count
+        let complexity = calculateTextComplexity(text)
+        
+        let canProcessLocally = wordCount <= 20 && complexity < 0.7
+        let confidence = canProcessLocally ? 0.8 : 0.3
+        
+        return OnDeviceCapabilityResult(
+            canProcessLocally: canProcessLocally,
+            confidence: confidence,
+            estimatedProcessingTime: wordCount < 10 ? 0.5 : 1.2,
+            supportedCapabilities: getSupportedCapabilities(for: text)
+        )
+    }
+    
+    private func calculateTextComplexity(_ text: String) -> Double {
+        let hasQuestions = text.contains("?")
+        let hasComplexWords = text.split(separator: " ").contains { $0.count > 8 }
+        let hasNumbers = text.rangeOfCharacter(from: .decimalDigits) != nil
+        
+        var complexity = 0.0
+        if hasQuestions { complexity += 0.3 }
+        if hasComplexWords { complexity += 0.2 }
+        if hasNumbers { complexity += 0.1 }
+        
+        return min(complexity, 1.0)
+    }
+    
+    private func getSupportedCapabilities(for text: String) -> [OnDeviceCapability] {
+        var capabilities: [OnDeviceCapability] = []
+        
+        let lowercaseText = text.lowercased()
+        
+        if lowercaseText.contains("time") || lowercaseText.contains("date") {
+            capabilities.append(.timeQueries)
+        }
+        
+        if lowercaseText.contains("calculate") || lowercaseText.contains("math") {
+            capabilities.append(.basicCalculations)
+        }
+        
+        if lowercaseText.contains("calendar") || lowercaseText.contains("meeting") {
+            capabilities.append(.cachedCalendar)
+        }
+        
+        if lowercaseText.contains("contact") || lowercaseText.contains("call") {
+            capabilities.append(.cachedContacts)
+        }
+        
+        if lowercaseText.contains("weather") {
+            capabilities.append(.cachedWeather)
+        }
+        
+        if lowercaseText.contains("reminder") || lowercaseText.contains("note") {
+            capabilities.append(.simpleReminders)
+        }
+        
+        return capabilities
+    }
+    
     func sendVoiceCommand(_ request: VoiceRequest, completion: @escaping (Result<VoiceResponse, Error>) -> Void) {
         guard isAuthenticated else {
             completion(.failure(VoiceAssistantError.authenticationRequired))
@@ -272,7 +645,7 @@ class APIClient: ObservableObject {
             webSocketManager.sendVoiceCommand(request)
         } else {
             // Fall back to HTTP API
-            performAuthenticatedRequest(endpoint: "/api/voice/process", method: "POST", body: request) { result in
+            performAuthenticatedRequest(endpoint: "/api/voice/process-text", method: "POST", body: request) { result in
                 switch result {
                 case .success(let data):
                     self.parseVoiceResponse(data) { result in
@@ -298,13 +671,56 @@ class APIClient: ObservableObject {
             return
         }
         
-        // Use HTTP API for enhanced responses
-        performAuthenticatedRequest(endpoint: "/api/voice/process", method: "POST", body: request) { result in
-            switch result {
-            case .success(let data):
-                self.parseVoiceResponse(data, completion: completion)
-            case .failure(let error):
-                completion(.failure(error))
+        print("🔍 APIClient.sendVoiceCommandEnhanced: Starting enhanced voice command processing")
+        
+        Task {
+            // CRITICAL: First check and update OAuth integration status from backend
+            await updateOAuthIntegrationStatus()
+            
+            // Now get the updated OAuth integration status
+            let integrationStatus = await getCurrentIntegrationStatus()
+            print("🔍 APIClient.sendVoiceCommandEnhanced: OAuth integration status: \(integrationStatus)")
+            
+            // Create enhanced request with OAuth status using Codable struct
+            let enhancedRequest = EnhancedVoiceRequest(
+                text: request.text,
+                context: request.context,
+                platform: request.platform,
+                integrations: integrationStatus
+            )
+            
+            print("🔍 APIClient.sendVoiceCommandEnhanced: Sending enhanced request with OAuth status")
+            
+            await MainActor.run {
+                // Debug: Log the actual request being sent
+                do {
+                    let requestData = try JSONEncoder().encode(enhancedRequest)
+                    if let requestJSON = String(data: requestData, encoding: .utf8) {
+                        print("📤 APIClient.sendVoiceCommandEnhanced: Sending request JSON:")
+                        print(requestJSON)
+                    }
+                } catch {
+                    print("❌ APIClient.sendVoiceCommandEnhanced: Failed to encode request for logging: \(error)")
+                }
+                
+                // Use HTTP API for enhanced responses with OAuth integration status
+                self.performAuthenticatedRequest(endpoint: "/api/voice/process-text", method: "POST", body: enhancedRequest) { result in
+                    switch result {
+                    case .success(let data):
+                        print("🔍 APIClient.sendVoiceCommandEnhanced: Received response, parsing...")
+                        
+                        // Debug: Log raw response
+                        if let responseJSON = String(data: data, encoding: .utf8) {
+                            print("📥 APIClient.sendVoiceCommandEnhanced: Raw response:")
+                            print(responseJSON.prefix(500))
+                        }
+                        
+                        self.parseVoiceResponse(data, completion: completion)
+                    case .failure(let error):
+                        print("❌ APIClient.sendVoiceCommandEnhanced: Request failed: \(error.localizedDescription)")
+                        completion(.failure(error))
+                    }
+                }
             }
         }
     }
@@ -398,8 +814,22 @@ class APIClient: ObservableObject {
     }
     
     private func performRequest(request: URLRequest, completion: @escaping (Result<Data, Error>) -> Void) {
+        // DEBUG: Log request details
+        print("🌐 API REQUEST DEBUG:")
+        print("   URL: \(request.url?.absoluteString ?? "nil")")
+        print("   Method: \(request.httpMethod ?? "nil")")
+        print("   Headers:")
+        for (key, value) in request.allHTTPHeaderFields ?? [:] {
+            if key == "Authorization" {
+                print("     \(key): \(value.prefix(20))...")
+            } else {
+                print("     \(key): \(value)")
+            }
+        }
+        
         session.dataTask(with: request) { [weak self] data, response, error in
             if let error = error {
+                print("❌ REQUEST ERROR: \(error)")
                 DispatchQueue.main.async {
                     self?.lastError = error
                     completion(.failure(error))
@@ -408,6 +838,7 @@ class APIClient: ObservableObject {
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ INVALID HTTP RESPONSE")
                 DispatchQueue.main.async {
                     self?.lastError = VoiceAssistantError.networkError
                     completion(.failure(VoiceAssistantError.networkError))
@@ -415,14 +846,24 @@ class APIClient: ObservableObject {
                 return
             }
             
+            print("📡 RESPONSE DEBUG:")
+            print("   Status Code: \(httpResponse.statusCode)")
+            print("   Headers: \(httpResponse.allHeaderFields)")
+            if let data = data, let responseString = String(data: data, encoding: .utf8) {
+                print("   Response Body: \(responseString.prefix(500))...")
+            }
+            
             // Handle 401 by attempting token refresh
             if httpResponse.statusCode == 401 {
+                print("🚨 401 UNAUTHORIZED - Attempting token refresh")
                 self?.refreshAccessToken { result in
                     switch result {
                     case .success:
+                        print("✅ Token refreshed successfully, retrying request")
                         // Retry the original request
                         self?.performRequest(request: request, completion: completion)
                     case .failure(let error):
+                        print("❌ Token refresh failed: \(error)")
                         DispatchQueue.main.async {
                             completion(.failure(error))
                         }
@@ -478,24 +919,17 @@ class APIClient: ObservableObject {
         do {
             let backendResponse = try JSONDecoder().decode(BackendVoiceResponse.self, from: data)
             
-            // Create enhanced response with backend information
-            let response = EnhancedVoiceResponse(
-                text: backendResponse.response ?? "",
-                success: backendResponse.success,
-                audioBase64: backendResponse.audioResponse?.audioBase64,
-                intent: backendResponse.intent,
-                confidence: backendResponse.confidence,
-                agentUsed: backendResponse.agentUsed,
-                executionTime: backendResponse.executionTime,
-                actions: backendResponse.actions,
-                suggestions: backendResponse.suggestions
-            )
+            // Convert backend response to enhanced response
+            let response = EnhancedVoiceResponse(from: backendResponse)
             
             DispatchQueue.main.async {
                 completion(.success(response))
             }
         } catch {
             print("❌ Failed to parse voice response: \(error)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("❌ Response JSON: \(jsonString)")
+            }
             DispatchQueue.main.async {
                 self.lastError = error
                 completion(.failure(error))
@@ -565,16 +999,28 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        addCommonHeaders(to: &request)
+        await addCommonHeadersAsync(to: &request)
         
-        if let accessToken = accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        // Debug: Log the request headers
+        print("🌐 GET Request to \(endpoint)")
+        if let authHeader = request.value(forHTTPHeaderField: "Authorization") {
+            print("🔑 Authorization header present: \(authHeader.prefix(20))...")
+        } else {
+            print("❌ No Authorization header found")
         }
         
         let (data, response) = try await session.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              200...299 ~= httpResponse.statusCode else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        print("📡 Response status: \(httpResponse.statusCode)")
+        
+        guard 200...299 ~= httpResponse.statusCode else {
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("📡 Error response body: \(responseString)")
+            }
             throw VoiceAssistantError.networkError
         }
         
@@ -588,11 +1034,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        addCommonHeaders(to: &request)
-        
-        if let accessToken = accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        }
+        await addCommonHeadersAsync(to: &request)
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
@@ -638,11 +1080,7 @@ class APIClient: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        addCommonHeaders(to: &request)
-        
-        if let accessToken = accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        }
+        await addCommonHeadersAsync(to: &request)
         
         let (data, response) = try await session.data(for: request)
         
@@ -653,4 +1091,215 @@ class APIClient: ObservableObject {
         
         return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
     }
+    
+    // MARK: - User Preferences Methods
+    
+    func updateUserPreferences(_ preferences: UserPreferences) async throws -> Bool {
+        guard isAuthenticated else {
+            throw VoiceAssistantError.authenticationRequired
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/user/preferences") else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        addCommonHeaders(to: &request)
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        do {
+            request.httpBody = try JSONEncoder().encode(preferences)
+        } catch {
+            throw VoiceAssistantError.networkError
+        }
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        // Handle 401 by attempting token refresh
+        if httpResponse.statusCode == 401 {
+            return try await withCheckedThrowingContinuation { continuation in
+                refreshAccessToken { result in
+                    switch result {
+                    case .success:
+                        Task {
+                            do {
+                                let success = try await self.updateUserPreferences(preferences)
+                                continuation.resume(returning: success)
+                            } catch {
+                                continuation.resume(throwing: error)
+                            }
+                        }
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+        
+        guard 200...299 ~= httpResponse.statusCode else {
+            let error = mapHTTPStatusToError(httpResponse.statusCode)
+            throw error
+        }
+        
+        do {
+            let response = try JSONDecoder().decode(UserPreferencesResponse.self, from: data)
+            return response.success
+        } catch {
+            throw VoiceAssistantError.invalidResponse
+        }
+    }
+    
+    func getUserPreferences() async throws -> UserPreferences {
+        guard isAuthenticated else {
+            throw VoiceAssistantError.authenticationRequired
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/user/preferences") else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        addCommonHeaders(to: &request)
+        
+        if let accessToken = accessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VoiceAssistantError.networkError
+        }
+        
+        // Handle 401 by attempting token refresh
+        if httpResponse.statusCode == 401 {
+            return try await withCheckedThrowingContinuation { continuation in
+                refreshAccessToken { result in
+                    switch result {
+                    case .success:
+                        Task {
+                            do {
+                                let preferences = try await self.getUserPreferences()
+                                continuation.resume(returning: preferences)
+                            } catch {
+                                continuation.resume(throwing: error)
+                            }
+                        }
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+        
+        guard 200...299 ~= httpResponse.statusCode else {
+            let error = mapHTTPStatusToError(httpResponse.statusCode)
+            throw error
+        }
+        
+        do {
+            let response = try JSONDecoder().decode(UserPreferencesResponse.self, from: data)
+            return UserPreferences.default
+        } catch {
+            throw VoiceAssistantError.invalidResponse
+        }
+    }
 }
+
+// MARK: - Hybrid Processing Support Types
+
+/// Processing flags sent to server for hybrid decision making
+public struct ProcessingFlags {
+    let onDeviceCapable: Bool
+    let complexityScore: Double
+    let privacyRequired: Bool
+    let resourceConstraints: ResourceConstraints
+}
+
+/// Resource constraints for processing decisions
+public struct ResourceConstraints {
+    let batteryLevel: Float
+    let networkQuality: NetworkQuality
+    let memoryPressure: Float
+    let thermalState: String
+}
+
+/// Network quality assessment
+public enum NetworkQuality: String, CaseIterable, Codable, Comparable {
+    case excellent = "excellent"
+    case good = "good"
+    case fair = "fair"
+    case poor = "poor"
+    case unavailable = "unavailable"
+    
+    public static func < (lhs: NetworkQuality, rhs: NetworkQuality) -> Bool {
+        let order: [NetworkQuality] = [.unavailable, .poor, .fair, .good, .excellent]
+        guard let lhsIndex = order.firstIndex(of: lhs),
+              let rhsIndex = order.firstIndex(of: rhs) else {
+            return false
+        }
+        return lhsIndex < rhsIndex
+    }
+}
+
+/// Voice processing context for API calls
+public struct APIVoiceContext {
+    let sessionId: String
+    let platform: String
+    let deviceModel: String
+    
+    public init(sessionId: String = UUID().uuidString, platform: String = "iOS", deviceModel: String = UIDevice.current.model) {
+        self.sessionId = sessionId
+        self.platform = platform
+        self.deviceModel = deviceModel
+    }
+}
+
+/// Server voice response with enhanced metadata
+public struct ServerVoiceResponse {
+    public let response: String
+    public let audioBase64: String?
+    public let confidence: Double
+    public let serverProcessingTime: TimeInterval
+    public let modelUsed: String?
+    public let tokensConsumed: Int?
+    
+    internal init(from backendResponse: BackendVoiceResponse) {
+        self.response = backendResponse.response?.text ?? ""
+        self.audioBase64 = backendResponse.audioResponse?.audioBase64
+        self.confidence = backendResponse.confidence ?? 0
+        self.serverProcessingTime = TimeInterval(backendResponse.processingTime ?? 0) / 1000.0
+        self.modelUsed = backendResponse.agentUsed
+        self.tokensConsumed = nil // Not available in current backend response
+    }
+}
+
+/// On-device capability result
+public struct OnDeviceCapabilityResult {
+    public let canProcessLocally: Bool
+    public let confidence: Double
+    public let estimatedProcessingTime: TimeInterval
+    public let supportedCapabilities: [OnDeviceCapability]
+}
+
+/// On-device capabilities
+public enum OnDeviceCapability: String, CaseIterable {
+    case timeQueries = "time_queries"
+    case basicCalculations = "basic_calculations"
+    case cachedCalendar = "cached_calendar"
+    case cachedContacts = "cached_contacts"
+    case cachedWeather = "cached_weather"
+    case simpleReminders = "simple_reminders"
+    case deviceControl = "device_control"
+    case conversationHistory = "conversation_history"
+}
+

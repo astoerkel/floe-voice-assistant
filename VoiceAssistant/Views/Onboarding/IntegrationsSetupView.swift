@@ -10,7 +10,7 @@ import SwiftUI
 struct IntegrationsSetupView: View {
     @ObservedObject var apiClient: APIClient
     let onComplete: () -> Void
-    @StateObject private var oauthManager = OAuthManager()
+    @ObservedObject private var oauthManager = OAuthManager.shared
     @State private var showAuthenticationFirst = false
     
     var body: some View {

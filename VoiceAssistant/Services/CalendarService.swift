@@ -262,7 +262,7 @@ class CalendarService: ObservableObject {
         }
         
         // If Google Calendar is connected, also save there
-        if await oauthService.isConnected("google_calendar") {
+        if oauthService.isConnected("google_calendar") {
             do {
                 try await saveToGoogleCalendar(details)
                 print("✅ Event saved to Google Calendar: \(details.title)")

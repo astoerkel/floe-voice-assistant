@@ -1,14 +1,37 @@
 import Foundation
 import Speech
 import AVFoundation
+import Combine
 
-class SpeechRecognizer: ObservableObject {
+public class SpeechRecognizer: ObservableObject {
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    let enhancedSpeechRecognizer: EnhancedSpeechRecognizer
     
     @Published var isAuthorized = false
+    @Published var isEnhanced = false
+    @Published var useHybridMode = true
+    @Published var processingMode: EnhancedSpeechRecognizer.ProcessingMode = .hybrid
+    @Published var confidenceScore: Float = 0.0
     
     init() {
+        self.enhancedSpeechRecognizer = EnhancedSpeechRecognizer()
         checkAuthorization()
+        setupEnhanced()
+    }
+    
+    private func setupEnhanced() {
+        // Subscribe to enhanced recognizer updates
+        enhancedSpeechRecognizer.$isEnhanced
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$isEnhanced)
+            
+        enhancedSpeechRecognizer.$processingMode
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$processingMode)
+            
+        enhancedSpeechRecognizer.$confidenceScore
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$confidenceScore)
     }
     
     private func checkAuthorization() {
@@ -32,14 +55,121 @@ class SpeechRecognizer: ObservableObject {
         }
     }
     
+    // MARK: - Hybrid Transcription (Enhanced + Fallback)
+    
     func transcribe(_ audioData: Data, completion: @escaping (Result<String, Error>) -> Void) {
-        print("🎤 SpeechRecognizer: Starting transcription of \(audioData.count) bytes")
+        print("🎤 SpeechRecognizer: Starting simple Apple Speech Recognition transcription of \(audioData.count) bytes")
         
         guard isAuthorized else {
             print("❌ SpeechRecognizer: Not authorized")
             completion(.failure(SpeechRecognitionError.notAuthorized))
             return
         }
+        
+        // Use simple standard transcription for better accuracy
+        // Skip enhanced/hybrid mode to avoid complex processing that may cause errors
+        simpleTranscribe(audioData, completion: completion)
+    }
+    
+    // MARK: - Simple Apple Speech Recognition (High Accuracy)
+    
+    private func simpleTranscribe(_ audioData: Data, completion: @escaping (Result<String, Error>) -> Void) {
+        print("📱 SpeechRecognizer: Using simple Apple Speech Recognition (no enhancements)")
+        
+        guard let speechRecognizer = speechRecognizer, speechRecognizer.isAvailable else {
+            print("❌ SpeechRecognizer: Apple Speech Recognition not available")
+            completion(.failure(SpeechRecognitionError.notAvailable))
+            return
+        }
+        
+        do {
+            // Create temporary M4A file for the audio data (now compatible with SFSpeechRecognizer)
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("speech_recognition.m4a")
+            try audioData.write(to: tempURL)
+            print("📱 SpeechRecognizer: Created M4A file at \(tempURL)")
+            
+            // Create recognition request with minimal configuration
+            let request = SFSpeechURLRecognitionRequest(url: tempURL)
+            request.shouldReportPartialResults = false
+            request.taskHint = .dictation  // Use dictation for general speech
+            
+            // Optional: Add context for better accuracy (but keep it simple)
+            if #available(iOS 16.0, *) {
+                request.addsPunctuation = true
+            }
+            
+            print("📱 SpeechRecognizer: Starting simple recognition task")
+            speechRecognizer.recognitionTask(with: request) { result, error in
+                defer {
+                    // Clean up temp file
+                    try? FileManager.default.removeItem(at: tempURL)
+                }
+                
+                if let error = error {
+                    print("❌ Simple transcription failed: \(error.localizedDescription)")
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let result = result else {
+                    print("❌ Simple transcription: No result")
+                    completion(.failure(SpeechRecognitionError.noResult))
+                    return
+                }
+                
+                if result.isFinal {
+                    let transcribedText = result.bestTranscription.formattedString
+                    let confidence = result.bestTranscription.segments.isEmpty ? 0.0 : 
+                        result.bestTranscription.segments.map { $0.confidence }.reduce(0, +) / Float(result.bestTranscription.segments.count)
+                    
+                    print("✅ Simple transcription complete: '\(transcribedText)' (confidence: \(confidence))")
+                    completion(.success(transcribedText))
+                }
+            }
+            
+        } catch {
+            print("❌ Failed to setup simple transcription: \(error.localizedDescription)")
+            completion(.failure(error))
+        }
+    }
+    
+    private func enhancedTranscribe(_ audioData: Data, completion: @escaping (Result<String, Error>) -> Void) {
+        print("🚀 SpeechRecognizer: Using enhanced transcription")
+        
+        enhancedSpeechRecognizer.enhancedTranscribe(audioData) { result in
+            switch result {
+            case .success(let enhancedResult):
+                print("✅ Enhanced transcription complete - confidence: \(enhancedResult.confidence)")
+                
+                // Check if confidence is high enough
+                if enhancedResult.confidence >= 0.75 {
+                    completion(.success(enhancedResult.text))
+                } else {
+                    // Fall back to standard transcription for low confidence
+                    print("⚠️ Low confidence (\(enhancedResult.confidence)), falling back to standard")
+                    self.standardTranscribe(audioData) { fallbackResult in
+                        switch fallbackResult {
+                        case .success(let fallbackText):
+                            // Choose the better result
+                            let betterResult = enhancedResult.confidence > 0.5 ? enhancedResult.text : fallbackText
+                            completion(.success(betterResult))
+                        case .failure:
+                            // Use enhanced result even if confidence is lower
+                            completion(.success(enhancedResult.text))
+                        }
+                    }
+                }
+                
+            case .failure(let error):
+                print("❌ Enhanced transcription failed: \(error.localizedDescription)")
+                // Fall back to standard transcription
+                self.standardTranscribe(audioData, completion: completion)
+            }
+        }
+    }
+    
+    private func standardTranscribe(_ audioData: Data, completion: @escaping (Result<String, Error>) -> Void) {
+        print("🎤 SpeechRecognizer: Using standard transcription")
         
         guard let speechRecognizer = speechRecognizer, speechRecognizer.isAvailable else {
             print("❌ SpeechRecognizer: Not available")
@@ -100,15 +230,59 @@ class SpeechRecognizer: ObservableObject {
         }
     }
     
-    // Real-time transcription for live audio (for future enhancement)
+    // MARK: - Enhanced Real-time Transcription
+    
     func transcribeRealTime(_ audioData: Data, partialResultsHandler: @escaping (String) -> Void, completion: @escaping (Result<String, Error>) -> Void) {
-        print("🎤 SpeechRecognizer: Starting real-time transcription of \(audioData.count) bytes")
+        print("🎤 SpeechRecognizer: Starting enhanced real-time transcription of \(audioData.count) bytes")
         
         guard isAuthorized else {
             print("❌ SpeechRecognizer: Not authorized")
             completion(.failure(SpeechRecognitionError.notAuthorized))
             return
         }
+        
+        // Use enhanced real-time transcription if available
+        if useHybridMode && isEnhanced {
+            enhancedRealTimeTranscribe(audioData, partialResultsHandler: partialResultsHandler, completion: completion)
+        } else {
+            standardRealTimeTranscribe(audioData, partialResultsHandler: partialResultsHandler, completion: completion)
+        }
+    }
+    
+    private func enhancedRealTimeTranscribe(_ audioData: Data, partialResultsHandler: @escaping (String) -> Void, completion: @escaping (Result<String, Error>) -> Void) {
+        print("🚀 SpeechRecognizer: Using enhanced real-time transcription")
+        
+        enhancedSpeechRecognizer.startEnhancedRealTimeTranscription(
+            partialResultsHandler: { enhancedResult in
+                // Update confidence score
+                DispatchQueue.main.async {
+                    self.confidenceScore = enhancedResult.confidence
+                    self.processingMode = enhancedResult.processingMode
+                }
+                
+                // Pass through enhanced text with confidence indicators
+                let enhancedText = enhancedResult.confidence > 0.8 ? 
+                    enhancedResult.text : 
+                    enhancedResult.text + " ⚠️"
+                
+                partialResultsHandler(enhancedText)
+            },
+            completion: { result in
+                switch result {
+                case .success(let enhancedResult):
+                    print("✅ Enhanced real-time transcription complete")
+                    completion(.success(enhancedResult.text))
+                case .failure(let error):
+                    print("❌ Enhanced real-time transcription failed: \(error.localizedDescription)")
+                    // Fall back to standard real-time transcription
+                    self.standardRealTimeTranscribe(audioData, partialResultsHandler: partialResultsHandler, completion: completion)
+                }
+            }
+        )
+    }
+    
+    private func standardRealTimeTranscribe(_ audioData: Data, partialResultsHandler: @escaping (String) -> Void, completion: @escaping (Result<String, Error>) -> Void) {
+        print("🎤 SpeechRecognizer: Using standard real-time transcription")
         
         guard let speechRecognizer = speechRecognizer, speechRecognizer.isAvailable else {
             print("❌ SpeechRecognizer: Not available")
@@ -178,6 +352,102 @@ class SpeechRecognizer: ObservableObject {
             print("❌ SpeechRecognizer: File error: \(error.localizedDescription)")
             completion(.failure(error))
         }
+    }
+    
+    // MARK: - Enhanced Features Control
+    
+    func toggleHybridMode() {
+        useHybridMode.toggle()
+        print("🔄 SpeechRecognizer: Hybrid mode \(useHybridMode ? "enabled" : "disabled")")
+    }
+    
+    func setProcessingMode(_ mode: EnhancedSpeechRecognizer.ProcessingMode) {
+        enhancedSpeechRecognizer.processingMode = mode
+        print("🎯 SpeechRecognizer: Processing mode set to \(mode.rawValue)")
+    }
+    
+    // MARK: - Learning and Adaptation
+    
+    func learnFromCorrection(original: String, corrected: String) {
+        guard isEnhanced else { return }
+        
+        Task {
+            await enhancedSpeechRecognizer.getVocabularyManager().learnFromTranscription(original, correctedText: corrected)
+            print("📚 SpeechRecognizer: Learned from correction: '\(original)' -> '\(corrected)'")
+        }
+    }
+    
+    func addCustomVocabulary(terms: [String], domain: VocabularyManager.VocabularyDomain = .custom) {
+        guard isEnhanced else { return }
+        
+        Task {
+            for term in terms {
+                await enhancedSpeechRecognizer.getVocabularyManager().addCustomTerm(term, domain: domain)
+            }
+            print("📝 SpeechRecognizer: Added \(terms.count) custom terms to \(domain.rawValue)")
+        }
+    }
+    
+    func getVocabularyStats() -> VocabularyStats? {
+        guard isEnhanced else { return nil }
+        return enhancedSpeechRecognizer.getVocabularyManager().getVocabularyStats()
+    }
+    
+    func getEnhancementStatus() -> [String: Any] {
+        var status: [String: Any] = [
+            "isEnhanced": isEnhanced,
+            "useHybridMode": useHybridMode,
+            "processingMode": processingMode.rawValue,
+            "confidenceScore": confidenceScore
+        ]
+        
+        if isEnhanced {
+            status["enhancements"] = enhancedSpeechRecognizer.enhancements
+            status["vocabularyCount"] = enhancedSpeechRecognizer.getVocabularyManager().vocabularyCount
+            
+            if let patternLearning = enhancedSpeechRecognizer.getPatternLearning().exportLearningData() as? [String: Any] {
+                status["patternLearning"] = patternLearning
+            }
+        }
+        
+        return status
+    }
+    
+    // MARK: - Privacy Controls
+    
+    func resetLearningData() {
+        guard isEnhanced else { return }
+        
+        Task {
+            await enhancedSpeechRecognizer.getPatternLearning().resetLearning()
+            print("🔄 SpeechRecognizer: Learning data reset")
+        }
+    }
+    
+    func exportPrivacyReport() -> [String: Any] {
+        guard isEnhanced else { 
+            return ["status": "Enhanced features not available"]
+        }
+        
+        var report: [String: Any] = [
+            "enhanced_features_enabled": true,
+            "learning_enabled": enhancedSpeechRecognizer.getPatternLearning().isLearningEnabled,
+            "vocabulary_learning": true,
+            "pattern_learning": true,
+            "data_encryption": "AES-256-GCM",
+            "local_storage_only": true
+        ]
+        
+        if let stats = getVocabularyStats() {
+            report["vocabulary_stats"] = [
+                "total_terms": stats.totalTerms,
+                "custom_terms": stats.customTerms,
+                "user_corrections": stats.userCorrections,
+                "last_updated": stats.lastUpdated
+            ]
+        }
+        
+        return report
     }
 }
 

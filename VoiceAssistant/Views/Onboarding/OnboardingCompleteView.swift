@@ -135,7 +135,7 @@ struct OnboardingCompleteView: View {
                 }
             }) {
                 HStack {
-                    Text(apiClient.isAuthenticated ? "Start Using Sora" : "Continue to Sign In")
+                    Text(apiClient.isAuthenticated ? "Start Using Floe" : "Continue to Sign In")
                         .font(.headline)
                         .fontWeight(.semibold)
                     

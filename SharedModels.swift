@@ -6,14 +6,105 @@
 //
 import Foundation
 
-struct VoiceResponse: Codable {
-    let text: String
-    let success: Bool
-    let audioBase64: String?
+// Backend Response Models - matching exactly what the backend returns
+public struct BackendVoiceResponse: Codable {
+    public let success: Bool
+    public let processingTime: Int?
+    public let transcriptionMethod: String?
+    public let text: String?
+    public let intent: String?
+    public let confidence: Double?
+    public let agentUsed: String?
+    public let executionTime: Double?
+    public let response: ResponseData?
+    public let audioResponse: AudioResponseData?
+    public let actions: [String]?
+    public let suggestions: [String]?
+    public let sessionId: String?
+    public let coordinatorSuccess: Bool?
     
     enum CodingKeys: String, CodingKey {
-        case text, success
-        case audioBase64 = "audioBase64"
+        case success, processingTime, transcriptionMethod, text, intent, confidence
+        case agentUsed, executionTime, response, audioResponse, actions, suggestions
+        case sessionId, coordinatorSuccess
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Handle success field that can be either Bool or String
+        if let successBool = try? container.decode(Bool.self, forKey: .success) {
+            print("📊 SUCCESS: Decoded as Bool: \(successBool)")
+            self.success = successBool
+        } else if let successString = try? container.decode(String.self, forKey: .success) {
+            print("📊 SUCCESS: Decoded as String: '\(successString)'")
+            self.success = successString.lowercased() == "true"
+            print("📊 SUCCESS: Converted to Bool: \(self.success)")
+        } else {
+            print("📊 SUCCESS: Failed to decode, defaulting to false")
+            self.success = false
+        }
+        
+        // Handle coordinatorSuccess field that can be either Bool or String
+        if let coordinatorSuccessBool = try? container.decodeIfPresent(Bool.self, forKey: .coordinatorSuccess) {
+            self.coordinatorSuccess = coordinatorSuccessBool
+        } else if let coordinatorSuccessString = try? container.decodeIfPresent(String.self, forKey: .coordinatorSuccess) {
+            self.coordinatorSuccess = coordinatorSuccessString.lowercased() == "true"
+        } else {
+            self.coordinatorSuccess = nil
+        }
+        
+        // Decode other fields normally
+        self.processingTime = try container.decodeIfPresent(Int.self, forKey: .processingTime)
+        self.transcriptionMethod = try container.decodeIfPresent(String.self, forKey: .transcriptionMethod)
+        self.text = try container.decodeIfPresent(String.self, forKey: .text)
+        self.intent = try container.decodeIfPresent(String.self, forKey: .intent)
+        self.confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
+        self.agentUsed = try container.decodeIfPresent(String.self, forKey: .agentUsed)
+        self.executionTime = try container.decodeIfPresent(Double.self, forKey: .executionTime)
+        self.response = try container.decodeIfPresent(ResponseData.self, forKey: .response)
+        self.audioResponse = try container.decodeIfPresent(AudioResponseData.self, forKey: .audioResponse)
+        self.actions = try container.decodeIfPresent([String].self, forKey: .actions)
+        self.suggestions = try container.decodeIfPresent([String].self, forKey: .suggestions)
+        self.sessionId = try container.decodeIfPresent(String.self, forKey: .sessionId)
+    }
+}
+
+public struct ResponseData: Codable {
+    public let text: String
+    public let audioUrl: String?
+    public let hapticPattern: String?
+}
+
+public struct AudioResponseData: Codable {
+    public let audioBase64: String?
+    public let audioSize: Int?
+    public let voiceConfig: VoiceConfig?
+}
+
+public struct VoiceConfig: Codable {
+    public let name: String?
+    public let languageCode: String?
+}
+
+// Legacy models for compatibility
+public struct VoiceResponse: Codable {
+    public let text: String
+    public let success: Bool
+    public let audioBase64: String?
+    
+    // Legacy initializer for Watch app compatibility
+    public init(text: String, success: Bool, audioBase64: String?) {
+        self.text = text
+        self.success = success
+        self.audioBase64 = audioBase64
+    }
+    
+    // Convert from BackendVoiceResponse
+    public init(from backendResponse: BackendVoiceResponse) {
+        self.success = backendResponse.success
+        self.text = backendResponse.response?.text ?? backendResponse.text ?? "No response"
+        self.audioBase64 = backendResponse.audioResponse?.audioBase64
     }
 }
 
@@ -28,6 +119,19 @@ struct EnhancedVoiceResponse: Codable {
     let actions: [String]?
     let suggestions: [String]?
     
+    // Convert from BackendVoiceResponse
+    init(from backendResponse: BackendVoiceResponse) {
+        self.success = backendResponse.success
+        self.text = backendResponse.response?.text ?? backendResponse.text ?? "No response"
+        self.audioBase64 = backendResponse.audioResponse?.audioBase64
+        self.intent = backendResponse.intent
+        self.confidence = backendResponse.confidence
+        self.agentUsed = backendResponse.agentUsed
+        self.executionTime = backendResponse.executionTime
+        self.actions = backendResponse.actions
+        self.suggestions = backendResponse.suggestions
+    }
+    
     // Convert to basic VoiceResponse for compatibility
     var voiceResponse: VoiceResponse {
         return VoiceResponse(
@@ -40,15 +144,80 @@ struct EnhancedVoiceResponse: Codable {
 
 struct VoiceRequest: Codable {
     let text: String
-    let sessionId: String
-    let metadata: [String: String]?
-    let generateAudio: Bool
+    let context: VoiceContext
+    let platform: String
     
-    init(text: String, sessionId: String, metadata: [String: String]? = nil, generateAudio: Bool = true) {
+    init(text: String, sessionId: String, metadata: [String: String]? = nil, generateAudio: Bool = true, platform: String = "ios") {
         self.text = text
+        self.platform = platform
+        self.context = VoiceContext(sessionId: sessionId, metadata: metadata)
+    }
+}
+
+struct EnhancedVoiceRequest: Codable {
+    let text: String
+    let context: VoiceContext
+    let platform: String
+    let integrations: OAuthIntegrationsStatus
+    
+    init(text: String, context: VoiceContext, platform: String, integrations: [String: Any]) {
+        self.text = text
+        self.context = context
+        self.platform = platform
+        self.integrations = OAuthIntegrationsStatus(from: integrations)
+    }
+}
+
+struct OAuthIntegrationsStatus: Codable {
+    let google: OAuthServiceStatus
+    let airtable: OAuthServiceStatus
+    
+    init(from integrations: [String: Any]) {
+        if let googleDict = integrations["google"] as? [String: Any] {
+            self.google = OAuthServiceStatus(from: googleDict)
+        } else {
+            self.google = OAuthServiceStatus.disconnected()
+        }
+        
+        if let airtableDict = integrations["airtable"] as? [String: Any] {
+            self.airtable = OAuthServiceStatus(from: airtableDict)
+        } else {
+            self.airtable = OAuthServiceStatus.disconnected()
+        }
+    }
+}
+
+struct OAuthServiceStatus: Codable {
+    let connected: Bool
+    let scopes: [String]
+    let lastUpdated: Double
+    
+    init(connected: Bool, scopes: [String], lastUpdated: Double) {
+        self.connected = connected
+        self.scopes = scopes
+        self.lastUpdated = lastUpdated
+    }
+    
+    init(from dict: [String: Any]) {
+        self.connected = dict["connected"] as? Bool ?? false
+        self.scopes = dict["scopes"] as? [String] ?? []
+        self.lastUpdated = dict["lastUpdated"] as? Double ?? 0.0
+    }
+    
+    static func disconnected() -> OAuthServiceStatus {
+        return OAuthServiceStatus(connected: false, scopes: [], lastUpdated: 0.0)
+    }
+}
+
+struct VoiceContext: Codable {
+    let sessionId: String
+    let languageCode: String
+    let metadata: [String: String]?
+    
+    init(sessionId: String, metadata: [String: String]? = nil) {
         self.sessionId = sessionId
+        self.languageCode = "en-US"
         self.metadata = metadata
-        self.generateAudio = generateAudio
     }
 }
 
@@ -136,23 +305,23 @@ enum VoiceAssistantError: LocalizedError {
     }
 }
 
-struct ConversationMessage: Identifiable, Codable {
-    let id: UUID
-    let text: String
-    let isUser: Bool
-    let timestamp: Date
-    let audioBase64: String? // Store audio data for replay
-    let isTranscribed: Bool // Indicates if text was transcribed from audio
+public struct ConversationMessage: Identifiable, Codable {
+    public let id: UUID
+    public let text: String
+    public let isUser: Bool
+    public let timestamp: Date
+    public let audioBase64: String? // Store audio data for replay
+    public let isTranscribed: Bool // Indicates if text was transcribed from audio
     
     // Enhanced fields from new backend
-    let intent: String?
-    let confidence: Double?
-    let agentUsed: String?
-    let executionTime: Double?
-    let actions: [String]?
-    let suggestions: [String]?
+    public let intent: String?
+    public let confidence: Double?
+    public let agentUsed: String?
+    public let executionTime: Double?
+    public let actions: [String]?
+    public let suggestions: [String]?
     
-    init(id: UUID = UUID(), text: String, isUser: Bool, timestamp: Date = Date(), audioBase64: String? = nil, isTranscribed: Bool = false, intent: String? = nil, confidence: Double? = nil, agentUsed: String? = nil, executionTime: Double? = nil, actions: [String]? = nil, suggestions: [String]? = nil) {
+    public init(id: UUID = UUID(), text: String, isUser: Bool, timestamp: Date = Date(), audioBase64: String? = nil, isTranscribed: Bool = false, intent: String? = nil, confidence: Double? = nil, agentUsed: String? = nil, executionTime: Double? = nil, actions: [String]? = nil, suggestions: [String]? = nil) {
         self.id = id
         self.text = text
         self.isUser = isUser
@@ -182,38 +351,21 @@ struct User: Codable {
     let email: String?
     let name: String?
     let profilePicture: String?
+    let preferredName: String?
 }
 
-struct BackendVoiceResponse: Codable {
+struct BasicUserPreferences: Codable {
+    let preferredName: String?
+    
+    init(preferredName: String? = nil) {
+        self.preferredName = preferredName
+    }
+}
+
+struct UserPreferencesResponse: Codable {
     let success: Bool
-    let transcription: Transcription?
-    let response: String?
-    let audioResponse: AudioResponse?
-    let intent: String?
-    let confidence: Double?
-    let agentUsed: String?
-    let executionTime: Double?
-    let actions: [String]?
-    let suggestions: [String]?
-    let sessionId: String?
-}
-
-struct Transcription: Codable {
-    let text: String
-    let confidence: Double?
-    let language: String?
-}
-
-struct AudioResponse: Codable {
-    let audioBase64: String
-    let audioSize: Int?
-    let voiceConfig: VoiceConfig?
-}
-
-struct VoiceConfig: Codable {
-    let languageCode: String?
-    let name: String?
-    let ssmlGender: String?
+    let preferences: BasicUserPreferences?
+    let message: String?
 }
 
 // MARK: - Calendar Models

@@ -82,8 +82,8 @@ struct HomeDashboardView: View {
             
             Spacer()
             
-            // SORA Title - Centered
-            Text("Sora")
+            // FLOE Title - Centered
+            Text("Floe")
                 .font(.custom("Corinthia", size: 48))
                 .fontWeight(.medium)
                 .foregroundColor(.white)
@@ -161,7 +161,7 @@ struct VoiceButtonHero: View {
             .accessibilityLabel("Voice Assistant")
             .accessibilityHint("Tap to start voice interaction")
             
-            Text("Tap to speak with Sora")
+            Text("Tap to speak with Floe")
                 .font(.title3)
                 .fontWeight(.medium)
                 .foregroundColor(.white.opacity(0.8))

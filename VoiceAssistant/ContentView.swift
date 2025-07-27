@@ -2,91 +2,52 @@ import SwiftUI
 import AVFoundation
 
 struct ContentView: View {
-    @ObservedObject private var watchConnector = WatchConnector.shared
+    @StateObject private var audioRecorder = MinimalAudioRecorder()
     @ObservedObject private var apiClient = APIClient.shared
     @StateObject private var speechRecognizer = SpeechRecognizer()
-    
-    @State private var isConnected = false
-    @State private var lastMessage = ""
-    @State private var currentStatus: VoiceAssistantStatus = .idle
-    @State private var webhookURL = Constants.API.webhookURL
-    @State private var showSettings = false
-    
-    // Voice testing
-    @State private var isRecording = false
-    @State private var audioRecorder: AVAudioRecorder?
-    @State private var audioPlayer: AVAudioPlayer?
-    @State private var audioSession = AVAudioSession.sharedInstance()
-    @State private var conversationHistory: [ConversationMessage] = []
-    @State private var currentTranscription = ""
-    @State private var audioLevels: [CGFloat] = Array(repeating: 0.3, count: 50)
-    @State private var showMenu = false
-    @State private var currentResult: VoiceCommandResult?
+    @StateObject private var enhancedVoiceProcessor: EnhancedVoiceProcessor
+    @StateObject private var offlineProcessor = OfflineProcessor()
+    @StateObject private var offlineEnhancementManager = OfflineEnhancementManager()
+    @ObservedObject private var transitionManager = OfflineTransitionManager.shared
+    @StateObject private var performanceOptimizer = MLPerformanceOptimizer()
+    @StateObject private var quantization: ModelQuantization
+    @StateObject private var batchProcessor: BatchProcessor
+    @StateObject private var personalizationEngine = PersonalizationEngine()
+    @StateObject private var intentClassifier: IntentClassifier
+    @State private var transcribedText = ""
+    @State private var statusMessage = "Tap to record"
     @State private var showError = false
-    @State private var lastError = ""
+    @State private var showSettings = false
+    @StateObject private var conversationHistoryManager = ConversationHistoryManager()
     
-    // Quick Actions
-    private let quickActions: [QuickAction] = [
-        QuickAction(
-            id: "calendar",
-            title: "Schedule",
-            icon: "calendar.badge.plus",
-            voiceCommand: "Schedule a meeting",
-            color: "blue"
-        ),
-        QuickAction(
-            id: "email",
-            title: "Email",
-            icon: "envelope",
-            voiceCommand: "Check my emails",
-            color: "red"
-        ),
-        QuickAction(
-            id: "tasks",
-            title: "Tasks",
-            icon: "checkmark.circle",
-            voiceCommand: "Add a new task",
-            color: "green"
-        ),
-        QuickAction(
-            id: "weather",
-            title: "Weather",
-            icon: "cloud.sun",
-            voiceCommand: "What's the weather like?",
-            color: "orange"
-        ),
-        QuickAction(
-            id: "time",
-            title: "Time",
-            icon: "clock",
-            voiceCommand: "What time is it?",
-            color: "purple"
+    // Audio playback for responses
+    @State private var audioPlayer: AVAudioPlayer?
+    @State private var isAudioPlaying = false
+    
+    // Initialize with dependencies
+    init() {
+        let speechRecognizer = SpeechRecognizer()
+        let apiClient = APIClient.shared
+        let performanceOptimizer = MLPerformanceOptimizer()
+        let quantization = ModelQuantization(performanceOptimizer: performanceOptimizer)
+        let batchProcessor = BatchProcessor(
+            performanceOptimizer: performanceOptimizer,
+            quantization: quantization
         )
-    ]
-    
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                backgroundView
-                contentView
-            }
-        }
-        .onAppear {
-            setupView()
-        }
-        .sheet(isPresented: $showSettings) {
-            EnhancedSettingsView()
-        }
-        .sheet(isPresented: $showMenu) {
-            MenuView(conversationHistory: $conversationHistory, apiClient: apiClient)
-        }
-        .sheet(item: $currentResult) { result in
-            ResultBottomSheet(result: result)
-        }
+        let intentClassifier = IntentClassifier()
+        
+        _speechRecognizer = StateObject(wrappedValue: speechRecognizer)
+        _performanceOptimizer = StateObject(wrappedValue: performanceOptimizer)
+        _quantization = StateObject(wrappedValue: quantization)
+        _batchProcessor = StateObject(wrappedValue: batchProcessor)
+        _intentClassifier = StateObject(wrappedValue: intentClassifier)
+        _enhancedVoiceProcessor = StateObject(wrappedValue: EnhancedVoiceProcessor(
+            speechRecognizer: speechRecognizer,
+            apiClient: apiClient
+        ))
     }
     
-    // MARK: - View Components
-    private var backgroundView: some View {
+    var body: some View {
         ZStack {
             // Dark background
             Color.black
@@ -94,25 +55,48 @@ struct ContentView: View {
             
             // Particle effect background
             ParticleBackgroundView(
-                isVoiceActive: isRecording || currentStatus == .recording,
-                isAudioPlaying: currentStatus == .playing || audioPlayer?.isPlaying == true
+                isVoiceActive: audioRecorder.isRecording,
+                isAudioPlaying: isAudioPlaying
+            )
+            
+            // Main content
+            VStack(spacing: 20) {
+                headerView
+                offlineStatusView
+                permissionView
+                conversationView
+                statusView
+                recordingButton
+                recordingTimeView
+                audioLevelMeter
+                quickActionsView
+                Spacer()
+                debugView
+            }
+            .padding()
+        }
+        .alert("Recording Error", isPresented: $showError) {
+            Button("OK") { showError = false }
+        } message: {
+            Text(audioRecorder.error?.errorDescription ?? "Unknown error occurred")
+        }
+        .onChange(of: audioRecorder.error) { _, error in
+            showError = (error != nil)
+        }
+        .sheet(isPresented: $showSettings) {
+            EnhancedSettingsViewWithActions(
+                conversationHistory: $conversationHistoryManager.conversationHistory,
+                onDismiss: { showSettings = false }
             )
         }
     }
     
-    private var contentView: some View {
-        VStack {
-            headerViewMain
-            quickActionsSection
-            conversationView
-            voiceButtonSection
-        }
-    }
+    // MARK: - View Components
     
-    private var headerViewMain: some View {
+    private var headerView: some View {
         HStack {
             // Hamburger Menu Button
-            Button(action: { showMenu.toggle() }) {
+            Button(action: { showSettings.toggle() }) {
                 Image(systemName: "line.horizontal.3")
                     .font(.title2)
                     .foregroundColor(.white.opacity(0.7))
@@ -121,12 +105,12 @@ struct ContentView: View {
             .contentShape(Rectangle())
             .padding(.leading, 20)
             .accessibilityLabel("Menu")
-            .accessibilityHint("Opens the main menu with settings and options")
+            .accessibilityHint("Opens the settings menu")
             
             Spacer()
             
-            // SORA Title - Centered
-            Text("Sora")
+            // FLOE Title - Centered
+            Text("Floe")
                 .font(.custom("Corinthia", size: 48))
                 .fontWeight(.medium)
                 .foregroundColor(.white)
@@ -141,1811 +125,1085 @@ struct ContentView: View {
         .padding(.top, 60)
     }
     
-    private var quickActionsSection: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("Quick Actions")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.7))
-                    .padding(.leading, 20)
-                
-                Spacer()
-            }
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(quickActions) { action in
-                        CompactQuickActionButton(
-                            action: action,
-                            onTap: { executeQuickAction(action) }
-                        )
+    private var offlineStatusView: some View {
+        VStack {
+            if transitionManager.currentMode != .online || transitionManager.degradedModeActive {
+                VStack {
+                    OfflineStatusCard(
+                        mode: transitionManager.currentMode,
+                        connectionQuality: transitionManager.connectionStatus.quality,
+                        availableCapabilities: offlineProcessor.offlineCapabilities.map { $0.rawValue },
+                        queuedCommandsCount: offlineProcessor.queuedCommandsCount,
+                        isDegraded: transitionManager.degradedModeActive
+                    )
+                    
+                    // Enhanced offline status
+                    if offlineEnhancementManager.enhancedCacheStatus != .ready {
+                        EnhancedOfflineStatusView(enhancementManager: offlineEnhancementManager)
+                            .padding(.top, 4)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 4)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.3), value: transitionManager.currentMode)
             }
         }
-        .padding(.top, 16)
     }
     
     private var conversationView: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 12) {
-                    if conversationHistory.isEmpty {
-                        emptyStateContent
+                    if conversationHistoryManager.conversationHistory.isEmpty {
+                        ConversationEmptyStateView()
                     } else {
                         // Show conversation history
-                        ForEach(conversationHistory) { message in
-                            ConversationBubbleChat(message: message)
+                        ForEach(conversationHistoryManager.conversationHistory) { message in
+                            ConversationBubbleChat(
+                                message: message,
+                                onTap: {
+                                    if !message.isUser {
+                                        HapticManager.shared.cardTapped()
+                                    }
+                                }
+                            )
+                            .id(message.id)
                         }
                     }
                     
                     // Live transcription bubble
-                    if !currentTranscription.isEmpty && !conversationHistory.isEmpty {
-                        LiveTranscriptionBubbleChat(text: currentTranscription)
-                    }
-                    
-                    // Status indicators when conversation exists
-                    if !conversationHistory.isEmpty {
-                        statusIndicators
+                    if !transcribedText.isEmpty && audioRecorder.isRecording {
+                        LiveTranscriptionBubbleChat(text: transcribedText)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                .padding(.vertical, 8)
             }
-            .onChange(of: conversationHistory.count) { _, _ in
-                if let lastMessage = conversationHistory.last {
-                    withAnimation(.easeOut(duration: 0.5)) {
-                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                    }
+            .frame(maxHeight: 400)
+            .onChange(of: conversationHistoryManager.conversationHistory.count) { _, _ in
+                // Scroll to bottom when new messages are added
+                withAnimation {
+                    proxy.scrollTo(conversationHistoryManager.conversationHistory.last?.id, anchor: .bottom)
                 }
-            }
-            .accessibilityLabel("Conversation history")
-            .accessibilityHint("Scrollable list of your conversation with the AI assistant")
-        }
-        .frame(maxHeight: .infinity)
-        .padding(.top, 20)
-    }
-    
-    private var emptyStateContent: some View {
-        VStack(spacing: 20) {
-            // Simple listening indicator
-            if isRecording || currentStatus == .recording {
-                Text("I'm listening...")
-                    .font(.title3)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.9))
-                    .animation(.easeInOut(duration: 0.5), value: isRecording)
-            }
-            
-            // Processing indicator
-            if currentStatus == .processing {
-                Text("Thinking...")
-                    .font(.title3)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.9))
-                    .animation(.easeInOut(duration: 0.5), value: currentStatus)
-            }
-            
-            // Show transcription if available
-            if !currentTranscription.isEmpty {
-                Text(currentTranscription)
-                    .font(.body)
-                    .foregroundColor(.white.opacity(0.9))
-                    .padding()
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(12)
-                    .padding(.horizontal, 20)
-            }
-            
-            // Empty state message
-            if currentStatus == .idle && currentTranscription.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "waveform.circle.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.white.opacity(0.3))
-                    
-                    Text("Ready to assist you")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white.opacity(0.8))
-                    
-                    Text("Your conversation will appear here")
-                        .font(.body)
-                        .foregroundColor(.white.opacity(0.5))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                .padding(.top, 60)
             }
         }
     }
     
-    private var statusIndicators: some View {
-        VStack(spacing: 8) {
-            if isRecording || currentStatus == .recording {
-                Text("I'm listening...")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            
-            if currentStatus == .processing {
-                Text("Thinking...")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            
-            if currentStatus == .playing {
-                Text("Speaking...")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-        }
-        .padding(.bottom, 20)
-    }
-    
-    private var voiceButtonSection: some View {
-        VStack(spacing: 20) {
-            voiceButtonContent
-            voiceButtonText
-        }
-        .padding(.bottom, 50)
-    }
-    
-    private var voiceButtonContent: some View {
-        Button(action: {}) {
-            ZStack {
-                voiceButtonBackground
-                voiceButtonMain
-            }
-        }
-        .buttonStyle(PlainButtonStyle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isRecording {
-                        startRecording()
-                    }
-                }
-                .onEnded { _ in
-                    if isRecording {
-                        stopRecording()
-                    }
-                }
-        )
-        .accessibilityLabel("Voice Recording Button")
-        .accessibilityHint("Hold to record voice command, release to process")
-    }
-    
-    private var voiceButtonBackground: some View {
-        Circle()
-            .fill(
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.8, green: 0.7, blue: 1.0).opacity(0.3),
-                        Color(red: 0.6, green: 0.5, blue: 0.8).opacity(0.1),
-                        Color.clear
-                    ],
-                    center: .center,
-                    startRadius: 10,
-                    endRadius: 100
-                )
-            )
-            .frame(width: 200, height: 200)
-            .scaleEffect(isRecording ? 1.2 : 1.0)
-            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isRecording)
-    }
-    
-    private var voiceButtonMain: some View {
-        Circle()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.8, green: 0.7, blue: 1.0),
-                        Color(red: 0.6, green: 0.5, blue: 0.8)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(width: 120, height: 120)
-            .overlay(voiceButtonOverlay)
-            .shadow(color: Color(red: 0.8, green: 0.7, blue: 1.0).opacity(0.5), radius: 20, x: 0, y: 10)
-    }
-    
-    private var voiceButtonOverlay: some View {
+    private var permissionView: some View {
         Group {
-            if isRecording {
-                WaveformVisualizationView(
-                    audioLevels: audioLevels.map { Float($0) },
-                    isRecording: isRecording,
-                    isProcessing: currentStatus == .processing
-                )
-                .frame(width: 80, height: 80)
-            } else {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 40, weight: .medium))
-                    .foregroundColor(.white)
+            if !audioRecorder.hasPermission {
+                Label("Microphone permission required", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .padding(.horizontal)
             }
         }
     }
     
-    private var voiceButtonText: some View {
-        Text(isRecording ? "Recording..." : "Hold to speak")
-            .font(.caption)
-            .foregroundColor(.white.opacity(0.7))
-            .animation(.easeInOut(duration: 0.2), value: isRecording)
-    }
-    
-    // MARK: - Header View
-    private var headerView: some View {
-        VStack(spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Voice Assistant")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+    private var statusView: some View {
+        VStack(spacing: 4) {
+            Text(statusMessage)
+                .foregroundColor(.white.opacity(0.6))
+                .font(.subheadline)
+            
+            // Processing status indicator
+            if enhancedVoiceProcessor.isProcessing {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                     
-                    connectionStatusBadge
+                    Text(enhancedVoiceProcessor.currentProcessingStep.displayText)
+                        .font(.caption)
+                        .foregroundColor(.blue)
                 }
-                
-                Spacer()
-                
-                // Hamburger Menu Button
-                Button(action: { showMenu.toggle() }) {
-                    Image(systemName: "line.horizontal.3")
-                        .font(.title2)
-                        .foregroundColor(.primary)
-                        .frame(width: 44, height: 44)
-                        .background(
-                            Circle()
-                                .fill(Color(.systemGray6))
-                                .opacity(0.8)
-                        )
-                }
-                .contentShape(Circle()) // Ensure entire frame is tappable
-                .accessibilityLabel("Menu")
-                .accessibilityHint("Opens the main menu with settings and options")
-                
-                settingsButton
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(12)
             }
-            .padding(.horizontal, 24)
+            
+            // Batch processing status
+            if batchProcessor.isProcessing || batchProcessor.queuedRequestsCount > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: batchProcessor.isProcessing ? "cpu" : "clock")
+                        .foregroundColor(.purple)
+                        .font(.caption)
+                    
+                    Text(batchProcessor.isProcessing ? 
+                         "Batch processing..." : 
+                         "\(batchProcessor.queuedRequestsCount) queued")
+                        .font(.caption)
+                        .foregroundColor(.purple)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.purple.opacity(0.1))
+                .cornerRadius(8)
+            }
+            
+            // Personalization status
+            if personalizationEngine.isLearning {
+                HStack(spacing: 8) {
+                    Image(systemName: "brain.head.profile")
+                        .foregroundColor(.green)
+                        .font(.caption)
+                    
+                    Text("Learning preferences...")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(8)
+            }
+            
+            // Intent classification status
+            if intentClassifier.isProcessing {
+                HStack(spacing: 8) {
+                    Image(systemName: "brain")
+                        .foregroundColor(.cyan)
+                        .font(.caption)
+                    
+                    Text("Analyzing intent...")
+                        .font(.caption)
+                        .foregroundColor(.cyan)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.cyan.opacity(0.1))
+                .cornerRadius(8)
+            }
         }
     }
     
-    private var connectionStatusBadge: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(connectionStatusColor)
-                .frame(width: 8, height: 8)
-                .scaleEffect(isConnected ? 1.2 : 1.0)
-                .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isConnected)
+    private var recordingButton: some View {
+        RecordingButtonView(
+            isRecording: audioRecorder.isRecording,
+            audioLevel: audioRecorder.audioLevel,
+            hasPermission: audioRecorder.hasPermission,
+            action: toggleRecording
+        )
+    }
+    
+    private var recordingTimeView: some View {
+        Group {
+            if audioRecorder.isRecording {
+                Text(timeString(from: audioRecorder.recordingTime))
+                    .font(.system(size: 24, weight: .medium, design: .monospaced))
+                    .foregroundColor(.red)
+            }
+        }
+    }
+    
+    private var audioLevelMeter: some View {
+        Group {
+            if audioRecorder.isRecording {
+                AudioLevelMeterView(audioLevel: audioRecorder.audioLevel)
+            }
+        }
+    }
+    
+    private var quickActionsView: some View {
+        VStack(spacing: 12) {
+            Text("Quick Actions")
+                .font(.headline)
+                .foregroundColor(.white.opacity(0.7))
             
-            Text(connectionStatusText)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    SimpleQuickActionButton(
+                        action: QuickAction(
+                            id: "schedule",
+                            title: "Schedule",
+                            icon: "calendar.badge.plus",
+                            voiceCommand: "What's on my calendar today?",
+                            color: "blue"
+                        ),
+                        onTap: processQuickAction
+                    )
+                    
+                    SimpleQuickActionButton(
+                        action: QuickAction(
+                            id: "email",
+                            title: "Email",
+                            icon: "envelope",
+                            voiceCommand: "Check my unread emails",
+                            color: "red"
+                        ),
+                        onTap: processQuickAction
+                    )
+                    
+                    SimpleQuickActionButton(
+                        action: QuickAction(
+                            id: "tasks",
+                            title: "Tasks",
+                            icon: "checkmark.circle",
+                            voiceCommand: "Show me my tasks for today",
+                            color: "green"
+                        ),
+                        onTap: processQuickAction
+                    )
+                    
+                    SimpleQuickActionButton(
+                        action: QuickAction(
+                            id: "weather",
+                            title: "Weather",
+                            icon: "cloud.sun",
+                            voiceCommand: "What's the weather like today?",
+                            color: "orange"
+                        ),
+                        onTap: processQuickAction
+                    )
+                    
+                    SimpleQuickActionButton(
+                        action: QuickAction(
+                            id: "time",
+                            title: "Time",
+                            icon: "clock",
+                            voiceCommand: "What time is it?",
+                            color: "purple"
+                        ),
+                        onTap: processQuickAction
+                    )
+                }
+                .padding(.horizontal)
+            }
+        }
+        .padding(.vertical, 8)
+    }
+    
+    
+    private var debugView: some View {
+        Group {
+            #if DEBUG
+            VStack(spacing: 8) {
+                Button("Check Circuit Breakers") {
+                    FeatureCircuitBreakers.printStatus()
+                }
                 .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
+                
+                Button("Test Batch Processing") {
+                    testBatchProcessing()
+                }
+                .font(.caption)
+                .foregroundColor(.purple)
+                
+                Button("Test ML & Personalization") {
+                    testMLAndPersonalization()
+                }
+                .font(.caption)
+                .foregroundColor(.green)
+                
+                if batchProcessor.queuedRequestsCount > 0 {
+                    Button("Force Process Batch") {
+                        batchProcessor.forceBatchProcessing()
+                    }
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                }
+            }
+            #endif
         }
     }
     
-    private var connectionStatusColor: Color {
-        if apiClient.isWebSocketConnected {
-            return .green
-        } else if isConnected {
-            return .orange
+    // MARK: - Methods
+    
+    func toggleRecording() {
+        if audioRecorder.isRecording {
+            // Stop recording with circuit breaker
+            FeatureCircuitBreakers.audioRecording.executeFeature {
+                statusMessage = "Processing..."
+                
+                if let audioURL = audioRecorder.stopRecording() {
+                    Task {
+                        // First transcribe the audio using our fixed speech recognition
+                        await transcribeAudio(audioURL)
+                        
+                        // Add user message after we have transcription
+                        await MainActor.run {
+                            if !transcribedText.isEmpty {
+                                let userMessage = ConversationMessage(
+                                    text: transcribedText,
+                                    isUser: true,
+                                    isTranscribed: true
+                                )
+                                conversationHistoryManager.addMessage(userMessage)
+                            }
+                        }
+                        
+                        // Check if we should use offline processing
+                        // Only use offline if truly disconnected or explicitly in offline mode
+                        if !transitionManager.connectionStatus.isConnected || 
+                           (transitionManager.currentMode == .offline && !transitionManager.connectionStatus.isConnected) {
+                            // Use enhanced offline processor
+                            let audioData = try? Data(contentsOf: audioURL)
+                            let context = createProcessingContext()
+                            
+                            // Try enhanced offline processing first
+                            let enhancedResult = await offlineEnhancementManager.processOfflineIntent(
+                                transcribedText,
+                                context: context
+                            )
+                            
+                            // Fallback to basic offline processor if needed
+                            let result: OfflineProcessor.OfflineResponse
+                            if enhancedResult.confidence > 0.6 {
+                                // Convert enhanced result to basic result
+                                result = OfflineProcessor.OfflineResponse(
+                                    text: enhancedResult.text,
+                                    audioBase64: enhancedResult.audioBase64,
+                                    confidence: enhancedResult.confidence,
+                                    source: .template,
+                                    capabilities: [],
+                                    processingTime: 0.0,
+                                    requiresSync: enhancedResult.requiresSync,
+                                    metadata: [:]
+                                )
+                            } else {
+                                result = await offlineProcessor.processCommand(
+                                    transcribedText,
+                                    audioData: audioData
+                                )
+                            }
+                            
+                            await MainActor.run {
+                                // Add AI response with offline indicator
+                                let aiMessage = ConversationMessage(
+                                    text: result.text,
+                                    isUser: false,
+                                    audioBase64: result.audioBase64,
+                                    isTranscribed: false,
+                                    confidence: result.confidence
+                                )
+                                conversationHistoryManager.addMessage(aiMessage)
+                                
+                                // Play audio if available
+                                if let audioBase64 = result.audioBase64, !audioBase64.isEmpty {
+                                    playAudioResponse(audioBase64: audioBase64)
+                                }
+                                
+                                // Update status based on result
+                                if result.requiresSync {
+                                    statusMessage = "Command queued for sync"
+                                } else {
+                                    statusMessage = "Tap to record"
+                                }
+                            }
+                        } else {
+                            // SIMPLE BACKEND PROCESSING - Use simple text processing
+                            do {
+                                // Instead of complex processing, use simple backend
+                                await MainActor.run {
+                                    statusMessage = "Processing with simple backend..."
+                                }
+                                
+                                // Use simple backend text processing
+                                try await processWithSimpleBackend(transcribedText)
+                            } catch {
+                                await MainActor.run {
+                                    // Provide user-friendly error messages
+                                    let errorMessage: String
+                                    switch error {
+                                    case APIError.httpError(let code) where code == 401:
+                                        errorMessage = "Authentication required. Please sign in."
+                                    case APIError.httpError(let code) where code == 429:
+                                        errorMessage = "Rate limit exceeded. Please try again later."
+                                    case APIError.httpError(let code) where code >= 500:
+                                        errorMessage = "Server error. Please try again later."
+                                    case APIError.fileReadError:
+                                        errorMessage = "Failed to read audio file."
+                                    case APIError.noResponseText:
+                                        errorMessage = "No response from server. Please try again."
+                                    case APIError.invalidAudioFormat(let message):
+                                        errorMessage = "Audio format issue: \(message)"
+                                    default:
+                                        errorMessage = "Connection error: \(error.localizedDescription)"
+                                    }
+                                    
+                                    // Add error as AI message
+                                    let errorAIMessage = ConversationMessage(
+                                        text: errorMessage,
+                                        isUser: false,
+                                        isTranscribed: false
+                                    )
+                                    conversationHistoryManager.addMessage(errorAIMessage)
+                                    statusMessage = "Tap to record"
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    statusMessage = "Failed to stop recording"
+                }
+            }
         } else {
-            return .red
-        }
-    }
-    
-    private var connectionStatusText: String {
-        if apiClient.isWebSocketConnected {
-            return "Real-time Connected"
-        } else if isConnected {
-            return "Watch Connected"
-        } else {
-            return "iPhone Mode"
-        }
-    }
-    
-    private var settingsButton: some View {
-        Button(action: { showSettings = true }) {
-            Image(systemName: "gear")
-                .font(.title2)
-                .foregroundColor(.secondary)
-                .frame(width: 44, height: 44)
-                .background(
-                    Circle()
-                        .fill(Color(.systemGray6))
-                        .opacity(0.8)
-                )
-        }
-    }
-    
-    
-    
-    // MARK: - Voice Input Section
-    private func voiceInputSection(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 24) {
-            // Audio Visualization
-            if isRecording {
-                AudioVisualizationView(levels: audioLevels)
-                    .frame(height: 60)
-                    .padding(.horizontal, 40)
+            // Start recording with circuit breaker
+            let success = FeatureCircuitBreakers.audioRecording.executeFeature {
+                audioRecorder.startRecording()
+                statusMessage = "Recording..."
+                transcribedText = ""
+                
+                // Real speech recognition instead of demo simulation
+                startRealTimeTranscription()
             }
             
-            // Status Text
-            statusTextView
-            
-            // Main Voice Button
-            voiceButton
+            if !success {
+                statusMessage = "Recording temporarily disabled"
+                // Add error as system message
+                let errorMessage = ConversationMessage(
+                    text: "Audio recording has been disabled due to repeated failures. Please try again later.",
+                    isUser: false,
+                    isTranscribed: false
+                )
+                conversationHistoryManager.addMessage(errorMessage)
+            }
         }
-        .padding(.horizontal, 20)
     }
     
-    private var statusTextView: some View {
-        Text(statusText)
-            .font(.headline)
-            .fontWeight(.medium)
-            .foregroundColor(statusColor)
-            .frame(minHeight: 25)
-            .animation(.easeInOut(duration: 0.3), value: currentStatus)
+    // Helper function to format time
+    private func timeString(from timeInterval: TimeInterval) -> String {
+        let minutes = Int(timeInterval) / 60
+        let seconds = Int(timeInterval) % 60
+        let milliseconds = Int((timeInterval.truncatingRemainder(dividingBy: 1)) * 10)
+        return String(format: "%02d:%02d.%d", minutes, seconds, milliseconds)
     }
     
-    private var voiceButton: some View {
-        Button(action: {}) {
-            ZStack {
-                // Background circles for animation
+    // Process quick action commands
+    private func processQuickAction(_ action: QuickAction) {
+        statusMessage = "Processing..."
+        
+        // Add user message for quick action
+        let userMessage = ConversationMessage(
+            text: action.voiceCommand,
+            isUser: true,
+            isTranscribed: false
+        )
+        conversationHistoryManager.addMessage(userMessage)
+        
+        Task {
+            // Check if we should use offline processing
+            // Only use offline if truly disconnected
+            if !transitionManager.connectionStatus.isConnected {
+                // Use offline processor for text
+                let result = await offlineProcessor.processCommand(
+                    action.voiceCommand,
+                    audioData: nil
+                )
+                
+                await MainActor.run {
+                    // Add AI response with offline indicator
+                    let aiMessage = ConversationMessage(
+                        text: result.text,
+                        isUser: false,
+                        audioBase64: result.audioBase64,
+                        isTranscribed: false,
+                        confidence: result.confidence
+                    )
+                    conversationHistoryManager.addMessage(aiMessage)
+                    
+                    // Play audio if available
+                    if let audioBase64 = result.audioBase64, !audioBase64.isEmpty {
+                        playAudioResponse(audioBase64: audioBase64)
+                    }
+                    
+                    statusMessage = result.requiresSync ? "Command queued" : "Tap to record"
+                }
+            } else {
+                // Try enhanced offline processing first for quick actions
+                let context = createProcessingContext()
+                let enhancedResult = await offlineEnhancementManager.processOfflineIntent(
+                    action.voiceCommand,
+                    context: context
+                )
+                
+                if enhancedResult.confidence > 0.7 {
+                    // Use enhanced offline result
+                    await MainActor.run {
+                        let aiMessage = ConversationMessage(
+                            text: enhancedResult.text,
+                            isUser: false,
+                            audioBase64: enhancedResult.audioBase64,
+                            isTranscribed: false,
+                            confidence: enhancedResult.confidence
+                        )
+                        conversationHistoryManager.addMessage(aiMessage)
+                        
+                        // Play audio if available
+                        if let audioBase64 = enhancedResult.audioBase64, !audioBase64.isEmpty {
+                            playAudioResponse(audioBase64: audioBase64)
+                        }
+                        
+                        statusMessage = enhancedResult.requiresSync ? "Command queued" : "Tap to record"
+                    }
+                    return
+                }
+                
+                // Use enhanced voice processor for text processing
+                do {
+                    let context = createProcessingContext()
+                    let result = try await enhancedVoiceProcessor.processTextCommand(
+                        text: action.voiceCommand,
+                        context: context
+                    )
+                    
+                    await MainActor.run {
+                        // Add AI response with enhanced metadata
+                        let aiMessage = ConversationMessage(
+                            text: result.response.text,
+                            isUser: false,
+                            audioBase64: result.response.audioBase64,
+                            isTranscribed: false,
+                            intent: result.intent.rawValue,
+                            confidence: Double(result.confidence),
+                            agentUsed: result.processingMethod.description,
+                            executionTime: result.processingTime
+                        )
+                        conversationHistoryManager.addMessage(aiMessage)
+                        
+                        // Play audio if available
+                        if let audioBase64 = result.response.audioBase64, !audioBase64.isEmpty {
+                            playAudioResponse(audioBase64: audioBase64)
+                        }
+                        statusMessage = "Tap to record"
+                    }
+                } catch {
+                    await MainActor.run {
+                        // Add error message
+                        let errorMessage = ConversationMessage(
+                            text: "Failed to process: \(error.localizedDescription)",
+                            isUser: false,
+                            isTranscribed: false
+                        )
+                        conversationHistoryManager.addMessage(errorMessage)
+                        statusMessage = "Tap to record"
+                    }
+                }
+            }
+        }
+    }
+    
+    // Helper function to create processing context
+    private func createProcessingContext() -> VoiceProcessingContext {
+        let dateFormatter = DateFormatter()
+        dateFormatter.timeStyle = .short
+        let timeOfDay = dateFormatter.string(from: Date())
+        
+        let deviceState = DeviceState(
+            batteryLevel: UIDevice.current.batteryLevel >= 0 ? UIDevice.current.batteryLevel : 1.0,
+            isLowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
+            isNetworkAvailable: apiClient.isWebSocketConnected,
+            isWifiConnected: true, // Simplified for now
+            memoryUsage: 0.5 // Simplified for now
+        )
+        
+        return VoiceProcessingContext(
+            timeOfDay: timeOfDay,
+            location: nil, // Could be integrated with CoreLocation
+            previousIntent: nil, // Could track from conversation history
+            conversationHistory: conversationHistoryManager.conversationHistory,
+            userPreferences: [:], // Could be loaded from UserDefaults
+            deviceState: deviceState
+        )
+    }
+    
+    // Helper function to handle processing errors
+    private func handleProcessingError(_ error: Error) {
+        // Provide user-friendly error messages
+        let errorMessage: String
+        switch error {
+        case APIError.httpError(let code) where code == 401:
+            errorMessage = "Authentication required. Please sign in."
+        case APIError.httpError(let code) where code == 429:
+            errorMessage = "Rate limit exceeded. Please try again later."
+        case APIError.httpError(let code) where code >= 500:
+            errorMessage = "Server error. Please try again later."
+        case APIError.fileReadError:
+            errorMessage = "Failed to read audio file."
+        case APIError.noResponseText:
+            errorMessage = "No response from server. Please try again."
+        case APIError.invalidAudioFormat(let message):
+            errorMessage = "Audio format issue: \(message)"
+        default:
+            errorMessage = "Connection error: \(error.localizedDescription)"
+        }
+        
+        // Add error as AI message
+        let errorAIMessage = ConversationMessage(
+            text: errorMessage,
+            isUser: false,
+            isTranscribed: false
+        )
+        conversationHistoryManager.addMessage(errorAIMessage)
+        statusMessage = "Tap to record"
+    }
+    
+    // MARK: - ML and Personalization Methods
+    
+    /// Classify user intent using ML models
+    private func classifyIntentWithML(_ text: String) async -> IntentClassificationResult {
+        do {
+            return try await intentClassifier.classifyIntent(text: text)
+        } catch {
+            // Fallback to basic intent classification
+            return IntentClassificationResult(
+                intent: .general,
+                confidence: 0.5,
+                processingTime: 0.1,
+                processingMethod: .rulesBased,
+                alternativeIntents: [],
+                extractedEntities: [:],
+                shouldRouteToServer: true,
+                routingExplanation: "ML classification failed, using fallback"
+            )
+        }
+    }
+    
+    /// Personalize the processing context based on user preferences and intent
+    private func personalizeContextForUser(
+        _ context: VoiceProcessingContext,
+        intentResult: IntentClassificationResult
+    ) async -> VoiceProcessingContext {
+        // Get current user preferences from personalization engine
+        let userPrefs = personalizationEngine.currentPreferences
+        
+        // Create enhanced context with personalization data
+        var personalizedPrefs = context.userPreferences
+        personalizedPrefs["responseLength"] = userPrefs.responseLength.rawValue
+        personalizedPrefs["formalityLevel"] = userPrefs.formalityLevel
+        personalizedPrefs["detectedIntent"] = intentResult.intent.rawValue
+        personalizedPrefs["intentConfidence"] = intentResult.confidence
+        personalizedPrefs["measurementSystem"] = userPrefs.measurementSystem.rawValue
+        
+        return VoiceProcessingContext(
+            timeOfDay: context.timeOfDay,
+            location: context.location,
+            previousIntent: intentResult.intent,
+            conversationHistory: context.conversationHistory,
+            userPreferences: personalizedPrefs,
+            deviceState: context.deviceState
+        )
+    }
+    
+    #if DEBUG
+    // Test batch processing functionality
+    private func testBatchProcessing() {
+        // Submit multiple test requests to batch processor
+        let testAudioData = Data(repeating: 0, count: 1024) // Mock audio data
+        let context = createProcessingContext()
+        
+        // Submit requests with different priorities
+        for i in 1...5 {
+            let priority: RequestPriority = i == 1 ? .high : .normal
+            batchProcessor.submitRequest(
+                modelType: "voice_processing",
+                input: VoiceBatchInput(audioData: testAudioData, context: context),
+                priority: priority
+            ) { (result: Result<EnhancedVoiceProcessingResult, Error>) in
+                Task { @MainActor in
+                    switch result {
+                    case .success(let batchResult):
+                        let testMessage = ConversationMessage(
+                            text: "Test \(i): \(batchResult.response.text)",
+                            isUser: false,
+                            isTranscribed: false
+                        )
+                        conversationHistoryManager.addMessage(testMessage)
+                    case .failure(let error):
+                        let errorMessage = ConversationMessage(
+                            text: "Test \(i) failed: \(error.localizedDescription)",
+                            isUser: false,
+                            isTranscribed: false
+                        )
+                        conversationHistoryManager.addMessage(errorMessage)
+                    }
+                }
+            }
+        }
+        
+        statusMessage = "Batch processing test submitted - \(batchProcessor.queuedRequestsCount) queued"
+    }
+    
+    // Test ML models and personalization functionality
+    private func testMLAndPersonalization() {
+        Task {
+            let testPhrases = [
+                "What's the weather like today?",
+                "Schedule a meeting for tomorrow",
+                "Set a reminder to call mom",
+                "Play some relaxing music",
+                "How are you feeling today?"
+            ]
+            
+            for (index, phrase) in testPhrases.enumerated() {
+                // Test intent classification
+                let intentResult = await classifyIntentWithML(phrase)
+                
+                let testMessage = ConversationMessage(
+                    text: "Test ML \(index + 1): \"\(phrase)\" → Intent: \(intentResult.intent.rawValue) (confidence: \(String(format: "%.2f", intentResult.confidence)))",
+                    isUser: false,
+                    isTranscribed: false
+                )
+                conversationHistoryManager.addMessage(testMessage)
+                
+                // Small delay between tests
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            }
+            
+            await MainActor.run {
+                statusMessage = "ML and personalization tests completed"
+            }
+        }
+    }
+    #endif
+    
+    // MARK: - Real Speech Recognition Functions
+    
+    private func startRealTimeTranscription() {
+        // For now, just show that we're preparing to transcribe
+        // Real-time transcription can be complex, so we'll do post-recording transcription
+        statusMessage = "Recording... Tap again when done"
+    }
+    
+    private func transcribeAudio(_ audioURL: URL) async {
+        print("🎤 Starting real speech recognition transcription")
+        statusMessage = "Transcribing..."
+        
+        do {
+            let audioData = try Data(contentsOf: audioURL)
+            
+            // Use our fixed simple speech recognition
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                speechRecognizer.transcribe(audioData) { result in
+                    Task { @MainActor in
+                        switch result {
+                        case .success(let transcribedTextResult):
+                            self.transcribedText = transcribedTextResult
+                            print("✅ Real transcription: '\(transcribedTextResult)'")
+                            continuation.resume()
+                        case .failure(let error):
+                            print("❌ Transcription failed: \(error.localizedDescription)")
+                            self.transcribedText = "Transcription failed"
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                }
+            }
+        } catch {
+            await MainActor.run {
+                transcribedText = "Speech recognition error"
+                statusMessage = "Transcription failed"
+            }
+        }
+    }
+    
+    // MARK: - Audio Playback Functions
+    
+    private func playAudioResponse(audioBase64: String) {
+        guard !audioBase64.isEmpty,
+              let audioData = Data(base64Encoded: audioBase64) else {
+            print("❌ No valid audio data for playback")
+            return
+        }
+        
+        do {
+            // Configure audio session for playback
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+            
+            // Create and configure audio player
+            audioPlayer = try AVAudioPlayer(data: audioData)
+            // Set up a simple delegate that will reset the playing state
+            let delegate = SimpleAudioDelegate()
+            audioPlayer?.delegate = delegate
+            audioPlayer?.prepareToPlay()
+            
+            // Start playback
+            isAudioPlaying = true
+            audioPlayer?.play()
+            
+            print("✅ Playing audio response")
+        } catch {
+            print("❌ Failed to play audio: \(error)")
+            isAudioPlaying = false
+        }
+    }
+    
+    private func stopAudioPlayback() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+        isAudioPlaying = false
+    }
+    
+    // MARK: - Simple Backend Processing
+    
+    private func processWithSimpleBackend(_ text: String) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            apiClient.processTextSimple(text: text) { result in
+                Task { @MainActor in
+                    switch result {
+                    case .success(let voiceResponse):
+                        // Add AI response to conversation
+                        let aiMessage = ConversationMessage(
+                            text: voiceResponse.text,
+                            isUser: false,
+                            audioBase64: voiceResponse.audioBase64,
+                            isTranscribed: false,
+                            confidence: 1.0
+                        )
+                        conversationHistoryManager.addMessage(aiMessage)
+                        
+                        // Play audio if available
+                        if let audioBase64 = voiceResponse.audioBase64, !audioBase64.isEmpty {
+                            playAudioResponse(audioBase64: audioBase64)
+                        }
+                        
+                        statusMessage = "Tap to record"
+                        continuation.resume()
+                        
+                    case .failure(let error):
+                        let errorMessage: String
+                        if let voiceError = error as? VoiceAssistantError {
+                            switch voiceError {
+                            case .authenticationRequired:
+                                errorMessage = "Please sign in to use voice features"
+                            case .networkError:
+                                errorMessage = "Network connection error"
+                            case .authenticationFailed:
+                                errorMessage = "Authentication failed"
+                            case .invalidResponse:
+                                errorMessage = "Invalid response from server"
+                            default:
+                                errorMessage = "Error: \(error.localizedDescription)"
+                            }
+                        } else {
+                            errorMessage = "Error: \(error.localizedDescription)"
+                        }
+                        
+                        // Add error as AI message
+                        let errorAIMessage = ConversationMessage(
+                            text: errorMessage,
+                            isUser: false,
+                            isTranscribed: false
+                        )
+                        conversationHistoryManager.addMessage(errorAIMessage)
+                        statusMessage = "Tap to record"
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Supporting Types
+
+/// Input structure for voice batch processing
+struct VoiceBatchInput {
+    let audioData: Data
+    let context: VoiceProcessingContext
+}
+
+// MARK: - Extensions
+
+extension EnhancedVoiceProcessor.ProcessingStep {
+    var displayText: String {
+        switch self {
+        case .idle:
+            return "Ready"
+        case .transcribing:
+            return "Converting speech..."
+        case .classifyingIntent:
+            return "Understanding intent..."
+        case .routingDecision:
+            return "Choosing processor..."
+        case .processingOnDevice:
+            return "Processing locally..."
+        case .processingOnServer:
+            return "Processing online..."
+        case .generatingResponse:
+            return "Generating response..."
+        case .completed:
+            return "Complete"
+        case .error(let message):
+            return "Error: \(message)"
+        }
+    }
+}
+
+extension ProcessingMethod {
+    var description: String {
+        switch self {
+        case .fullyOnDevice:
+            return "On-Device"
+        case .fullyServer:
+            return "Server"
+        case .hybrid(let onDevice, let server):
+            return "Hybrid (On-Device: \(onDevice.joined(separator: ", ")), Server: \(server.joined(separator: ", ")))"
+        }
+    }
+}
+
+// MARK: - Recording Button Component
+
+struct RecordingButtonView: View {
+    let isRecording: Bool
+    let audioLevel: Float
+    let hasPermission: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        ZStack {
+            // Outer ring animation
+            if isRecording {
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 3
+                    )
+                    .frame(width: buttonSize + 20, height: buttonSize + 20)
+                    .scaleEffect(isRecording ? 1.1 : 1.0)
+                    .opacity(isRecording ? 0.8 : 0)
+                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isRecording)
+            }
+            
+            // Audio level indicator
+            if isRecording {
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: [
-                                (isRecording ? Color.red : Color.blue).opacity(0.1),
-                                (isRecording ? Color.red : Color.blue).opacity(0.05)
-                            ],
+                            colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.1)],
                             center: .center,
-                            startRadius: 10,
-                            endRadius: 80
+                            startRadius: 20,
+                            endRadius: 60
                         )
                     )
-                    .frame(width: 160, height: 160)
-                    .scaleEffect(isRecording ? 1.2 : 1.0)
-                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isRecording)
-                
-                // Main button
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                isRecording ? Color.red : Color.blue,
-                                isRecording ? Color.red.opacity(0.8) : Color.blue.opacity(0.8)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-                    .overlay(
-                        Image(systemName: isRecording ? "stop.fill" : "mic.fill")
-                            .font(.system(size: 40, weight: .medium))
-                            .foregroundColor(.white)
-                    )
-                    .scaleEffect(isRecording ? 0.95 : 1.0)
-                    .shadow(
-                        color: (isRecording ? Color.red : Color.blue).opacity(0.3),
-                        radius: 20,
-                        x: 0,
-                        y: 10
-                    )
-            }
-        }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isRecording {
-                        startRecording()
-                    }
-                }
-                .onEnded { _ in
-                    if isRecording {
-                        stopRecording()
-                    }
-                }
-        )
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isRecording)
-    }
-    
-    // MARK: - Computed Properties
-    private var statusText: String {
-        switch currentStatus {
-        case .idle:
-            return "Hold to speak"
-        case .recording:
-            return "Listening..."
-        case .transcribing:
-            return "Understanding..."
-        case .processing:
-            return "Thinking..."
-        case .playing:
-            return "Speaking..."
-        case .error:
-            return "Something went wrong"
-        }
-    }
-    
-    private var statusColor: Color {
-        switch currentStatus {
-        case .idle:
-            return .secondary
-        case .recording:
-            return .blue
-        case .transcribing, .processing:
-            return .orange
-        case .playing:
-            return .purple
-        case .error:
-            return .red
-        }
-    }
-    
-    // MARK: - Functions
-    private func setupView() {
-        // Set up watch connector callbacks
-        watchConnector.onAudioReceived = { audioData in
-            print("📱 iPhone: Received audio from Watch (\(audioData.count) bytes)")
-            self.handleAudioFromWatch(audioData, fromWatch: true)
-        }
-        
-        watchConnector.onStatusUpdate = { status in
-            DispatchQueue.main.async {
-                currentStatus = status
-            }
-        }
-        
-        loadWebhookURL()
-        setupAudioSession()
-        startAudioLevelMonitoring()
-    }
-    
-    private func setupAudioSession() {
-        do {
-            // Configure audio session with optimized settings
-            try audioSession.setCategory(.playAndRecord, 
-                                       mode: .default, 
-                                       options: [.defaultToSpeaker, .allowBluetooth, .allowAirPlay])
-            
-            // Set preferred sample rate and buffer duration to reduce buffer mismatches
-            try audioSession.setPreferredSampleRate(44100.0)
-            try audioSession.setPreferredIOBufferDuration(0.023) // ~1024 frames at 44.1kHz
-            
-            // Activate audio session
-            try audioSession.setActive(true)
-            
-            print("✅ Audio session configured successfully")
-        } catch {
-            print("❌ Failed to set up audio session: \(error)")
-        }
-    }
-    
-    private func startAudioLevelMonitoring() {
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            updateAudioLevels()
-        }
-    }
-    
-    private func updateAudioLevels() {
-        // Simulate audio levels for visualization
-        if isRecording {
-            audioLevels = (0..<50).map { _ in
-                CGFloat.random(in: 0.1...0.9)
-            }
-        } else {
-            audioLevels = Array(repeating: 0.1, count: 50)
-        }
-    }
-    
-    private func loadWebhookURL() {
-        // Legacy webhook URL handling - keeping for backwards compatibility
-        if let savedURL = UserDefaults.standard.string(forKey: Constants.StorageKeys.webhookURL) {
-            webhookURL = savedURL
-        }
-    }
-    
-    private func startRecording() {
-        print("📱 iPhone: startRecording called")
-        
-        // Set state immediately for instant visual feedback
-        isRecording = true
-        
-        // Haptic and sound feedback
-        HapticManager.shared.voiceStarted()
-        SoundManager.shared.playRecordingStart()
-        
-        // Check microphone permission first
-        let microphoneStatus = AVAudioApplication.shared.recordPermission
-        print("📱 iPhone: Microphone permission status: \(microphoneStatus.rawValue)")
-        
-        if microphoneStatus == .denied {
-            print("❌ iPhone: Microphone permission denied")
-            isRecording = false
-            currentStatus = .error
-            HapticManager.shared.commandError()
-            SoundManager.shared.playCommandError()
-            return
-        }
-        
-        if microphoneStatus == .undetermined {
-            print("📱 iPhone: Requesting microphone permission...")
-            AVAudioApplication.requestRecordPermission { granted in
-                DispatchQueue.main.async {
-                    if granted {
-                        print("✅ iPhone: Microphone permission granted")
-                        self.startRecording()
-                    } else {
-                        print("❌ iPhone: Microphone permission denied by user")
-                        self.isRecording = false
-                        self.currentStatus = .error
-                        HapticManager.shared.commandError()
-                        SoundManager.shared.playCommandError()
-                    }
-                }
-            }
-            return
-        }
-        
-        do {
-            print("📱 iPhone: Setting up audio session...")
-            try audioSession.setCategory(.record, mode: .default)
-            try audioSession.setActive(true)
-            
-            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let audioFilename = documentsPath.appendingPathComponent("recording.m4a")
-            
-            print("📱 iPhone: Audio file path: \(audioFilename)")
-            
-            let settings = [
-                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-                AVSampleRateKey: 12000,
-                AVNumberOfChannelsKey: 1,
-                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-            ]
-            
-            print("📱 iPhone: Creating audio recorder with settings: \(settings)")
-            audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
-            audioRecorder?.record()
-            
-            currentStatus = .recording
-            currentTranscription = ""
-            
-            print("✅ iPhone: Recording started successfully")
-            
-        } catch {
-            print("❌ iPhone: Failed to start recording: \(error.localizedDescription)")
-            print("❌ iPhone: Error details: \(error)")
-            isRecording = false
-            currentStatus = .error
-            HapticManager.shared.commandError()
-            SoundManager.shared.playCommandError()
-        }
-    }
-    
-    private func stopRecording() {
-        print("📱 iPhone: stopRecording called")
-        audioRecorder?.stop()
-        
-        // Set state immediately for instant visual feedback
-        isRecording = false
-        
-        // Haptic and sound feedback
-        HapticManager.shared.voiceStopped()
-        SoundManager.shared.playRecordingStop()
-        
-        guard let audioRecorder = audioRecorder else {
-            print("❌ iPhone: No audio recorder found")
-            currentStatus = .error
-            HapticManager.shared.commandError()
-            SoundManager.shared.playCommandError()
-            return
-        }
-        
-        do {
-            let audioData = try Data(contentsOf: audioRecorder.url)
-            print("✅ iPhone: Recording stopped, got \(audioData.count) bytes")
-            handleAudioFromWatch(audioData, fromWatch: false) // iPhone initiated
-        } catch {
-            print("❌ iPhone: Failed to read audio file: \(error.localizedDescription)")
-            isRecording = false
-            currentStatus = .error
-            HapticManager.shared.commandError()
-            SoundManager.shared.playCommandError()
-        }
-    }
-    
-    
-    private func handleAudioFromWatch(_ audioData: Data, fromWatch: Bool = false) {
-        print("📱 iPhone: handleAudioFromWatch called with \(audioData.count) bytes, fromWatch: \(fromWatch)")
-        
-        // Check if audio data is too small
-        if audioData.count < 1000 {
-            print("❌ iPhone: Audio data too small (\(audioData.count) bytes), rejecting")
-            if fromWatch {
-                watchConnector.sendError("Audio recording too short, please try again")
-            }
-            currentStatus = .error
-            return
-        }
-        
-        currentStatus = .transcribing
-        
-        // Use real-time transcription for live updates
-        speechRecognizer.transcribeRealTime(audioData, 
-            partialResultsHandler: { partialText in
-                self.currentTranscription = partialText
-            },
-            completion: { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let transcription):
-                        print("✅ iPhone: Transcription successful: \(transcription)")
-                        self.currentTranscription = "" // Clear live transcription
-                        HapticManager.shared.commandSuccess()
-                        SoundManager.shared.playCommandSuccess()
-                        self.handleTranscription(transcription, fromWatch: fromWatch)
-                    case .failure(let error):
-                        print("❌ iPhone: Transcription failed: \(error.localizedDescription)")
-                        self.currentTranscription = "" // Clear on error
-                        self.handleTranscriptionError(error)
-                    }
-                }
-            }
-        )
-    }
-    
-    private func handleTranscription(_ transcription: String, fromWatch: Bool = false) {
-        // Add user message to conversation
-        let userMessage = ConversationMessage(
-            id: UUID(),
-            text: transcription,
-            isUser: true,
-            timestamp: Date(),
-            audioBase64: nil,
-            isTranscribed: false
-        )
-        conversationHistory.append(userMessage)
-        
-        currentStatus = .processing
-        
-        let request = VoiceRequest(
-            text: transcription,
-            sessionId: Constants.getCurrentSessionId(),
-            metadata: ["voiceId": Constants.API.defaultVoiceId],
-            generateAudio: true
-        )
-        
-        // Use secure backend API exclusively
-        apiClient.sendVoiceCommandEnhanced(request) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let enhancedResponse):
-                    self.handleEnhancedAPIResponse(enhancedResponse, fromWatch: fromWatch)
-                case .failure(let error):
-                    print("❌ Voice API failed: \(error)")
-                    // Handle error appropriately without falling back to insecure methods
-                    self.isRecording = false
-                    self.showError = true
-                    self.lastError = "Voice processing failed. Please try again."
-                }
-            }
-        }
-    }
-    
-    
-    
-    private func handleAPIResponse(_ response: VoiceResponse, fromWatch: Bool = false) {
-        print("📱 iPhone: Received API response: '\(response.text)'")
-        print("📱 iPhone: Response success: \(response.success)")
-        print("📱 iPhone: Response audioBase64 length: \(response.audioBase64?.count ?? 0)")
-        print("📱 iPhone: fromWatch = \(fromWatch)")
-        
-        // Check if we need to transcribe audio response
-        if response.text.isEmpty && response.audioBase64 != nil {
-            transcribeAudioResponse(response, fromWatch: fromWatch)
-        } else {
-            // Process response normally (with existing text)
-            processVoiceResponse(response, transcribedText: response.text, fromWatch: fromWatch)
-        }
-    }
-    
-    private func handleEnhancedAPIResponse(_ enhancedResponse: EnhancedVoiceResponse, fromWatch: Bool = false) {
-        print("📱 iPhone: Received enhanced API response: '\(enhancedResponse.text)'")
-        print("📱 iPhone: Response success: \(enhancedResponse.success)")
-        print("📱 iPhone: Response audioBase64 length: \(enhancedResponse.audioBase64?.count ?? 0)")
-        print("📱 iPhone: Intent: \(enhancedResponse.intent ?? "unknown")")
-        print("📱 iPhone: Confidence: \(enhancedResponse.confidence ?? 0.0)")
-        print("📱 iPhone: Agent used: \(enhancedResponse.agentUsed ?? "unknown")")
-        print("📱 iPhone: Execution time: \(enhancedResponse.executionTime ?? 0.0)s")
-        print("📱 iPhone: fromWatch = \(fromWatch)")
-        
-        // Check if we need to transcribe audio response
-        if enhancedResponse.text.isEmpty && enhancedResponse.audioBase64 != nil {
-            transcribeEnhancedAudioResponse(enhancedResponse, fromWatch: fromWatch)
-        } else {
-            // Process response normally (with existing text)
-            processEnhancedVoiceResponse(enhancedResponse, fromWatch: fromWatch)
-        }
-    }
-    
-    private func transcribeAudioResponse(_ response: VoiceResponse, fromWatch: Bool) {
-        guard let audioBase64 = response.audioBase64,
-              let audioData = Data(base64Encoded: audioBase64) else {
-            print("❌ iPhone: No valid audio data for transcription")
-            processVoiceResponse(response, transcribedText: "Audio response", fromWatch: fromWatch)
-            return
-        }
-        
-        print("🎤 iPhone: Transcribing audio response (\(audioData.count) bytes)")
-        currentStatus = .transcribing
-        
-        // Add temporary message while transcribing
-        let tempMessage = ConversationMessage(
-            id: UUID(),
-            text: "Transcribing audio...",
-            isUser: false,
-            timestamp: Date(),
-            audioBase64: audioBase64,
-            isTranscribed: false
-        )
-        conversationHistory.append(tempMessage)
-        
-        speechRecognizer.transcribe(audioData) { result in
-            DispatchQueue.main.async {
-                // Remove temporary message
-                self.conversationHistory.removeAll { $0.id == tempMessage.id }
-                
-                switch result {
-                case .success(let transcribedText):
-                    print("✅ iPhone: Audio transcription successful: \(transcribedText)")
-                    self.processVoiceResponse(response, transcribedText: transcribedText, fromWatch: fromWatch)
-                case .failure(let error):
-                    print("❌ iPhone: Audio transcription failed: \(error.localizedDescription)")
-                    self.processVoiceResponse(response, transcribedText: "Audio response (transcription failed)", fromWatch: fromWatch)
-                }
-            }
-        }
-    }
-    
-    private func processVoiceResponse(_ response: VoiceResponse, transcribedText: String, fromWatch: Bool) {
-        // Add assistant response to conversation with transcribed text and enhanced backend info
-        let assistantMessage = ConversationMessage(
-            id: UUID(),
-            text: transcribedText,
-            isUser: false,
-            timestamp: Date(),
-            audioBase64: response.audioBase64,
-            isTranscribed: response.text.isEmpty && response.audioBase64 != nil,
-            intent: nil, // Will be populated when using BackendVoiceResponse
-            confidence: nil,
-            agentUsed: nil,
-            executionTime: nil,
-            actions: nil,
-            suggestions: nil
-        )
-        conversationHistory.append(assistantMessage)
-        
-        if fromWatch {
-            // Send response back to watch - Watch will handle audio playback
-            print("📤 iPhone: Sending response to Watch (Watch will play audio)")
-            print("📤 iPhone: Response text being sent: '\(transcribedText)'")
-            
-            // Create updated response with transcribed text for watch
-            let updatedResponse = VoiceResponse(
-                text: transcribedText,
-                success: response.success,
-                audioBase64: response.audioBase64
-            )
-            watchConnector.sendVoiceResponse(updatedResponse)
-            print("📤 iPhone: Response sent to Watch successfully")
-        } else {
-            // iPhone initiated - iPhone handles audio playback
-            print("🔊 iPhone: Playing audio response (iPhone initiated)")
-            if let audioBase64 = response.audioBase64 {
-                print("🔊 iPhone: Audio base64 available, length: \(audioBase64.count)")
-                playAudioResponse(audioBase64)
-            } else {
-                print("❌ iPhone: No audio data available in response")
-            }
-        }
-        
-        currentStatus = .playing
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            currentStatus = .idle
-        }
-    }
-    
-    private func transcribeEnhancedAudioResponse(_ enhancedResponse: EnhancedVoiceResponse, fromWatch: Bool = false) {
-        print("🎯 Processing enhanced voice response with intent: \(enhancedResponse.intent ?? "none")")
-        
-        // Add enhanced assistant response to conversation history
-        let enhancedMessage = ConversationMessage(
-            text: enhancedResponse.text,
-            isUser: false,
-            audioBase64: enhancedResponse.audioBase64,
-            intent: enhancedResponse.intent,
-            confidence: enhancedResponse.confidence,
-            agentUsed: enhancedResponse.agentUsed,
-            executionTime: enhancedResponse.executionTime,
-            actions: enhancedResponse.actions,
-            suggestions: enhancedResponse.suggestions
-        )
-        
-        conversationHistory.append(enhancedMessage)
-        
-        if fromWatch {
-            // Send response back to watch - Watch will handle audio playback
-            print("📤 iPhone: Sending enhanced response to Watch (Watch will play audio)")
-            print("📤 iPhone: Response text being sent: '\(enhancedResponse.text)'")
-            
-            // Create updated response with enhanced metadata for watch
-            let updatedResponse = VoiceResponse(
-                text: enhancedResponse.text,
-                success: enhancedResponse.success,
-                audioBase64: enhancedResponse.audioBase64
-            )
-            watchConnector.sendVoiceResponse(updatedResponse)
-            print("📤 iPhone: Enhanced response sent to Watch successfully")
-        } else {
-            // iPhone initiated - iPhone handles audio playback
-            print("🔊 iPhone: Playing enhanced audio response (iPhone initiated)")
-            if let audioBase64 = enhancedResponse.audioBase64 {
-                playAudioResponse(audioBase64)
-            }
-        }
-        
-        currentStatus = .playing
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            currentStatus = .idle
-        }
-    }
-    
-    private func processEnhancedVoiceResponse(_ enhancedResponse: EnhancedVoiceResponse, fromWatch: Bool = false) {
-        print("🎯 Processing enhanced voice response with metadata")
-        print("🎯 Intent: \(enhancedResponse.intent ?? "none")")
-        print("🎯 Confidence: \(enhancedResponse.confidence ?? 0.0)")
-        print("🎯 Agent used: \(enhancedResponse.agentUsed ?? "none")")
-        print("🎯 Execution time: \(enhancedResponse.executionTime ?? 0.0)s")
-        print("🎯 Actions: \(enhancedResponse.actions ?? [])")
-        print("🎯 Suggestions: \(enhancedResponse.suggestions ?? [])")
-        
-        // Add enhanced assistant response to conversation history
-        let enhancedMessage = ConversationMessage(
-            text: enhancedResponse.text,
-            isUser: false,
-            audioBase64: enhancedResponse.audioBase64,
-            intent: enhancedResponse.intent,
-            confidence: enhancedResponse.confidence,
-            agentUsed: enhancedResponse.agentUsed,
-            executionTime: enhancedResponse.executionTime,
-            actions: enhancedResponse.actions,
-            suggestions: enhancedResponse.suggestions
-        )
-        
-        conversationHistory.append(enhancedMessage)
-        
-        if fromWatch {
-            // Send response back to watch - Watch will handle audio playback
-            print("📤 iPhone: Sending enhanced response to Watch (Watch will play audio)")
-            print("📤 iPhone: Response text being sent: '\(enhancedResponse.text)'")
-            
-            // Create updated response with enhanced metadata for watch
-            let updatedResponse = VoiceResponse(
-                text: enhancedResponse.text,
-                success: enhancedResponse.success,
-                audioBase64: enhancedResponse.audioBase64
-            )
-            watchConnector.sendVoiceResponse(updatedResponse)
-            print("📤 iPhone: Enhanced response sent to Watch successfully")
-        } else {
-            // iPhone initiated - iPhone handles audio playback
-            print("🔊 iPhone: Playing enhanced audio response (iPhone initiated)")
-            if let audioBase64 = enhancedResponse.audioBase64 {
-                playAudioResponse(audioBase64)
-            }
-        }
-        
-        currentStatus = .playing
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            currentStatus = .idle
-        }
-    }
-    
-    private func playAudioResponse(_ audioBase64: String) {
-        // Check if audio data is empty
-        if audioBase64.isEmpty {
-            print("❌ Audio base64 string is empty - no audio to play")
-            currentStatus = .idle
-            return
-        }
-        
-        guard let audioData = Data(base64Encoded: audioBase64) else {
-            print("❌ Failed to decode base64 audio")
-            currentStatus = .idle
-            return
-        }
-        
-        // Check if decoded audio data is empty
-        if audioData.isEmpty {
-            print("❌ Decoded audio data is empty - no audio to play")
-            currentStatus = .idle
-            return
-        }
-        
-        print("🔊 Playing audio response (\(audioData.count) bytes)")
-        
-        do {
-            // Set up audio session for playback with simple settings
-            print("🔊 Setting up audio session for playback...")
-            try audioSession.setCategory(.playback)
-            try audioSession.setActive(true)
-            
-            // Create audio player
-            print("🔊 Creating AVAudioPlayer...")
-            audioPlayer = try AVAudioPlayer(data: audioData)
-            audioPlayer?.volume = 1.0
-            
-            // Check if audio player is ready
-            if audioPlayer?.prepareToPlay() == true {
-                print("🔊 Audio player prepared successfully")
-                let success = audioPlayer?.play()
-                print("🔊 Audio playback started: \(success == true ? "SUCCESS" : "FAILED")")
-                
-                if let duration = audioPlayer?.duration {
-                    print("🔊 Audio duration: \(duration) seconds")
-                    
-                    // Schedule cleanup after playback completes
-                    DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.5) {
-                        cleanupAudioPlayback()
-                    }
-                }
-            } else {
-                print("❌ Audio player failed to prepare")
+                    .frame(width: buttonSize + (CGFloat(audioLevel) * 60),
+                           height: buttonSize + (CGFloat(audioLevel) * 60))
+                    .animation(.easeInOut(duration: 0.1), value: audioLevel)
             }
             
-        } catch {
-            print("❌ Failed to play audio: \(error)")
-            print("❌ Audio error details: \(error.localizedDescription)")
-        }
-    }
-    
-    private func cleanupAudioPlayback() {
-        print("🔊 Cleaning up audio playback")
-        
-        // Stop and cleanup audio player
-        audioPlayer?.stop()
-        audioPlayer = nil
-        
-        // Reset audio session back to record mode for next interaction
-        do {
-            try audioSession.setCategory(.playAndRecord, 
-                                       mode: .default, 
-                                       options: [.defaultToSpeaker, .allowBluetooth, .allowAirPlay])
-            try audioSession.setPreferredIOBufferDuration(0.023)
-            print("🔊 Audio session reset to record mode")
-        } catch {
-            print("❌ Failed to reset audio session: \(error)")
-        }
-    }
-    
-    
-    private func handleTranscriptionError(_ error: Error) {
-        currentStatus = .error
-        watchConnector.sendError("Transcription failed: \(error.localizedDescription)")
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            currentStatus = .idle
-        }
-    }
-    
-    private func executeQuickAction(_ action: QuickAction) {
-        print("🎯 Executing quick action: \(action.voiceCommand)")
-        
-        // Haptic feedback
-        HapticManager.shared.commandSuccess()
-        SoundManager.shared.playCommandSuccess()
-        
-        // Process the voice command directly
-        handleTranscription(action.voiceCommand, fromWatch: false)
-    }
-    
-    private func handleAPIError(_ error: Error) {
-        currentStatus = .error
-        
-        var errorMessage = "API request failed: \(error.localizedDescription)"
-        var shouldReturnToIdle = true
-        
-        // Handle different types of errors with specific responses
-        if let voiceError = error as? VoiceAssistantError {
-            switch voiceError {
-            case .authenticationRequired, .authenticationFailed:
-                errorMessage = "Authentication required. Please sign in."
-                shouldReturnToIdle = false
-                // This will trigger the authentication flow
-                return
-                
-            case .tokenExpired, .tokenRefreshFailed:
-                errorMessage = "Session expired. Please sign in again."
-                shouldReturnToIdle = false
-                // Clear stored tokens and trigger re-authentication
-                apiClient.logout { _ in }
-                return
-                
-            case .networkError:
-                errorMessage = "Network connection failed. Please check your internet connection."
-                
-            case .backendUnavailable:
-                errorMessage = "Service temporarily unavailable. Please try again later."
-                
-            case .rateLimitExceeded:
-                errorMessage = "Too many requests. Please wait a moment before trying again."
-                
-            case .webSocketConnectionFailed:
-                errorMessage = "Real-time connection failed. Using fallback mode."
-                
-            case .voiceProcessingFailed:
-                errorMessage = "Voice processing failed. Please try again."
-                
-            case .audioEncodingFailed, .audioDecodingFailed:
-                errorMessage = "Audio processing failed. Please try recording again."
-                
-            case .invalidAudioFormat:
-                errorMessage = "Invalid audio format. Please try recording again."
-                
-            case .serverError(let code):
-                errorMessage = "Server error (\(code)). Please try again later."
-                
-            case .unknownError(let message):
-                errorMessage = "Unexpected error: \(message)"
-                
-            default:
-                errorMessage = voiceError.localizedDescription
-                if let recovery = voiceError.recoverySuggestion {
-                    errorMessage += " \(recovery)"
-                }
-            }
-        }
-        
-        print("❌ iPhone: API Error - \(errorMessage)")
-        
-        // Add error message to conversation history
-        let errorConversationMessage = ConversationMessage(
-            text: errorMessage,
-            isUser: false,
-            timestamp: Date()
-        )
-        conversationHistory.append(errorConversationMessage)
-        
-        // Send error to watch if applicable
-        watchConnector.sendError(errorMessage)
-        
-        if shouldReturnToIdle {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                currentStatus = .idle
-            }
-        }
-    }
-}
-
-// MARK: - Supporting Views
-
-struct ConversationBubble: View {
-    let message: ConversationMessage
-    @State private var audioPlayer: AVAudioPlayer?
-    @State private var isPlaying = false
-    
-    var body: some View {
-        HStack {
-            if message.isUser {
-                Spacer()
-            }
-            
-            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-                if !message.text.isEmpty {
-                    VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-                        Text(message.text)
-                            .font(.body)
-                            .foregroundColor(message.isUser ? .white : .primary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(message.isUser ? Color.blue : Color(.systemGray5))
+            Button(action: action) {
+                ZStack {
+                    // Background gradient
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: isRecording ? [Color.red, Color.orange] : [Color.blue, Color.purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                        
-                        // Show transcription indicator and replay button for AI responses
-                        if !message.isUser && message.isTranscribed {
-                            HStack {
-                                Image(systemName: "waveform.badge.magnifyingglass")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                Text("Transcribed from audio")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                
-                                Spacer()
-                                
-                                // Small replay button
-                                Button(action: { replayAudio() }) {
-                                    Image(systemName: isPlaying ? "stop.circle" : "play.circle")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                .accessibilityLabel("Replay audio")
-                                .accessibilityHint("Tap to replay the original audio")
-                            }
-                            .padding(.horizontal, 8)
-                        }
-                    }
-                } else if !message.isUser {
-                        // This case should rarely happen now due to transcription
-                    // Show clickable audio indicator for AI responses without text
-                    Button(action: {
-                        replayAudio()
-                    }) {
-                        HStack {
-                            Image(systemName: isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                                .foregroundColor(.gray)
-                                .font(.title3)
-                            Text("Audio response (transcription failed)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            if isPlaying {
-                                Image(systemName: "waveform")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption2)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(Color(.systemGray5))
                         )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .accessibilityLabel("AI audio response")
-                    .accessibilityHint("Tap to replay audio response")
-                }
-                
-                Text(formatTime(message.timestamp))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8)
-            }
-            
-            if !message.isUser {
-                Spacer()
-            }
-        }
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-    
-    private func replayAudio() {
-        guard let audioBase64 = message.audioBase64,
-              !audioBase64.isEmpty else {
-            print("❌ No audio data available for replay")
-            return
-        }
-        
-        if isPlaying {
-            // Stop current playback
-            stopAudioPlayback()
-        } else {
-            // Start playback
-            playAudioResponse(audioBase64)
-        }
-    }
-    
-    private func playAudioResponse(_ audioBase64: String) {
-        guard let audioData = Data(base64Encoded: audioBase64) else {
-            print("❌ Failed to decode base64 audio for replay")
-            return
-        }
-        
-        print("🔊 Replaying audio response (\(audioData.count) bytes)")
-        
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback)
-            try audioSession.setActive(true)
-            
-            audioPlayer = try AVAudioPlayer(data: audioData)
-            audioPlayer?.volume = 1.0
-            
-            if audioPlayer?.prepareToPlay() == true {
-                let success = audioPlayer?.play()
-                if success == true {
-                    isPlaying = true
+                        .frame(width: buttonSize, height: buttonSize)
                     
-                    // Schedule cleanup after playback completes
-                    if let duration = audioPlayer?.duration {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.1) {
-                            stopAudioPlayback()
-                        }
-                    }
-                }
-            }
-        } catch {
-            print("❌ Failed to replay audio: \(error)")
-        }
-    }
-    
-    private func stopAudioPlayback() {
-        audioPlayer?.stop()
-        audioPlayer = nil
-        isPlaying = false
-        
-        // Reset audio session
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playAndRecord, 
-                                       mode: .default, 
-                                       options: [.defaultToSpeaker, .allowBluetooth, .allowAirPlay])
-        } catch {
-            print("❌ Failed to reset audio session after replay: \(error)")
-        }
-    }
-}
-
-// Chat-optimized bubble for dark theme
-struct ConversationBubbleChat: View {
-    let message: ConversationMessage
-    @State private var audioPlayer: AVAudioPlayer?
-    @State private var isPlaying = false
-    
-    var body: some View {
-        HStack {
-            if message.isUser {
-                Spacer()
-            }
-            
-            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-                if !message.text.isEmpty {
-                    VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-                        Text(message.text)
-                            .font(.body)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(message.isUser ? 
-                                         Color(red: 0.8, green: 0.7, blue: 1.0) : // lilac for user
-                                         Color.white.opacity(0.15)) // semi-transparent white for AI
+                    // Shadow
+                    Circle()
+                        .fill(Color.black.opacity(0.2))
+                        .frame(width: buttonSize, height: buttonSize)
+                        .offset(y: 2)
+                        .blur(radius: 4)
+                    
+                    // Main button
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: isRecording ? [Color.red, Color.orange] : [Color.blue, Color.purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                        
-                        // Show transcription indicator and replay button for AI responses
-                        if !message.isUser && message.isTranscribed {
-                            HStack {
-                                Image(systemName: "waveform.badge.magnifyingglass")
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.5))
-                                Text("Transcribed from audio")
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.5))
-                                
-                                Spacer()
-                                
-                                // Small replay button
-                                Button(action: { replayAudio() }) {
-                                    Image(systemName: isPlaying ? "stop.circle" : "play.circle")
-                                        .font(.caption)
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                .accessibilityLabel("Replay audio")
-                                .accessibilityHint("Tap to replay the original audio")
-                            }
-                            .padding(.horizontal, 8)
-                        }
-                    }
-                    .accessibilityLabel(message.isUser ? "Your message" : (message.isTranscribed ? "AI response (transcribed from audio)" : "AI response"))
-                    .accessibilityValue(message.text)
-                } else if !message.isUser {
-                    // This case should rarely happen now due to transcription
-                    // Show clickable audio indicator for AI responses without text
-                    Button(action: {
-                        replayAudio()
-                    }) {
-                        HStack {
-                            Image(systemName: isPlaying ? "stop.circle.fill" : "play.circle.fill")
-                                .foregroundColor(.white.opacity(0.7))
-                                .font(.title3)
-                            Text("Audio response (transcription failed)")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.7))
-                            if isPlaying {
-                                Image(systemName: "waveform")
-                                    .foregroundColor(.white.opacity(0.5))
-                                    .font(.caption2)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.white.opacity(0.15))
                         )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .accessibilityLabel("AI audio response")
-                    .accessibilityHint("Tap to replay audio response")
-                }
-                
-                Text(formatTime(message.timestamp))
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.5))
-                    .padding(.horizontal, 8)
-                    .accessibilityLabel("Time: \(formatTime(message.timestamp))")
-            }
-            
-            if !message.isUser {
-                Spacer()
-            }
-        }
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-    
-    private func replayAudio() {
-        guard let audioBase64 = message.audioBase64,
-              !audioBase64.isEmpty else {
-            print("❌ No audio data available for replay")
-            return
-        }
-        
-        if isPlaying {
-            // Stop current playback
-            stopAudioPlayback()
-        } else {
-            // Start playback
-            playAudioResponse(audioBase64)
-        }
-    }
-    
-    private func playAudioResponse(_ audioBase64: String) {
-        guard let audioData = Data(base64Encoded: audioBase64) else {
-            print("❌ Failed to decode base64 audio for replay")
-            return
-        }
-        
-        print("🔊 Replaying audio response (\(audioData.count) bytes)")
-        
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback)
-            try audioSession.setActive(true)
-            
-            audioPlayer = try AVAudioPlayer(data: audioData)
-            audioPlayer?.volume = 1.0
-            
-            if audioPlayer?.prepareToPlay() == true {
-                let success = audioPlayer?.play()
-                if success == true {
-                    isPlaying = true
+                        .frame(width: buttonSize, height: buttonSize)
                     
-                    // Schedule cleanup after playback completes
-                    if let duration = audioPlayer?.duration {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.1) {
-                            stopAudioPlayback()
-                        }
-                    }
+                    Image(systemName: isRecording ? "stop.fill" : "mic.fill")
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundColor(.white)
+                        .scaleEffect(isRecording ? 0.8 : 1.0)
+                        .animation(.easeInOut(duration: 0.2), value: isRecording)
                 }
             }
-        } catch {
-            print("❌ Failed to replay audio: \(error)")
+            .disabled(!hasPermission)
+            .scaleEffect(hasPermission ? 1.0 : 0.9)
+            .opacity(hasPermission ? 1.0 : 0.6)
         }
     }
     
-    private func stopAudioPlayback() {
-        audioPlayer?.stop()
-        audioPlayer = nil
-        isPlaying = false
-        
-        // Reset audio session
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playAndRecord, 
-                                       mode: .default, 
-                                       options: [.defaultToSpeaker, .allowBluetooth, .allowAirPlay])
-        } catch {
-            print("❌ Failed to reset audio session after replay: \(error)")
-        }
+    private var buttonSize: CGFloat { 100 }
+}
+
+// MARK: - Audio Player Delegate
+
+class SimpleAudioDelegate: NSObject, AVAudioPlayerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        // Audio finished playing - simple implementation without callbacks
+        print("✅ Audio playback finished")
     }
 }
 
-struct LiveTranscriptionBubble: View {
-    let text: String
-    
-    var body: some View {
-        HStack {
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(text)
-                    .font(.body)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.blue.opacity(0.7))
-                    )
-                
-                Text("Transcribing...")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8)
-            }
-        }
-        .transition(.scale.combined(with: .opacity))
-    }
-}
+// MARK: - Audio Level Meter Component
 
-// Chat-optimized live transcription bubble
-struct LiveTranscriptionBubbleChat: View {
-    let text: String
-    
-    var body: some View {
-        HStack {
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(text)
-                    .font(.body)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color(red: 0.8, green: 0.7, blue: 1.0).opacity(0.7)) // lilac with transparency
-                    )
-                
-                Text("Transcribing...")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.5))
-                    .padding(.horizontal, 8)
-            }
-        }
-        .transition(.scale.combined(with: .opacity))
-    }
-}
-
-struct AudioVisualizationView: View {
-    let levels: [CGFloat]
+struct AudioLevelMeterView: View {
+    let audioLevel: Float
     
     var body: some View {
         HStack(spacing: 2) {
-            ForEach(0..<levels.count, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(
-                        LinearGradient(
-                            colors: [.blue, .blue.opacity(0.6)],
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-                    )
-                    .frame(width: 3, height: max(4, levels[index] * 50))
-                    .animation(.easeInOut(duration: 0.1), value: levels[index])
+            ForEach(0..<20) { index in
+                Rectangle()
+                    .fill(audioLevelColor(for: index))
+                    .frame(width: 8, height: 20)
+                    .opacity(isActive(index: index) ? 1.0 : 0.3)
             }
+        }
+        .frame(height: 20)
+        .padding(.horizontal)
+    }
+    
+    private func isActive(index: Int) -> Bool {
+        Double(index) / 20.0 <= Double(audioLevel)
+    }
+    
+    private func audioLevelColor(for index: Int) -> Color {
+        let percentage = Double(index) / 20.0
+        if percentage < 0.5 {
+            return .green
+        } else if percentage < 0.8 {
+            return .yellow
+        } else {
+            return .red
         }
     }
 }
 
-// MARK: - Settings View
-struct SettingsView: View {
-    @Binding var webhookURL: String
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                VStack(spacing: 30) {
-                    // Header
-                    Text("Settings")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.top, 20)
-                    
-                    // API Configuration
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("API Configuration")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        
-                        TextField("Webhook URL", text: $webhookURL)
-                            .textFieldStyle(PlainTextFieldStyle())
-                            .padding()
-                            .background(Color.white.opacity(0.1))
-                            .cornerRadius(12)
-                            .foregroundColor(.white)
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
-                    }
-                    .padding(.horizontal)
-                    
-                    // Information
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Information")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("SORA")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                            
-                            Text("AI-powered voice assistant with natural conversation capabilities.")
-                                .font(.body)
-                                .foregroundColor(.white.opacity(0.7))
-                        }
-                        .padding()
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    
-                    Spacer()
-                    
-                    // Done Button
-                    Button("Done") {
-                        saveSettings()
-                        dismiss()
-                    }
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 15)
-                    .background(
-                        RoundedRectangle(cornerRadius: 25)
-                            .fill(Color.blue)
-                    )
-                    .padding(.bottom, 30)
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-    
-    private func saveSettings() {
-        UserDefaults.standard.set(webhookURL, forKey: Constants.StorageKeys.webhookURL)
-        // Legacy webhook URL saving - keeping for backwards compatibility
-    }
-}
+// MARK: - Quick Action Button Component
 
-// MARK: - Menu View
-struct MenuView: View {
-    @Binding var conversationHistory: [ConversationMessage]
-    @ObservedObject var apiClient: APIClient
-    @Environment(\.dismiss) private var dismiss
-    @State private var showClearConfirmation = false
-    @State private var showSettings = false
-    @State private var showLogoutConfirmation = false
-    @State private var webhookURL = Constants.API.webhookURL
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                VStack(spacing: 30) {
-                    // Header
-                    HStack {
-                        Text("Menu")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        
-                        Spacer()
-                        
-                        Button("Done") {
-                            dismiss()
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white.opacity(0.7))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    
-                    // Menu Options
-                    VStack(spacing: 20) {
-                        // Clear Chat History
-                        Button(action: {
-                            showClearConfirmation = true
-                        }) {
-                            HStack {
-                                Image(systemName: "trash")
-                                    .font(.title2)
-                                    .foregroundColor(.red)
-                                Text("Clear Chat History")
-                                    .font(.headline)
-                                    .foregroundColor(.red)
-                                Spacer()
-                            }
-                            .padding()
-                            .background(Color.white.opacity(0.05))
-                            .cornerRadius(12)
-                        }
-                        .confirmationDialog(
-                            "Clear Chat History",
-                            isPresented: $showClearConfirmation,
-                            titleVisibility: .visible
-                        ) {
-                            Button("Clear All Messages", role: .destructive) {
-                                conversationHistory.removeAll()
-                                dismiss()
-                            }
-                            Button("Cancel", role: .cancel) {}
-                        } message: {
-                            Text("This will permanently delete all messages in your conversation history.")
-                        }
-                        
-                        // Enhanced Settings
-                        Button(action: {
-                            showSettings = true
-                        }) {
-                            HStack {
-                                Image(systemName: "gear")
-                                    .font(.title2)
-                                    .foregroundColor(.white.opacity(0.7))
-                                Text("Settings")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            .padding()
-                            .background(Color.white.opacity(0.05))
-                            .cornerRadius(12)
-                        }
-                        
-                        // Logout
-                        Button(action: {
-                            showLogoutConfirmation = true
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.right.square")
-                                    .font(.title2)
-                                    .foregroundColor(.red)
-                                Text("Logout")
-                                    .font(.headline)
-                                    .foregroundColor(.red)
-                                Spacer()
-                            }
-                            .padding()
-                            .background(Color.white.opacity(0.05))
-                            .cornerRadius(12)
-                        }
-                        .confirmationDialog(
-                            "Logout",
-                            isPresented: $showLogoutConfirmation,
-                            titleVisibility: .visible
-                        ) {
-                            Button("Logout", role: .destructive) {
-                                handleLogout()
-                            }
-                            Button("Cancel", role: .cancel) {}
-                        } message: {
-                            Text("Are you sure you want to logout?")
-                        }
-                        
-                        // Stats
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Statistics")
-                                .font(.headline)
-                                .foregroundColor(.white.opacity(0.7))
-                            
-                            Text("Total Messages: \(conversationHistory.count)")
-                                .font(.body)
-                                .foregroundColor(.white.opacity(0.5))
-                        }
-                        .padding()
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    Spacer()
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-        .sheet(isPresented: $showSettings) {
-            EnhancedSettingsView()
-        }
-    }
-    
-    private func handleLogout() {
-        apiClient.logout { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    print("✅ Logout successful")
-                    dismiss()
-                case .failure(let error):
-                    print("❌ Logout failed: \(error)")
-                    // Still dismiss as we cleared local tokens
-                    dismiss()
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Compact Quick Action Button
-
-struct CompactQuickActionButton: View {
+struct SimpleQuickActionButton: View {
     let action: QuickAction
-    let onTap: () -> Void
+    let onTap: (QuickAction) -> Void
     
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 6) {
-                // Icon circle
-                ZStack {
-                    Circle()
-                        .fill(colorFromString(action.color).opacity(0.2))
-                        .frame(width: 40, height: 40)
-                    
-                    Image(systemName: action.icon)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(colorFromString(action.color))
-                }
-                
-                // Title
-                Text(action.title)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.8))
-                    .lineLimit(1)
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.white.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(colorFromString(action.color).opacity(0.3), lineWidth: 0.5)
+        let color = colorFromString(action.color)
+        
+        Button(action: { onTap(action) }) {
+            VStack(spacing: 8) {
+                Image(systemName: action.icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(color)
+                    .frame(width: 50, height: 50)
+                    .background(
+                        Circle()
+                            .fill(color.opacity(0.2))
                     )
-            )
+                
+                Text(action.title)
+                    .font(.caption)
+                    .foregroundColor(.white)
+            }
         }
         .buttonStyle(PlainButtonStyle())
-        .scaleEffect(1.0)
-        .animation(.easeInOut(duration: 0.1), value: false)
-        .accessibilityLabel(action.title)
-        .accessibilityHint("Tap to \(action.voiceCommand.lowercased())")
     }
     
     private func colorFromString(_ colorString: String) -> Color {
@@ -1953,7 +1211,7 @@ struct CompactQuickActionButton: View {
         case "blue": return .blue
         case "red": return .red
         case "green": return .green
-        case "orange": return .orange
+        case "orange": return Color(red: 1.0, green: 0.65, blue: 0.0) // Custom orange color
         case "purple": return .purple
         case "yellow": return .yellow
         case "pink": return .pink
@@ -1961,8 +1219,4 @@ struct CompactQuickActionButton: View {
         default: return .blue
         }
     }
-}
-
-#Preview {
-    ContentView()
 }

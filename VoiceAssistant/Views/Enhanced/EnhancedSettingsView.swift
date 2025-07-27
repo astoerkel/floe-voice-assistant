@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 // MARK: - Supporting Models
 
@@ -56,6 +57,9 @@ class SettingsViewModel: ObservableObject {
     @Published var useAppleSpeech = true
     @Published var useWhisperFallback = true
     @Published var showDeleteAccountConfirmation = false
+    @Published var preferredName: String = ""
+    @Published var isUpdatingPreferences = false
+    @Published var preferencesUpdateMessage: String? = nil
     
     func loadSettings() {
         // Load user settings
@@ -66,14 +70,118 @@ class SettingsViewModel: ObservableObject {
     }
     
     private func loadUserData() {
-        // Mock user data
-        currentUser = AppUser(
-            id: "user123",
-            name: "John Doe",
-            email: "john@example.com",
-            profilePictureURL: nil,
-            createdAt: Date().addingTimeInterval(-2592000) // 30 days ago
-        )
+        // Load preferred name from UserDefaults first
+        preferredName = UserDefaults.standard.string(forKey: "preferred_name") ?? ""
+        
+        // Get authentication status and tokens for debugging
+        let isAuth = APIClient.shared.isAuthenticated
+        let mainToken = UserDefaults.standard.string(forKey: "voice_assistant_access_token")
+        let refreshToken = UserDefaults.standard.string(forKey: "voice_assistant_refresh_token")
+        
+        print("🔍 Settings loadUserData - isAuthenticated: \(isAuth), mainToken: \(mainToken != nil), refreshToken: \(refreshToken != nil)")
+        
+        // For now, if authenticated, show a basic authenticated user instead of guest
+        if isAuth {
+            // Try to decode information from the access token if available
+            if let token = mainToken, let decoded = try? decodeJWT(token) {
+                print("✅ Decoded token data: \(decoded)")
+                
+                currentUser = AppUser(
+                    id: decoded["sub"] as? String ?? "unknown",
+                    name: decoded["name"] as? String ?? (decoded["email"] as? String)?.components(separatedBy: "@").first?.capitalized ?? "Authenticated User",
+                    email: decoded["email"] as? String ?? "user@example.com",
+                    profilePictureURL: nil,
+                    createdAt: Date().addingTimeInterval(-2592000)
+                )
+            } else {
+                // Fallback to basic authenticated user using available token data
+                if let token = mainToken, token.contains("eyJ") {
+                    // This looks like a JWT, extract email if possible
+                    let email = extractEmailFromToken(token) ?? "user@example.com"
+                    let name = email.components(separatedBy: "@").first?.capitalized ?? "Authenticated User"
+                    
+                    currentUser = AppUser(
+                        id: "authenticated",
+                        name: name,
+                        email: email,
+                        profilePictureURL: nil,
+                        createdAt: Date().addingTimeInterval(-2592000)
+                    )
+                } else {
+                    currentUser = AppUser(
+                        id: "authenticated",
+                        name: "Authenticated User", 
+                        email: "user@example.com",
+                        profilePictureURL: nil,
+                        createdAt: Date().addingTimeInterval(-2592000)
+                    )
+                }
+            }
+            
+            // Always try to load user profile from server (prioritized)
+            Task {
+                do {
+                    print("🔍 Attempting to fetch user profile from SimpleUserManager...")
+                    print("🔍 API Base URL: \(Constants.API.baseURL)")
+                    await SimpleUserManager.shared.fetchUserProfile()
+                    
+                    if let profile = SimpleUserManager.shared.userProfile {
+                        print("✅ Got user profile from server: \(profile.name ?? "No name") - \(profile.email)")
+                        
+                        // Update with server data (this should override the JWT fallback data)
+                        await MainActor.run {
+                            currentUser = AppUser(
+                                id: profile.id,
+                                name: profile.name ?? "Test User",
+                                email: profile.email,
+                                profilePictureURL: nil,
+                                createdAt: Date().addingTimeInterval(-2592000)
+                            )
+                        }
+                    } else {
+                        print("❌ No user profile returned from SimpleUserManager")
+                        if let error = SimpleUserManager.shared.error {
+                            print("❌ SimpleUserManager error: \(error)")
+                        }
+                    }
+                } catch {
+                    print("❌ Failed to load user profile from server: \(error)")
+                }
+            }
+        } else {
+            print("❌ Not authenticated - showing guest user")
+            // Not authenticated - show guest user
+            currentUser = AppUser(
+                id: "guest",
+                name: "Guest User",
+                email: "Not signed in",
+                profilePictureURL: nil,
+                createdAt: Date()
+            )
+        }
+    }
+    
+    private func decodeJWT(_ token: String) throws -> [String: Any] {
+        let parts = token.components(separatedBy: ".")
+        guard parts.count >= 2 else { throw NSError(domain: "JWT", code: 0) }
+        
+        var base64 = parts[1]
+        // Add padding if needed
+        while base64.count % 4 != 0 {
+            base64 += "="
+        }
+        
+        guard let data = Data(base64Encoded: base64),
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NSError(domain: "JWT", code: 1)
+        }
+        
+        return json
+    }
+    
+    private func extractEmailFromToken(_ token: String) -> String? {
+        guard let decoded = try? decodeJWT(token) else { return nil }
+        return decoded["email"] as? String
     }
     
     private func loadUsageData() {
@@ -129,6 +237,23 @@ class SettingsViewModel: ObservableObject {
         // Delete user account
         print("Deleting account...")
     }
+    
+    func updatePreferredName(_ newName: String) async {
+        isUpdatingPreferences = true
+        preferencesUpdateMessage = nil
+        
+        // Update local state for now (server sync to be implemented)
+        preferredName = newName
+        UserDefaults.standard.set(newName, forKey: "preferred_name")
+        preferencesUpdateMessage = "Preferred name updated successfully"
+        
+        isUpdatingPreferences = false
+        
+        // Clear message after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.preferencesUpdateMessage = nil
+        }
+    }
 }
 
 @MainActor
@@ -156,12 +281,31 @@ struct EnhancedSettingsView: View {
     @ObservedObject private var apiClient = APIClient.shared
     @Environment(\.dismiss) private var dismiss
     
+    // Optional actions for the settings view
+    let onClearHistory: (() -> Void)?
+    let onLogout: (() -> Void)?
+    
+    // Initializer
+    init(onClearHistory: (() -> Void)? = nil, onLogout: (() -> Void)? = nil) {
+        self.onClearHistory = onClearHistory
+        self.onLogout = onLogout
+    }
+    
+    // Hidden debug menu access
+    @State private var debugTapCount = 0
+    @State private var showDebugMenu = false
+    @State private var lastDebugTapTime = Date()
+    
     var body: some View {
         NavigationStack {
             List {
                 // Account Section
                 Section {
-                    AccountSummaryRow(user: settingsViewModel.currentUser)
+                    NavigationLink {
+                        SimpleUserProfileView()
+                    } label: {
+                        AccountSummaryRow(user: settingsViewModel.currentUser)
+                    }
                     
                     if let subscription = subscriptionManager.currentSubscription {
                         SubscriptionStatusRow(subscription: subscription)
@@ -171,6 +315,9 @@ struct EnhancedSettingsView: View {
                 } header: {
                     Text("Account")
                 }
+                
+                // Personalization Section
+                PersonalizationSection(viewModel: settingsViewModel)
                 
                 // Usage Section
                 Section {
@@ -191,15 +338,7 @@ struct EnhancedSettingsView: View {
                 }
                 
                 // Connected Services
-                Section(header: Text("Connected Services")) {
-                    NavigationLink("Service Integrations") {
-                        OAuthIntegrationsView()
-                    }
-                    
-                    NavigationLink("Legacy Setup") {
-                        IntegrationsSetupView(apiClient: apiClient, onComplete: {})
-                    }
-                }
+                ConnectedServicesSection()
                 
                 // Voice Settings
                 Section {
@@ -223,7 +362,7 @@ struct EnhancedSettingsView: View {
                 // Privacy & Security
                 Section {
                     NavigationLink("Privacy Controls") {
-                        PrivacyControlsView()
+                        BasicPrivacyControlsView()
                     }
                     
                     NavigationLink("Data Access Log") {
@@ -297,6 +436,33 @@ struct EnhancedSettingsView: View {
                     Text("Apple Watch")
                 }
                 
+                // Performance & Optimization
+                Section {
+                    NavigationLink("Performance Monitor") {
+                        PerformanceSettingsView()
+                    }
+                    
+                    NavigationLink("Model Optimization") {
+                        ModelOptimizationView()
+                    }
+                    
+                    NavigationLink("Battery Impact") {
+                        BatteryOptimizationView()
+                    }
+                    
+                    NavigationLink("Batch Processing") {
+                        BatchProcessingSettingsView()
+                    }
+                    
+                    NavigationLink("ML & Personalization") {
+                        PersonalizationSettingsView()
+                    }
+                } header: {
+                    Text("Performance & Optimization")
+                } footer: {
+                    Text("Optimize Core ML performance for better battery efficiency and processing speed.")
+                }
+                
                 // Advanced Settings
                 Section {
                     NavigationLink("Backend Settings") {
@@ -311,7 +477,37 @@ struct EnhancedSettingsView: View {
                         AboutView()
                     }
                 } header: {
-                    Text("Advanced")
+                    // Hidden debug menu access - tap "Advanced" 7 times within 3 seconds
+                    Button(action: handleDebugTap) {
+                        HStack {
+                            Text("Advanced")
+                                .font(.system(.footnote))
+                                .textCase(.uppercase)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
+                // Additional Actions (if provided)
+                if onClearHistory != nil || onLogout != nil {
+                    Section {
+                        if let onClearHistory = onClearHistory {
+                            Button("Clear Chat History", role: .destructive) {
+                                onClearHistory()
+                            }
+                        }
+                        
+                        if let onLogout = onLogout {
+                            Button("Logout", role: .destructive) {
+                                onLogout()
+                            }
+                        }
+                    } header: {
+                        Text("Actions")
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -335,6 +531,47 @@ struct EnhancedSettingsView: View {
             }
         } message: {
             Text("Are you sure you want to delete your account? This action cannot be undone.")
+        }
+        .sheet(isPresented: $showDebugMenu) {
+            Text("Debug menu is temporarily disabled")
+                .padding()
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    // MARK: - Debug Menu Access
+    private func handleDebugTap() {
+        let now = Date()
+        let timeSinceLastTap = now.timeIntervalSince(lastDebugTapTime)
+        
+        // Reset counter if more than 3 seconds have passed
+        if timeSinceLastTap > 3.0 {
+            debugTapCount = 1
+        } else {
+            debugTapCount += 1
+        }
+        
+        lastDebugTapTime = now
+        
+        // Provide subtle haptic feedback for each tap
+        hapticManager.settingToggled()
+        
+        // After 5 taps, give stronger feedback
+        if debugTapCount == 5 {
+            hapticManager.commandSuccess()
+        }
+        
+        // Show debug menu after 7 taps within 3 seconds
+        if debugTapCount >= 7 {
+            hapticManager.commandSuccess() // Strong success feedback
+            showDebugMenu = true
+            debugTapCount = 0 // Reset counter
+            
+            // Add visual feedback by briefly showing an alert
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                print("🧪 Debug menu activated!")
+            }
         }
     }
 }
@@ -388,7 +625,7 @@ struct SubscriptionStatusRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Sora Pro")
+                Text("Floe Pro")
                     .font(.headline)
                     .foregroundColor(.blue)
                 
@@ -418,7 +655,7 @@ struct UpgradePromptRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Upgrade to Sora Pro")
+                Text("Upgrade to Floe Pro")
                     .font(.headline)
                 
                 Text("Unlimited voice commands, advanced integrations, and more")
@@ -580,6 +817,180 @@ struct VoiceSettingsRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+struct PersonalizationSection: View {
+    @ObservedObject var viewModel: SettingsViewModel
+    @State private var tempPreferredName: String = ""
+    @State private var showingNameAlert = false
+    @FocusState private var isTextFieldFocused: Bool
+    
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Preferred Name")
+                            .font(.headline)
+                        
+                        if viewModel.preferredName.isEmpty {
+                            Text("Set how you'd like the assistant to address you")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Currently: \(viewModel.preferredName)")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Button(viewModel.preferredName.isEmpty ? "Set Name" : "Change") {
+                        tempPreferredName = viewModel.preferredName
+                        showingNameAlert = true
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(viewModel.isUpdatingPreferences)
+                }
+                
+                if let message = viewModel.preferencesUpdateMessage {
+                    HStack {
+                        Image(systemName: message.contains("successfully") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundColor(message.contains("successfully") ? .green : .orange)
+                        
+                        Text(message)
+                            .font(.caption)
+                            .foregroundColor(message.contains("successfully") ? .green : .orange)
+                    }
+                    .transition(.opacity.combined(with: .scale))
+                }
+                
+                if viewModel.isUpdatingPreferences {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        
+                        Text("Updating preferences...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("Personalization")
+        } footer: {
+            Text("Your preferred name helps the voice assistant provide more personalized responses.")
+                .font(.caption)
+        }
+        .alert("Set Preferred Name", isPresented: $showingNameAlert) {
+            TextField("Enter your preferred name", text: $tempPreferredName)
+                .focused($isTextFieldFocused)
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(true)
+            
+            Button("Cancel", role: .cancel) {
+                tempPreferredName = ""
+            }
+            
+            Button("Save") {
+                guard !tempPreferredName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                
+                Task {
+                    await viewModel.updatePreferredName(tempPreferredName.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+            }
+            .disabled(tempPreferredName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("Enter the name you'd like the voice assistant to use when addressing you.")
+        }
+        .onAppear {
+            if showingNameAlert {
+                isTextFieldFocused = true
+            }
+        }
+    }
+}
+
+// MARK: - Connected Services Section
+
+struct ConnectedServicesSection: View {
+    @ObservedObject private var oauthManager = OAuthManager.shared
+    
+    var body: some View {
+        Section {
+            NavigationLink("Service Integrations") {
+                OAuthIntegrationsView()
+            }
+            
+            // Google Services Status
+            HStack {
+                Image(systemName: "globe")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Google Services")
+                        .font(.body)
+                    
+                    Text(oauthManager.isGoogleConnected ? "Connected" : "Not connected")
+                        .font(.caption)
+                        .foregroundColor(oauthManager.isGoogleConnected ? .green : .secondary)
+                }
+                
+                Spacer()
+                
+                if oauthManager.isGoogleConnected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Navigate to OAuth integrations focused on Google
+            }
+            
+            // Airtable Status
+            HStack {
+                Image(systemName: "tablecells")
+                    .foregroundColor(.green)
+                    .font(.title3)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Airtable")
+                        .font(.body)
+                    
+                    Text(oauthManager.isAirtableConnected ? "Connected" : "Not connected")
+                        .font(.caption)
+                        .foregroundColor(oauthManager.isAirtableConnected ? .green : .secondary)
+                }
+                
+                Spacer()
+                
+                if oauthManager.isAirtableConnected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                // Navigate to OAuth integrations focused on Airtable
+            }
+        } header: {
+            Text("Connected Services")
+        } footer: {
+            Text("Connect Google Calendar, Gmail, and Airtable to unlock powerful voice commands for productivity.")
+                .font(.caption)
+        }
+        .onAppear {
+            oauthManager.checkIntegrationStatus()
+        }
     }
 }
 

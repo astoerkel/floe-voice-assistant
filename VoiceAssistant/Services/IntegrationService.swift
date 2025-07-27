@@ -6,7 +6,7 @@ class IntegrationService: ObservableObject {
     @Published var errorMessage: String?
     
     private let apiClient = APIClient.shared
-    private let oauthManager = OAuthManager()
+    private let oauthManager = OAuthManager.shared
     
     // MARK: - Calendar Integration
     

@@ -1,7 +1,7 @@
 # UI/UX Design Guidelines - VoiceAssistant iOS & watchOS
 
 ## Overview
-This document outlines the UI/UX design system for the VoiceAssistant application, covering both iOS and watchOS platforms. The design emphasizes simplicity, accessibility, and seamless cross-device interaction. The application now includes comprehensive enhancements with onboarding, dashboard, OAuth integrations, and advanced voice features.
+This document outlines the UI/UX design system for the VoiceAssistant application, covering both iOS and watchOS platforms. The design emphasizes simplicity, accessibility, and seamless cross-device interaction. The application now includes comprehensive enhancements with onboarding, dashboard, OAuth integrations, advanced voice features, and intelligent on-device response generation with personalization.
 
 ## Design Philosophy
 
@@ -441,6 +441,180 @@ VStack(alignment: .leading, spacing: 4) {
 - **Volume Control**: User-adjustable sound levels
 - **System Integration**: Proper audio session management
 - **Accessibility Support**: Sound cues for accessibility features
+
+### Enhanced Speech Recognition UI (COMPLETED ✅)
+
+#### SpeechConfidenceIndicator - Real-time Visual Feedback
+- **Confidence Visualization**: 5-bar confidence display with color coding
+  - Green (90-100%): Excellent recognition quality
+  - Blue (75-90%): Good recognition quality  
+  - Orange (50-75%): Fair recognition quality
+  - Red (0-50%): Poor recognition quality
+- **Processing Mode Indicators**: Visual icons for processing mode
+  - iPhone icon: On-device processing
+  - Cloud icon: Server processing
+  - Arrows icon: Hybrid processing
+  - Brain icon: Enhanced processing
+- **Enhancement Badges**: Scrollable badges showing active enhancements
+  - NR: Noise Reduction
+  - VB: Vocabulary Boost
+  - AA: Accent Adaptation
+  - PL: Pattern Learning
+  - CA: Context Aware
+- **Smooth Animations**: Backdrop blur effects with smooth transitions
+- **Contextual Appearance**: Appears during voice processing with intelligent auto-dismiss
+
+#### EnhancedSpeechSettingsView - Comprehensive Control Panel
+- **Hybrid Mode Toggle**: Main switch for enhanced speech processing
+- **Processing Mode Selector**: Segmented control for mode selection
+  - On-Device: Maximum privacy, local processing only
+  - Server: Maximum accuracy, cloud processing
+  - Hybrid: Intelligent routing based on confidence
+  - Enhanced: Full Core ML enhancement suite
+- **Real-time Status Display**: Current enhancements and confidence score
+- **Vocabulary Management Section**: 
+  - Statistics display (total terms, custom terms, contact names, corrections)
+  - Quick custom term addition with domain selection
+  - Full vocabulary manager access button
+- **Pattern Learning Section**:
+  - Learning status indicator with visual feedback
+  - Pattern count and adaptation accuracy metrics
+  - Detailed pattern learning view access
+  - Reset learning data functionality with confirmation
+- **Privacy & Data Section**:
+  - Privacy status indicators (local processing, encryption, no cloud sync)
+  - Privacy settings management access
+  - Privacy report export functionality
+- **Haptic Feedback Integration**: Contextual haptic feedback for all interactions
+- **Visual Consistency**: Follows app-wide design system with proper spacing and typography
+
+#### Enhanced UI Integration Patterns
+- **Confidence-Based UI Adaptation**: Interface elements adapt based on recognition confidence
+- **Processing Mode Visualization**: Clear visual indicators of current processing mode
+- **Enhancement Status Communication**: Real-time display of active enhancements
+- **Privacy-First Visual Language**: Clear indicators of local processing and data protection
+- **Accessibility Compliance**: Full VoiceOver support with descriptive labels and hints
+- **Responsive Design**: Adapts to different device sizes and orientations
+- **Dark Mode Optimization**: Proper contrast and visibility in dark mode environments
+
+#### User Experience Flows
+1. **Initial Setup Flow**:
+   - Enhanced speech features introduced during onboarding
+   - Permission requests with clear explanations
+   - Optional vocabulary import from contacts/calendar
+   
+2. **Daily Usage Flow**:
+   - Subtle confidence indicators during normal speech recognition
+   - Enhancement badges appear when active
+   - Automatic learning from user corrections
+   
+3. **Settings Management Flow**:
+   - Easy access to enhanced speech settings from main settings
+   - Clear organization of features by complexity and use frequency
+   - One-click privacy controls and data management
+
+#### Design Specifications
+- **Color Palette**: Consistent with app-wide color system
+- **Typography**: System fonts with proper hierarchy and accessibility
+- **Spacing**: 8pt base spacing unit for consistent layout
+- **Animation**: Smooth transitions with appropriate duration and easing
+- **Touch Targets**: Minimum 44pt touch targets for all interactive elements
+- **Visual Hierarchy**: Clear information architecture with logical grouping
+
+### Privacy Dashboard Design System (NEW - COMPLETED ✅)
+
+#### PrivacyDashboardView - Comprehensive Privacy Interface
+The Privacy Dashboard provides complete transparency and control over user analytics data with a focus on privacy education and user empowerment.
+
+**Design Philosophy**:
+- **Transparency First**: Clear visualization of what data is collected and stored
+- **User Control**: Granular controls for all privacy-related features
+- **Educational**: Helps users understand privacy protections and data handling
+- **Trust Building**: Builds user confidence through transparent data practices
+
+**Key UI Components**:
+
+**Privacy Status Section**:
+- **PrivacyStatusCard**: 2x2 grid of status cards showing encryption, on-device processing, data sharing, and cloud sync status
+- **Status Indicators**: Color-coded status with green (secure), blue (informational), orange (attention), gray (disabled)
+- **Descriptive Text**: Clear explanations of each privacy protection measure
+
+**Data Breakdown Section**:
+- **DataTypeRow**: Detailed breakdown of each type of analytics data stored
+- **Data Size Display**: Real-time storage usage with formatted byte counts
+- **Retention Periods**: Clear indication of how long each data type is retained
+- **Encryption Status**: Visual indicators showing all data is encrypted
+
+**Privacy Controls Section**:
+- **PrivacyControlRow**: Toggle switches for enabling/disabling analytics features
+- **Feature Descriptions**: Clear explanations of what each control does
+- **Read-only Indicators**: Some features (like differential privacy) are always enabled
+- **Real-time Updates**: Controls immediately reflect current system state
+
+**Data Rights Section**:
+- **DataRightRow**: Actionable items for user data rights (view, delete, export, settings)
+- **Action Buttons**: Clear call-to-action buttons with appropriate icons
+- **Destructive Actions**: Special styling for data deletion with confirmation dialogs
+- **Export Functionality**: ShareLink integration for data export
+
+**Transparency Report Section**:
+- **TransparencyItem**: Key-value pairs showing privacy practices
+- **Compliance Information**: Real-time compliance status and privacy parameters
+- **Last Analysis**: Timestamps showing when analytics were last processed
+- **Educational Content**: Explanatory text about privacy-by-design principles
+
+**Color Scheme**:
+- **Primary Green**: Used for security and privacy indicators (encryption, local processing)
+- **Primary Blue**: Used for data sizes, export actions, and informational elements
+- **Orange/Red**: Used sparingly for attention items and destructive actions
+- **System Gray**: Used for background cards and disabled states
+- **Secondary Text**: Used for descriptions and metadata
+
+**Typography Hierarchy**:
+- **Large Title**: Navigation title "Privacy Dashboard"
+- **Headline**: Section headers ("Privacy Status", "Data Stored on Device")
+- **Subheadline**: Card titles and primary labels
+- **Body**: Main descriptive text
+- **Caption**: Data sizes, timestamps, and metadata
+- **Caption2**: Fine print and technical details
+
+**Layout Patterns**:
+- **Card-based Design**: Each section uses rounded rectangle cards with system gray background
+- **Grid Layout**: 2x2 grid for privacy status cards, flexible grid for other content
+- **Consistent Spacing**: 24pt between sections, 16pt within sections, 8pt for tight groupings
+- **Safe Area Respect**: All content respects device safe areas and Dynamic Island
+
+**Accessibility Features**:
+- **VoiceOver Support**: Complete VoiceOver navigation with descriptive labels
+- **Dynamic Type**: Supports all user font size preferences
+- **High Contrast**: Optimized color choices for high contrast accessibility mode
+- **Reduced Motion**: Respects reduced motion preferences for animations
+- **Voice Control**: Compatible with iOS Voice Control feature
+
+**Interactive Elements**:
+- **Toggle Switches**: System-standard toggle switches for privacy controls
+- **Action Buttons**: Prominent buttons for data export and management
+- **Sheet Presentations**: Modal sheets for data export flow
+- **Confirmation Dialogs**: Alert dialogs for destructive actions like data deletion
+- **ShareLink Integration**: Native iOS sharing for data export
+
+**Data Export Flow**:
+1. **Loading State**: Progress indicator while preparing data
+2. **Ready State**: Success message with file size information
+3. **Share Interface**: Native iOS ShareLink for secure data sharing
+4. **Privacy Notice**: Clear explanation of data contents and privacy protections
+
+**Error Handling**:
+- **Error Alerts**: Clear error messages with actionable solutions
+- **Graceful Degradation**: UI functions even when some data is unavailable
+- **Recovery Options**: Users can retry failed operations
+- **Helpful Messages**: Error messages explain what went wrong and how to fix it
+
+#### Privacy Dashboard Integration
+- **Settings Integration**: Accessed through main settings menu
+- **Navigation**: Standard iOS navigation patterns with proper back button handling
+- **State Management**: @StateObject pattern for reactive UI updates
+- **Performance**: Efficient data loading and caching for smooth user experience
 
 ## Future Design Considerations
 
