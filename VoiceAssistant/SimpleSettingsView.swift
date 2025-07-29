@@ -235,6 +235,13 @@ struct SimpleSettingsView: View {
                 await userManager.fetchUserProfile()
             }
         }
+        .onReceive(apiClient.$isAuthenticated) { isAuthenticated in
+            print("🔍 Authentication status changed: \(isAuthenticated)")
+            if isAuthenticated {
+                print("🔍 User authenticated, refreshing user info...")
+                loadUserInfo()
+            }
+        }
         .alert("Clear Chat History", isPresented: $showingClearHistoryAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Clear", role: .destructive) {
@@ -257,12 +264,18 @@ struct SimpleSettingsView: View {
         // Load user info from SimpleAPIClient
         let userInfo = apiClient.getCurrentUserInfo()
         
+        print("🔍 SimpleSettingsView loadUserInfo:")
+        print("🔍 Retrieved email: \(userInfo.email ?? "nil")")
+        print("🔍 Retrieved name: \(userInfo.name ?? "nil")")
+        
         if let email = userInfo.email {
             userEmail = email
+            print("🔍 Set userEmail to: \(userEmail)")
         }
         
         if let name = userInfo.name {
             userName = name
+            print("🔍 Set userName to: \(userName)")
         }
     }
     

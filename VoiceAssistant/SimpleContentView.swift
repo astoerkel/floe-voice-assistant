@@ -113,16 +113,6 @@ struct SimpleContentView: View {
                             .font(.caption)
                             .foregroundColor(.orange)
                             .padding(.horizontal)
-                    } else {
-                        // Debug logout button (for testing)
-                        #if DEBUG
-                        Button("Logout (Debug)") {
-                            apiClient.forceLogout()
-                        }
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding(.horizontal)
-                        #endif
                     }
                     
                     Spacer()
@@ -149,10 +139,23 @@ struct SimpleContentView: View {
             }
         }
         .fullScreenCover(isPresented: .constant(!apiClient.isAuthenticated)) {
-            SimpleAuthenticationView(apiClient: apiClient)
+            AuthenticationCoordinator(apiClient: apiClient)
         }
         .slidingNavigationDrawer(isOpen: $showSettings) {
             SimpleSettingsView(conversationManager: conversationManager, isPresented: $showSettings)
+        }
+        .onAppear {
+            // Listen for automatic logout notifications from expired tokens
+            NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("TokensExpiredLogout"),
+                object: nil,
+                queue: .main
+            ) { _ in
+                print("🚪 SimpleContentView: Received TokensExpiredLogout notification")
+                // The authentication view will automatically appear since apiClient.isAuthenticated will become false
+                statusMessage = "Session expired. Please sign in again."
+                resetState()
+            }
         }
     }
     

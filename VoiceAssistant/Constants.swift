@@ -13,6 +13,10 @@ struct Constants {
         // Simple backend endpoints
         static let chatProcessURL = "https://floe.cognetica.de/api/chat/process"
         static let appleSignInURL = "https://floe.cognetica.de/api/auth/apple-signin"
+        static let registerURL = "https://floe.cognetica.de/api/auth/register"
+        static let loginURL = "https://floe.cognetica.de/api/auth/login"
+        static let googleSignInURL = "https://floe.cognetica.de/api/auth/google-signin"
+        static let profileURL = "https://floe.cognetica.de/api/auth/profile"
         static let verifyTokenURL = "https://floe.cognetica.de/api/auth/verify"
         static let healthURL = "https://floe.cognetica.de/health"
         // Legacy endpoints (kept for backward compatibility)

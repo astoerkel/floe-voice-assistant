@@ -17,14 +17,14 @@ public class SimpleAPIClient: ObservableObject {
         self.baseURL = baseURL
         
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15.0  // Shorter timeout for debugging
-        config.timeoutIntervalForResource = 15.0
+        config.timeoutIntervalForRequest = Constants.API.requestTimeout
+        config.timeoutIntervalForResource = Constants.API.requestTimeout
         self.session = URLSession(configuration: config)
         
         // Load stored tokens
         loadTokens()
         
-        // Validate token if present
+        // Validate token if present  
         if isAuthenticated {
             print("🔑 SimpleAPIClient: Found existing token, validating...")
             validateToken()
@@ -91,8 +91,19 @@ public class SimpleAPIClient: ObservableObject {
         
         print("🌐 SimpleAPIClient: Making request to \(url)")
         print("🌐 SimpleAPIClient: Request timeout: \(Constants.API.requestTimeout)s")
+        print("🌐 SimpleAPIClient: Request headers: \(request.allHTTPHeaderFields ?? [:])")
+        print("🌐 SimpleAPIClient: Request body size: \(request.httpBody?.count ?? 0) bytes")
         
         session.dataTask(with: request) { [weak self] data, response, error in
+            print("🔍 SimpleAPIClient: URLSession completion handler called")
+            print("🔍 SimpleAPIClient: Error: \(String(describing: error))")
+            print("🔍 SimpleAPIClient: Response: \(String(describing: response))")
+            print("🔍 SimpleAPIClient: Data size: \(data?.count ?? 0) bytes")
+            
+            // Log response data for debugging
+            if let data = data, let responseString = String(data: data, encoding: .utf8) {
+                print("🔍 SimpleAPIClient: Response data: \(responseString)")
+            }
             if let error = error {
                 print("❌ SimpleAPIClient: Network error: \(error)")
                 print("❌ SimpleAPIClient: Error domain: \(error.localizedDescription)")
@@ -107,7 +118,6 @@ public class SimpleAPIClient: ObservableObject {
             }
             
             guard let httpResponse = response as? HTTPURLResponse,
-                  200...299 ~= httpResponse.statusCode,
                   let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(VoiceAssistantError.networkError))
@@ -115,34 +125,237 @@ public class SimpleAPIClient: ObservableObject {
                 return
             }
             
-            do {
-                // Parse simple backend response format
-                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let success = jsonResponse["success"] as? Bool,
-                   success,
-                   let token = jsonResponse["token"] as? String {
-                    // Store the JWT token from simple backend
-                    self?.setAuthToken(token)
-                    
-                    // Store user information if available
-                    if let userInfo = jsonResponse["user"] as? [String: Any] {
-                        self?.storeUserInfo(userInfo)
-                    } else if let userInfo = user {
-                        // Use the user info from Apple Sign In
-                        self?.storeUserInfo(userInfo)
+            // Handle different HTTP status codes
+            switch httpResponse.statusCode {
+            case 200...299:
+                do {
+                    // Parse simple backend response format
+                    if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let success = jsonResponse["success"] as? Bool,
+                       success,
+                       let token = jsonResponse["accessToken"] as? String {
+                        // Store the JWT token from simple backend
+                        self?.setAuthToken(token)
+                        
+                        // Store user information if available
+                        if let userInfo = jsonResponse["user"] as? [String: Any] {
+                            self?.storeUserInfo(userInfo)
+                        } else if let userInfo = user {
+                            // Use the user info from Apple Sign In
+                            self?.storeUserInfo(userInfo)
+                        }
+                        
+                        DispatchQueue.main.async {
+                            completion(.success(true))
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            completion(.failure(VoiceAssistantError.authenticationFailed))
+                        }
                     }
-                    
+                } catch {
                     DispatchQueue.main.async {
-                        completion(.success(true))
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        completion(.failure(VoiceAssistantError.authenticationFailed))
+                        completion(.failure(error))
                     }
                 }
-            } catch {
+            case 400:
+                // Handle Apple authentication errors (Invalid token, etc.)
+                print("❌ SimpleAPIClient: Apple auth failed - HTTP 400")
+                if let errorString = String(data: data, encoding: .utf8) {
+                    print("❌ SimpleAPIClient: Error response: \(errorString)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.authenticationFailed))
+                }
+            case 401:
+                print("🚨 SimpleAPIClient: 401 Unauthorized - Apple auth failed")
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.authenticationFailed))
+                }
+            case 500...599:
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.serverError(httpResponse.statusCode)))
+                }
+            default:
+                print("❌ SimpleAPIClient: Unexpected status code: \(httpResponse.statusCode)")
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.serverError(httpResponse.statusCode)))
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Email Authentication
+    func registerWithEmail(email: String, password: String, name: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        print("📧 SimpleAPIClient: Starting email registration")
+        print("📧 SimpleAPIClient: Using URL: \(Constants.API.registerURL)")
+        
+        guard let url = URL(string: Constants.API.registerURL) else {
+            print("❌ SimpleAPIClient: Invalid registration URL: \(Constants.API.registerURL)")
+            completion(.failure(VoiceAssistantError.networkError))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "email": email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+            "password": password,
+            "name": name.trimmingCharacters(in: .whitespacesAndNewlines)
+        ]
+        
+        performAuthRequest(request: request, body: body, completion: completion)
+    }
+    
+    func loginWithEmail(email: String, password: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        print("📧 SimpleAPIClient: Starting email login")
+        print("📧 SimpleAPIClient: Using URL: \(Constants.API.loginURL)")
+        
+        guard let url = URL(string: Constants.API.loginURL) else {
+            print("❌ SimpleAPIClient: Invalid login URL: \(Constants.API.loginURL)")
+            completion(.failure(VoiceAssistantError.networkError))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "email": email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+            "password": password
+        ]
+        
+        performAuthRequest(request: request, body: body, completion: completion)
+    }
+    
+    // MARK: - Google Authentication (placeholder)
+    func authenticateWithGoogle(idToken: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        print("🔍 SimpleAPIClient: Starting Google authentication")
+        print("🔍 SimpleAPIClient: Using URL: \(Constants.API.googleSignInURL)")
+        
+        guard let url = URL(string: Constants.API.googleSignInURL) else {
+            print("❌ SimpleAPIClient: Invalid Google sign-in URL: \(Constants.API.googleSignInURL)")
+            completion(.failure(VoiceAssistantError.networkError))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = [
+            "idToken": idToken
+        ]
+        
+        performAuthRequest(request: request, body: body, completion: completion)
+    }
+    
+    // MARK: - Shared Authentication Request Handler
+    private func performAuthRequest(request: URLRequest, body: [String: Any], completion: @escaping (Result<Bool, Error>) -> Void) {
+        var request = request
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: body)
+            request.httpBody = jsonData
+            
+            // Debug: Log the JSON being sent
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                print("🌐 SimpleAPIClient: Sending JSON: \(jsonString)")
+            }
+        } catch {
+            print("❌ SimpleAPIClient: JSON serialization failed: \(error)")
+            completion(.failure(error))
+            return
+        }
+        
+        print("🌐 SimpleAPIClient: Making request to \(request.url?.absoluteString ?? "unknown")")
+        print("🌐 SimpleAPIClient: Request timeout: \(Constants.API.requestTimeout)s")
+        
+        session.dataTask(with: request) { [weak self] data, response, error in
+            print("🔍 SimpleAPIClient: URLSession completion handler called")
+            
+            if let error = error {
+                print("❌ SimpleAPIClient: Network error: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.networkError))
+                }
+                return
+            }
+            
+            // Log response data for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("🔍 SimpleAPIClient: Response (\(httpResponse.statusCode)): \(responseString)")
+            }
+            
+            // Handle different HTTP status codes
+            switch httpResponse.statusCode {
+            case 200...299:
+                do {
+                    // Parse backend response format
+                    if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let success = jsonResponse["success"] as? Bool,
+                       success,
+                       let token = jsonResponse["accessToken"] as? String {
+                        // Store the JWT token
+                        self?.setAuthToken(token)
+                        
+                        // Store user information if available
+                        if let userInfo = jsonResponse["user"] as? [String: Any] {
+                            self?.storeUserInfo(userInfo)
+                        }
+                        
+                        DispatchQueue.main.async {
+                            completion(.success(true))
+                        }
+                    } else {
+                        // Handle error response
+                        if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let errorMessage = jsonResponse["error"] as? String {
+                            print("❌ SimpleAPIClient: Server error: \(errorMessage)")
+                        }
+                        DispatchQueue.main.async {
+                            completion(.failure(VoiceAssistantError.authenticationFailed))
+                        }
+                    }
+                } catch {
+                    print("❌ SimpleAPIClient: JSON parsing failed: \(error)")
+                    DispatchQueue.main.async {
+                        completion(.failure(error))
+                    }
+                }
+            case 400:
+                // Handle validation errors
+                print("❌ SimpleAPIClient: Authentication failed - HTTP 400")
+                if let errorString = String(data: data, encoding: .utf8) {
+                    print("❌ SimpleAPIClient: Error response: \(errorString)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.authenticationFailed))
+                }
+            case 401:
+                print("🚨 SimpleAPIClient: 401 Unauthorized - Authentication failed")
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.authenticationFailed))
+                }
+            case 500...599:
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.serverError(httpResponse.statusCode)))
+                }
+            default:
+                print("❌ SimpleAPIClient: Unexpected status code: \(httpResponse.statusCode)")
+                DispatchQueue.main.async {
+                    completion(.failure(VoiceAssistantError.serverError(httpResponse.statusCode)))
                 }
             }
         }.resume()
@@ -265,7 +478,10 @@ public class SimpleAPIClient: ObservableObject {
                     }
                 }
             case 401:
+                print("🚨 SimpleAPIClient: 401 Unauthorized - Auto-clearing tokens")
                 DispatchQueue.main.async {
+                    // Automatically clear invalid tokens
+                    self.clearTokens()
                     completion(.failure(VoiceAssistantError.authenticationRequired))
                 }
             case 500...599:

@@ -12,15 +12,20 @@ The application has been simplified to focus on essential voice assistant featur
 VoiceAssistant/
 ├── VoiceAssistant/                 # iOS App Target
 │   ├── Simple Components/          # Simplified MVP Components
-│   │   ├── SimpleAPIClient.swift           # Streamlined API client with Apple Sign In
+│   │   ├── SimpleAPIClient.swift           # Extended API client with email authentication and Apple Sign-In support
 │   │   ├── SimpleSpeechRecognizer.swift    # Direct Apple Speech Recognition
-│   │   ├── SimpleContentView.swift         # Clean voice interface with particle animation
+│   │   ├── SimpleContentView.swift         # Clean voice interface with authentication coordinator integration
 │   │   ├── SimpleSettingsView.swift        # User profile and chat management with theme picker
-│   │   ├── SimpleAuthenticationView.swift  # Apple Sign In UI
+│   │   ├── SimpleAuthenticationView.swift  # Legacy Apple Sign In UI
 │   │   └── SimpleConversationManager.swift # Conversation history management
+│   ├── Views/Authentication/       # NEW - Complete authentication flow
+│   │   ├── AuthenticationCoordinator.swift # Main authentication flow coordinator with enum-based state management
+│   │   ├── EmailSignupView.swift           # Email registration form with validation and error handling
+│   │   ├── EmailLoginView.swift            # Email login form with authentication
+│   │   └── SocialAuthView.swift            # Apple Sign-In integration with Google Sign-In placeholder
 │   ├── Core Files/                 # Essential app files
 │   │   ├── VoiceAssistantApp.swift         # App entry point
-│   │   ├── Constants.swift                 # API endpoints and configuration
+│   │   ├── Constants.swift                 # Configuration constants including new authentication API endpoints (register, login, profile)
 │   │   ├── SharedModels.swift              # Data models
 │   │   └── MinimalAudioRecorder.swift      # Audio recording
 │   └── Info.plist                  # App configuration
@@ -52,7 +57,7 @@ VoiceAssistant/
 │   ├── ContentView.swift           # Main iOS voice chat interface with enhanced UI integration (LEGACY)
 │   ├── SimpleContentView.swift     # Active MVP voice interface with particle animation
 │   ├── SimpleSettingsView.swift    # Active MVP settings with integrations and theme management
-│   ├── AuthenticationView.swift    # Apple Sign In authentication
+│   ├── AuthenticationView.swift    # Legacy Apple Sign In authentication interface (simplified)
 │   ├── Models/                     # Shared data models
 │   │   ├── AudioMessage.swift      # Audio message data structure
 │   │   ├── ConversationMessage.swift # Conversation message model
