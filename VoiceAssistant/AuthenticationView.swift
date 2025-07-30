@@ -21,9 +21,6 @@ struct AuthenticationView: View {
                 Color.black
                     .ignoresSafeArea()
                 
-                // Particle effect background
-                ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false, audioLevel: 0.0)
-                
                 VStack(spacing: 40) {
                     Spacer()
                     

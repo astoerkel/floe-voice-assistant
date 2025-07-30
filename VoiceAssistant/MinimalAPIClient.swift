@@ -34,6 +34,14 @@ class MinimalAPIClient {
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         
+        // Add authentication token
+        if let accessToken = SimpleAPIClient.shared.currentAccessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            print("🔑 MinimalAPIClient: Using auth token: \(accessToken.prefix(20))...")
+        } else {
+            print("❌ MinimalAPIClient: No access token available")
+        }
+        
         var body = Data()
         
         // Add sessionId field
@@ -120,6 +128,14 @@ class MinimalAPIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        
+        // Add authentication token
+        if let accessToken = SimpleAPIClient.shared.currentAccessToken {
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            print("🔑 MinimalAPIClient: Using auth token: \(accessToken.prefix(20))...")
+        } else {
+            print("❌ MinimalAPIClient: No access token available")
+        }
         
         let requestBody: [String: Any] = [
             "text": text,

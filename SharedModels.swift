@@ -239,6 +239,7 @@ enum VoiceAssistantError: LocalizedError {
     case invalidResponse
     case authenticationRequired
     case authenticationFailed
+    case authenticationExpired
     case webSocketConnectionFailed
     case webSocketAuthenticationFailed
     case tokenExpired
@@ -264,6 +265,7 @@ enum VoiceAssistantError: LocalizedError {
         case .invalidResponse: return "Invalid response from server"
         case .authenticationRequired: return "Authentication required"
         case .authenticationFailed: return "Authentication failed"
+        case .authenticationExpired: return "Authentication expired"
         case .webSocketConnectionFailed: return "WebSocket connection failed"
         case .webSocketAuthenticationFailed: return "WebSocket authentication failed"
         case .tokenExpired: return "Access token expired"
@@ -283,7 +285,7 @@ enum VoiceAssistantError: LocalizedError {
     
     var recoverySuggestion: String? {
         switch self {
-        case .authenticationRequired, .authenticationFailed:
+        case .authenticationRequired, .authenticationFailed, .authenticationExpired:
             return "Please sign in with Apple ID"
         case .tokenExpired, .tokenRefreshFailed:
             return "Please sign in again"

@@ -75,7 +75,7 @@ ssh hetzner 'cd /app && git pull && npm restart'
 - **Database**: PostgreSQL with Prisma ORM
 - **AI Integration**: LangChain agents with OpenAI GPT-4 and Anthropic Claude
 - **Real-time**: Socket.IO for WebSocket connections
-- **Authentication**: JWT with Apple Sign In and Google OAuth
+- **Authentication**: JWT with Apple Sign In and Google OAuth 2.0 integration
 - **Deployment**: Hetzner Cloud via SSH
 
 ## Key Cross-Platform Communication
@@ -98,6 +98,35 @@ The app uses WatchConnectivity framework for iPhone-Watch communication:
 
 **✅ DEPLOYMENT STATUS**: Apple Speech Framework integration with Whisper fallback successfully deployed to Hetzner production environment. Watch app HTTP 500 errors resolved through comprehensive database schema migrations.
 
+## Google Services Integration
+
+**✅ COMPLETED (July 29, 2025)**: Full Google OAuth 2.0 integration with Calendar and Gmail services.
+
+### Implementation Details
+- **OAuth Flow**: Complete OAuth 2.0 implementation with secure token management
+- **URL Scheme**: `voiceassistant://oauth` for OAuth callback handling
+- **iOS Components**:
+  - `OAuthManager.swift`: Manages OAuth state and API calls
+  - `IntegrationService.swift`: Handles Google Calendar and Gmail operations
+  - `OAuthIntegrationsView.swift`: Settings UI for service connections
+- **Backend Integration**:
+  - Real Google Calendar API integration via `calendar.js`
+  - Complete Gmail API integration via `gmail.js`
+  - OAuth controller with public endpoints for device-based authentication
+  - LangChain agents with real Google API calls (no mock data)
+
+### Voice Commands Supported
+- **Calendar**: "What's on my calendar today?", "Schedule a meeting", "Check my appointments"
+- **Gmail**: "Read my emails", "Check for new messages", "Find emails from [person]"
+
+### OAuth Flow
+1. User taps "Connect" in Integrations settings
+2. App opens Google OAuth URL in Safari
+3. User authenticates with Google
+4. Safari redirects to `voiceassistant://oauth` with auth code
+5. App handles callback and completes OAuth flow
+6. Integration status updates in real-time
+
 ## Important File Locations
 
 ### iOS/Swift Files
@@ -106,17 +135,25 @@ The app uses WatchConnectivity framework for iPhone-Watch communication:
 - Shared models: `SharedModels.swift`
 - Network layer: `VoiceAssistant/APIClient.swift`
 - WatchConnectivity: `VoiceAssistant/WatchConnector.swift`, `VoiceAssistant Watch App Watch App/PhoneConnector.swift`
+- OAuth management: `VoiceAssistant/Services/OAuthManager.swift`
+- Integration services: `VoiceAssistant/Services/IntegrationService.swift`
+- OAuth settings UI: `VoiceAssistant/Views/Settings/OAuthIntegrationsView.swift`
 
 ### Backend Files
 - Main app: `voice-assistant-backend/src/app.js`
 - API routes: `voice-assistant-backend/src/routes/`
 - Database schema: `voice-assistant-backend/src/models/prisma/schema.prisma`
 - LangChain agents: `voice-assistant-backend/src/services/agents/`
+- OAuth controllers: `voice-assistant-backend/src/controllers/oauth.controller.js`
+- Google services: `voice-assistant-backend/src/services/integrations/google/`
+- OAuth services: `voice-assistant-backend/src/services/oauth/googleOAuth.js`
 
 ### Configuration Files
 - Xcode project: `VoiceAssistant.xcodeproj/project.pbxproj`
 - Backend package: `voice-assistant-backend/package.json`
 - Hetzner deployment: SSH-based deployment via `ssh hetzner`
+- OAuth configuration: `Info.plist` with URL scheme setup
+- Google OAuth config: `client_899362685715-eha0qo2dsre64sbiapvhrbomp1ep05e5.apps.googleusercontent.com.plist`
 
 ## Development Workflow
 
@@ -140,6 +177,15 @@ The app uses WatchConnectivity framework for iPhone-Watch communication:
 3. Update WatchConnector/PhoneConnector for cross-device communication
 4. Add corresponding backend API endpoints if needed
 5. Update database schema if data persistence is required
+
+### Adding New Service Integrations
+1. Create OAuth service in `voice-assistant-backend/src/services/oauth/`
+2. Add service integration in `voice-assistant-backend/src/services/integrations/`
+3. Update LangChain agents to use real API calls
+4. Add iOS OAuth management in `OAuthManager.swift`
+5. Update integration UI in `OAuthIntegrationsView.swift`
+6. Add URL scheme handling if needed
+7. Test end-to-end OAuth flow
 
 ## Key Dependencies
 

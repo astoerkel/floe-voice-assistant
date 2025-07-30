@@ -91,7 +91,7 @@ struct SimpleSettingsView: View {
                     // Integrations Section
                     Section {
                     NavigationLink {
-                        IntegrationsMenuView()
+                        OAuthIntegrationsView()
                     } label: {
                         HStack {
                             Image(systemName: "link.circle.fill")

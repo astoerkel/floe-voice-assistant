@@ -306,7 +306,6 @@ struct PermissionCard: View {
 #Preview {
     ZStack {
         Color.black.ignoresSafeArea()
-        ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false, audioLevel: 0.0)
         PermissionsFlowView(onComplete: {})
     }
 }

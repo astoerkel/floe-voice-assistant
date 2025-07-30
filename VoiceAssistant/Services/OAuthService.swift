@@ -682,6 +682,4 @@ class KeychainService {
 
 // MARK: - Notification Extensions
 
-extension Notification.Name {
-    static let oauthStatusChanged = Notification.Name("OAuthStatusChanged")
-}
+// Note: oauthStatusChanged is now defined in OAuthManager.swift to avoid duplicate declaration

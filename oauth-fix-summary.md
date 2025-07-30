@@ -50,3 +50,31 @@ The backend now properly recognizes when Google OAuth is connected based on the 
 1. Deploy these changes to the production server
 2. Test with the iOS app to confirm the fix works end-to-end
 3. Apply similar fixes to other agents (calendar, etc.) if needed
+
+## Latest Issue: Authentication Token Missing (July 29, 2025)
+
+### Problem
+OAuth connection process fails due to missing authentication token when checking integration status.
+
+### Symptoms
+- iOS app shows "Google connection initiated" but returns to "Connect to Google"
+- Backend receives 0 integrations due to missing Authorization header
+- Apple Sign-In successful but not used for OAuth integration status
+
+### Error Logs
+```
+❌ No authentication token available
+🌐 GET Request to /api/oauth/integrations
+❌ No Authorization header found
+📊 OAuthManager: Received 0 integrations from backend
+```
+
+### Potential Root Cause
+- Disconnect between Apple Sign-In authentication and Google OAuth integration
+- iOS OAuthManager not including auth tokens in API requests
+- Backend requiring authentication for integration status but iOS not providing it
+
+### Proposed Solutions
+1. Fix authentication token storage and usage in iOS OAuthManager
+2. Create public integration status endpoint using device ID
+3. Ensure OAuth callback completion properly updates integration status

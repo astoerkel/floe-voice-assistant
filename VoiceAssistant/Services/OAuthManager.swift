@@ -1,6 +1,10 @@
 import Foundation
 import UIKit
 
+extension Notification.Name {
+    static let oauthStatusChanged = Notification.Name("oauthStatusChanged")
+}
+
 @MainActor
 class OAuthManager: ObservableObject {
     static let shared = OAuthManager()
@@ -80,28 +84,35 @@ class OAuthManager: ObservableObject {
     }
     
     func connectGoogleServices() {
+        print("🔵 OAuthManager: Starting Google OAuth flow")
         isLoading = true
         errorMessage = nil
         
         Task {
             do {
-                // Get device ID
+                // Generate a unique device ID for this OAuth session
                 let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+                print("🔵 OAuthManager: Device ID: \(deviceId)")
                 
-                // Use new public OAuth endpoint
-                let requestBody: [String: Any] = [
-                    "deviceId": deviceId,
-                    "returnUrl": "voiceassistant://oauth/callback"
+                // Use public OAuth endpoint that doesn't require authentication
+                let body: [String: Any] = [
+                    "returnUrl": "voiceassistant://oauth",
+                    "deviceId": deviceId
                 ]
                 
-                let response = try await apiClient.post("/api/oauth/public/google/init", body: requestBody)
+                print("🔵 OAuthManager: Calling /api/oauth/public/google/init")
+                let response = try await apiClient.post("/api/oauth/public/google/init", body: body)
+                print("🔵 OAuthManager: Response received: \(response)")
                 
                 if let authUrl = response["authUrl"] as? String {
+                    print("🔵 OAuthManager: Auth URL received: \(authUrl)")
                     await openAuthURL(authUrl)
                 } else {
+                    print("❌ OAuthManager: No authUrl in response")
                     errorMessage = "Failed to get authorization URL"
                 }
             } catch {
+                print("❌ OAuthManager: Error: \(error)")
                 errorMessage = "Failed to start Google OAuth. \(error.localizedDescription)"
             }
             
@@ -115,16 +126,16 @@ class OAuthManager: ObservableObject {
         
         Task {
             do {
-                // Get device ID
+                // Generate a unique device ID for this OAuth session
                 let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
                 
-                // Use new public OAuth endpoint
-                let requestBody: [String: Any] = [
-                    "deviceId": deviceId,
-                    "returnUrl": "voiceassistant://oauth/callback"
+                // Use public OAuth endpoint that doesn't require authentication
+                let body: [String: Any] = [
+                    "returnUrl": "voiceassistant://oauth",
+                    "deviceId": deviceId
                 ]
                 
-                let response = try await apiClient.post("/api/oauth/public/airtable/init", body: requestBody)
+                let response = try await apiClient.post("/api/oauth/public/airtable/init", body: body)
                 
                 if let authUrl = response["authUrl"] as? String {
                     await openAuthURL(authUrl)
@@ -140,15 +151,21 @@ class OAuthManager: ObservableObject {
     }
     
     private func openAuthURL(_ urlString: String) async {
+        print("🔵 OAuthManager: Attempting to open URL: \(urlString)")
         guard let url = URL(string: urlString) else {
+            print("❌ OAuthManager: Invalid URL")
             errorMessage = "Invalid authorization URL"
             return
         }
         
         await MainActor.run {
             if UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url)
+                print("🔵 OAuthManager: Opening URL in browser")
+                UIApplication.shared.open(url) { success in
+                    print("🔵 OAuthManager: URL open result: \(success)")
+                }
             } else {
+                print("❌ OAuthManager: Cannot open URL")
                 errorMessage = "Cannot open authorization URL"
             }
         }

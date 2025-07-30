@@ -11,7 +11,8 @@ struct Constants {
     struct API {
         static let baseURL = "https://floe.cognetica.de"
         // Simple backend endpoints
-        static let chatProcessURL = "https://floe.cognetica.de/api/chat/process"
+        static let chatProcessURL = "https://floe.cognetica.de/api/voice/process-text"
+        static let audioProcessURL = "https://floe.cognetica.de/api/voice/process-audio"
         static let appleSignInURL = "https://floe.cognetica.de/api/auth/apple-signin"
         static let registerURL = "https://floe.cognetica.de/api/auth/register"
         static let loginURL = "https://floe.cognetica.de/api/auth/login"

@@ -81,11 +81,26 @@ public class APIClient: ObservableObject {
         }
     }
     
+    // Public method to sync tokens from SimpleAPIClient
+    public func syncTokensFromSimpleAPIClient() {
+        if let simpleToken = SimpleAPIClient.shared.currentAccessToken {
+            self.accessToken = simpleToken
+            self.isAuthenticated = true
+            print("✅ APIClient: Synced token from SimpleAPIClient")
+        }
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
     private func addCommonHeaders(to request: inout URLRequest) {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
         
-        if let accessToken = accessToken {
+        // Try to get token from SimpleAPIClient first, then fall back to local token
+        if let simpleToken = SimpleAPIClient.shared.currentAccessToken {
+            request.setValue("Bearer \(simpleToken)", forHTTPHeaderField: "Authorization")
+        } else if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
     }
@@ -94,8 +109,11 @@ public class APIClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
         
-        // Use main access token for authentication
-        if let accessToken = accessToken {
+        // Try to get token from SimpleAPIClient first, then fall back to local token
+        if let simpleToken = SimpleAPIClient.shared.currentAccessToken {
+            print("🔑 Using token from SimpleAPIClient")
+            request.setValue("Bearer \(simpleToken)", forHTTPHeaderField: "Authorization")
+        } else if let accessToken = accessToken {
             print("🔑 Using main access token")
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         } else {
@@ -626,6 +644,9 @@ public class APIClient: ObservableObject {
     }
     
     func sendVoiceCommand(_ request: VoiceRequest, completion: @escaping (Result<VoiceResponse, Error>) -> Void) {
+        // Refresh tokens before making the request
+        loadTokens()
+        
         guard isAuthenticated else {
             completion(.failure(VoiceAssistantError.authenticationRequired))
             return
@@ -666,6 +687,9 @@ public class APIClient: ObservableObject {
     
     // New method that returns enhanced response
     func sendVoiceCommandEnhanced(_ request: VoiceRequest, completion: @escaping (Result<EnhancedVoiceResponse, Error>) -> Void) {
+        // Refresh tokens before making the request
+        loadTokens()
+        
         guard isAuthenticated else {
             completion(.failure(VoiceAssistantError.authenticationRequired))
             return
@@ -726,6 +750,9 @@ public class APIClient: ObservableObject {
     }
     
     func sendVoiceAudio(_ audioData: Data, sessionId: String, completion: @escaping (Result<VoiceResponse, Error>) -> Void) {
+        // Refresh tokens before making the request
+        loadTokens()
+        
         guard isAuthenticated else {
             completion(.failure(VoiceAssistantError.authenticationRequired))
             return
@@ -864,8 +891,19 @@ public class APIClient: ObservableObject {
                         self?.performRequest(request: request, completion: completion)
                     case .failure(let error):
                         print("❌ Token refresh failed: \(error)")
+                        print("🚪 Auto-logging out due to expired tokens")
+                        
+                        // Automatically log out the user when tokens are expired/invalid
                         DispatchQueue.main.async {
-                            completion(.failure(error))
+                            self?.clearTokens() // Clear stored tokens
+                            
+                            // Post notification to trigger re-authentication
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("TokensExpiredLogout"),
+                                object: nil
+                            )
+                            
+                            completion(.failure(VoiceAssistantError.authenticationExpired))
                         }
                     }
                 }

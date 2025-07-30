@@ -3,7 +3,7 @@ import AVFoundation
 
 struct ContentView: View {
     @StateObject private var audioRecorder = MinimalAudioRecorder()
-    @ObservedObject private var apiClient = APIClient.shared
+    @ObservedObject private var apiClient = SimpleAPIClient.shared
     @ObservedObject private var oauthManager = OAuthManager.shared
     @StateObject private var speechRecognizer = SpeechRecognizer()
     @StateObject private var enhancedVoiceProcessor: EnhancedVoiceProcessor
@@ -724,7 +724,7 @@ struct ContentView: View {
         let deviceState = DeviceState(
             batteryLevel: UIDevice.current.batteryLevel >= 0 ? UIDevice.current.batteryLevel : 1.0,
             isLowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
-            isNetworkAvailable: apiClient.isWebSocketConnected,
+            isNetworkAvailable: true, // Simplified - SimpleAPIClient doesn't have WebSocket
             isWifiConnected: true, // Simplified for now
             memoryUsage: 0.5 // Simplified for now
         )

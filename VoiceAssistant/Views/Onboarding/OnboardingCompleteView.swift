@@ -236,7 +236,6 @@ struct OnboardingCompleteView: View {
 #Preview {
     ZStack {
         Color.black.ignoresSafeArea()
-        ParticleBackgroundView(isVoiceActive: false, isAudioPlaying: false, audioLevel: 0.0)
         OnboardingCompleteView(apiClient: APIClient())
     }
 }

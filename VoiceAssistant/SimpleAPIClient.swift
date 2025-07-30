@@ -8,6 +8,9 @@ public class SimpleAPIClient: ObservableObject {
     private let baseURL: String
     private let session: URLSession
     private var accessToken: String?
+    private var refreshToken: String?
+    private var refreshAttempts: Int = 0
+    private let maxRefreshAttempts = 3
     
     @Published var isAuthenticated = false
     @Published var lastError: Error?
@@ -24,9 +27,13 @@ public class SimpleAPIClient: ObservableObject {
         // Load stored tokens
         loadTokens()
         
-        // Validate token if present  
+        // Sync tokens with APIClient immediately if we have them
         if isAuthenticated {
-            print("🔑 SimpleAPIClient: Found existing token, validating...")
+            print("🔑 SimpleAPIClient: Found existing token, syncing with APIClient...")
+            DispatchQueue.main.async {
+                APIClient.shared.syncTokensFromSimpleAPIClient()
+            }
+            print("🔑 SimpleAPIClient: Validating token...")
             validateToken()
         } else {
             print("🔑 SimpleAPIClient: No existing token found")
@@ -38,6 +45,7 @@ public class SimpleAPIClient: ObservableObject {
     
     private func loadTokens() {
         self.accessToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.accessToken)
+        self.refreshToken = UserDefaults.standard.string(forKey: Constants.StorageKeys.refreshToken)
         
         // For debugging - print token prefix
         if let token = accessToken {
@@ -136,6 +144,11 @@ public class SimpleAPIClient: ObservableObject {
                        let token = jsonResponse["accessToken"] as? String {
                         // Store the JWT token from simple backend
                         self?.setAuthToken(token)
+                        
+                        // Store refresh token if available
+                        if let refreshToken = jsonResponse["refreshToken"] as? String {
+                            self?.setRefreshToken(refreshToken)
+                        }
                         
                         // Store user information if available
                         if let userInfo = jsonResponse["user"] as? [String: Any] {
@@ -371,24 +384,36 @@ public class SimpleAPIClient: ObservableObject {
             return
         }
         
-        // Test the token with a simple request
-        guard let url = URL(string: Constants.API.verifyTokenURL) else {
-            clearTokens()
+        // Use the profile endpoint to validate token since verify endpoint doesn't exist
+        guard let url = URL(string: "\(Constants.API.baseURL)/api/auth/profile") else {
+            // Don't clear tokens if URL is invalid
+            print("⚠️ Invalid validation URL")
             return
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
         
         session.dataTask(with: request) { [weak self] data, response, error in
             DispatchQueue.main.async {
-                if let httpResponse = response as? HTTPURLResponse,
-                   httpResponse.statusCode == 200 {
-                    print("🔑 Token validation successful")
+                if let httpResponse = response as? HTTPURLResponse {
+                    switch httpResponse.statusCode {
+                    case 200:
+                        print("🔑 Token validation successful")
+                        // Sync with APIClient after successful validation
+                        APIClient.shared.syncTokensFromSimpleAPIClient()
+                    case 401:
+                        print("🔑 Token expired or invalid, clearing tokens")
+                        self?.clearTokens()
+                    default:
+                        // Don't clear tokens for other errors (network, server issues, etc)
+                        print("⚠️ Token validation request failed with status: \(httpResponse.statusCode)")
+                    }
                 } else {
-                    print("🔑 Token validation failed, clearing tokens")
-                    self?.clearTokens()
+                    // Network error - don't clear tokens
+                    print("⚠️ Token validation network error: \(error?.localizedDescription ?? "Unknown")")
                 }
             }
         }.resume()
@@ -399,8 +424,95 @@ public class SimpleAPIClient: ObservableObject {
         UserDefaults.standard.set(token, forKey: Constants.StorageKeys.accessToken)
         DispatchQueue.main.async {
             self.isAuthenticated = true
+            // Sync token with APIClient
+            APIClient.shared.syncTokensFromSimpleAPIClient()
         }
         print("✅ Authentication token stored successfully")
+    }
+    
+    private func setRefreshToken(_ token: String) {
+        self.refreshToken = token
+        UserDefaults.standard.set(token, forKey: Constants.StorageKeys.refreshToken)
+        print("✅ Refresh token stored successfully")
+    }
+    
+    // MARK: - Token Access
+    var currentAccessToken: String? {
+        return accessToken
+    }
+    
+    // MARK: - Token Refresh
+    private func refreshAccessToken(completion: @escaping (Bool) -> Void) {
+        guard let refreshToken = refreshToken else {
+            print("❌ SimpleAPIClient: No refresh token available")
+            completion(false)
+            return
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/auth/refresh") else {
+            print("❌ SimpleAPIClient: Invalid refresh URL")
+            completion(false)
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["refreshToken": refreshToken]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            print("❌ SimpleAPIClient: Failed to encode refresh request: \(error)")
+            completion(false)
+            return
+        }
+        
+        print("🔄 SimpleAPIClient: Attempting token refresh...")
+        
+        session.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                print("❌ SimpleAPIClient: Refresh request failed: \(error)")
+                completion(false)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  let data = data else {
+                print("❌ SimpleAPIClient: Invalid refresh response")
+                completion(false)
+                return
+            }
+            
+            if httpResponse.statusCode == 200 {
+                do {
+                    if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let newAccessToken = jsonResponse["accessToken"] as? String {
+                        self?.setAuthToken(newAccessToken)
+                        
+                        // Update refresh token if provided
+                        if let newRefreshToken = jsonResponse["refreshToken"] as? String {
+                            self?.setRefreshToken(newRefreshToken)
+                        }
+                        
+                        print("✅ SimpleAPIClient: Token refreshed successfully")
+                        completion(true)
+                    } else {
+                        print("❌ SimpleAPIClient: Invalid refresh response format")
+                        completion(false)
+                    }
+                } catch {
+                    print("❌ SimpleAPIClient: Failed to parse refresh response: \(error)")
+                    completion(false)
+                }
+            } else {
+                print("❌ SimpleAPIClient: Token refresh failed with status: \(httpResponse.statusCode)")
+                // If refresh fails, clear all tokens
+                self?.clearTokens()
+                completion(false)
+            }
+        }.resume()
     }
     
     // MARK: - Voice Processing
@@ -418,12 +530,26 @@ public class SimpleAPIClient: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Constants.API.apiKey, forHTTPHeaderField: "x-api-key")
         
         if let accessToken = accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            print("🔑 SimpleAPIClient: Using auth token: \(accessToken.prefix(20))...")
+        } else {
+            print("❌ SimpleAPIClient: No access token available for request")
         }
         
-        let body: [String: Any] = ["text": text]
+        print("📤 SimpleAPIClient: Making request to \(url)")
+        print("📤 SimpleAPIClient: Headers: \(request.allHTTPHeaderFields ?? [:])")
+        
+        let body: [String: Any] = [
+            "text": text,
+            "sessionId": Constants.getCurrentSessionId(),
+            "context": [
+                "platform": "iOS",
+                "deviceModel": "iPhone"
+            ]
+        ]
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -478,11 +604,25 @@ public class SimpleAPIClient: ObservableObject {
                     }
                 }
             case 401:
-                print("🚨 SimpleAPIClient: 401 Unauthorized - Auto-clearing tokens")
-                DispatchQueue.main.async {
-                    // Automatically clear invalid tokens
-                    self.clearTokens()
-                    completion(.failure(VoiceAssistantError.authenticationRequired))
+                print("🚨 SimpleAPIClient: 401 Unauthorized - Attempting token refresh")
+                print("📡 401 Response headers: \(httpResponse.allHeaderFields)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("📡 401 Response body: \(responseString)")
+                }
+                
+                // Attempt token refresh before giving up
+                self.refreshAccessToken { refreshSuccess in
+                    if refreshSuccess {
+                        print("✅ SimpleAPIClient: Token refresh successful, retrying request")
+                        // Retry the original request with new token
+                        self.processTextSimple(text: text, completion: completion)
+                    } else {
+                        print("❌ SimpleAPIClient: Token refresh failed, clearing tokens")
+                        DispatchQueue.main.async {
+                            self.clearTokens()
+                            completion(.failure(VoiceAssistantError.authenticationRequired))
+                        }
+                    }
                 }
             case 500...599:
                 DispatchQueue.main.async {
@@ -546,7 +686,9 @@ public class SimpleAPIClient: ObservableObject {
     
     private func clearTokens() {
         self.accessToken = nil
+        self.refreshToken = nil
         UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.accessToken)
+        UserDefaults.standard.removeObject(forKey: Constants.StorageKeys.refreshToken)
         
         // Also clear cached user info
         UserDefaults.standard.removeObject(forKey: "cached_user_email")
